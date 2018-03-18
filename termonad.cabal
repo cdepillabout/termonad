@@ -20,6 +20,9 @@ library
                      , Termonad.Prelude
   build-depends:       base >= 4.7 && < 5
                      , classy-prelude
+                     , gi-gtk
+                     , gi-vte
+                     , haskell-gi-base
   default-language:    Haskell2010
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
   other-extensions:    TemplateHaskell

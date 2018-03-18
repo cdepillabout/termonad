@@ -9,8 +9,20 @@ packages:
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
+    # These are all current as of 2018-03-19.
+    - gi-atk-2.0.15
+    - gi-cairo-1.0.15
+    - gi-gdk-3.0.15
+    - gi-gdkpixbuf-2.0.15
+    - gi-gio-2.0.16
+    - gi-glib-2.0.16
+    - gi-gobject-2.0.16
     - gi-gtk-3.0.21
+    - gi-pango-1.0.16
     - gi-vte-2.91.17
+    - haskell-gi-0.21.0
+    - haskell-gi-base-0.21.0
+    - haskell-gi-overloading-1.0
 
 # Override default flag values for local packages and extra-deps
 flags: {}
