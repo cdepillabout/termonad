@@ -1,4 +1,4 @@
-.PHONY: bench benchmark build clean dump-th ghci haddock haddock-server hlint install test upload watch watch-test
+.PHONY: bench benchmark build build-fast clean dump-th ghci haddock haddock-server hlint install test upload watch watch-test
 all: build
 
 # Run the benchmark.
@@ -6,9 +6,11 @@ bench: benchmark
 benchmark:
 	stack bench
 
-# Build both hrep and highlight.
 build: 
 	stack build
+
+build-fast: 
+	stack build --fast
 
 # Clean up the built packages.
 clean:
@@ -26,7 +28,7 @@ dump-th:
 haddock:
 	stack build --haddock
 
-# Install highlight and hrep to ~/.local/bin/.
+# Install to ~/.local/bin/.
 install:
 	stack install
 
