@@ -20,6 +20,8 @@ library
                      , Termonad.Prelude
   build-depends:       base >= 4.7 && < 5
                      , classy-prelude
+                     , gi-gio
+                     , gi-glib
                      , gi-gtk
                      , gi-vte
                      , haskell-gi-base
