@@ -26,11 +26,11 @@ defaultMain = do
       button
       #clicked
       (set button [#sensitive := False, #label := "Thanks for clicking me"])
-  boxPackStart box button False False 0
+  #packStart box button False False 0
 
   term <- new Terminal []
   termResVal <-
-    terminalSpawnSync
+    #spawnSync
       term
       [PtyFlagsDefault]
       Nothing
@@ -39,7 +39,7 @@ defaultMain = do
       [SpawnFlagsDefault]
       Nothing
       (Nothing :: Maybe Cancellable)
-  boxPackStart box term True True 0
+  #packStart box term True True 0
 
   #add win box
   #showAll win
