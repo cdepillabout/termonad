@@ -8,6 +8,7 @@ import Termonad.Prelude hiding (on)
 
 import GI.Gtk
 import qualified GI.Gtk as Gtk
+import GI.Vte
 
 defaultMain :: IO ()
 defaultMain = do
@@ -21,5 +22,10 @@ defaultMain = do
       #clicked
       (set button [#sensitive := False, #label := "Thanks for clicking me"])
   #add win button
+
+  -- terminalNew
+  term <- new Terminal []
+  #add win term
+
   #showAll win
   Gtk.main
