@@ -32,6 +32,13 @@ cache:
 # matrix, you can use a line such as:
 #     addons: {apt: {packages: [libfcgi-dev,libgmp-dev]}}
 matrix:
+  addons:
+      apt:
+        packages:
+            - gir1.2-vte-2.91
+            - gobject-introspection
+            - libgirepository1.0-dev
+            - libvte-2.91-dev
   include:
   # We grab the appropriate GHC and cabal-install versions from hvr's PPA. See:
   # https://github.com/hvr/multi-ghc-travis
