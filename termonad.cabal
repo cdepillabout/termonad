@@ -20,6 +20,7 @@ library
                      , Termonad.Prelude
   build-depends:       base >= 4.7 && < 5
                      , classy-prelude
+                     , gi-gdk
                      , gi-gio
                      , gi-glib
                      , gi-gtk
