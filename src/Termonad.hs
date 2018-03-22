@@ -66,6 +66,7 @@ createTerm font notebook = do
       Nothing
       (Nothing :: Maybe Cancellable)
   print "created termina, appending it..."
+  #show term
   #appendPage notebook term noWidget
   print "appended terminal."
   on term #keyPressEvent (openTab font notebook)
@@ -108,7 +109,6 @@ defaultMain = do
 
   void $ createTerm font notebook
   void $ createTerm font notebook
-
 
   #add win box
   #showAll win
