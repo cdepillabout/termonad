@@ -10,6 +10,7 @@ import GI.Gio
 import GI.GLib.Flags (SpawnFlags(..))
 import GI.Gtk
 import qualified GI.Gtk as Gtk
+import GI.Pango
 import GI.Vte
 
 defaultMain :: IO ()
@@ -28,7 +29,11 @@ defaultMain = do
       (set button [#sensitive := False, #label := "Thanks for clicking me"])
   #packStart box button False False 0
 
-  term <- new Terminal []
+  font <- fontDescriptionNew
+  fontDescriptionSetFamily font "DejaVu Sans Mono"
+  fontDescriptionSetSize font (16 * SCALE)
+
+  term <- new Terminal [#fontDesc := font]
   termResVal <-
     #spawnSync
       term
