@@ -14,6 +14,8 @@ sudo: false
 # Do not choose a language; we provide our own build tools.
 language: generic
 
+group: travis-latest
+
 # Caching so the next build will be fast too.
 cache:
   directories:
@@ -25,10 +27,10 @@ cache:
 addons:
     apt:
       packages: &gtk_packages
-          - gir1.2-vte-2.90
+          - gir1.2-vte-2.91
           - gobject-introspection
           - libgirepository1.0-dev
-          - libvte-2.90-dev
+          - libvte-2.91-dev
 
 # The different configurations we want to test. We have BUILD=cabal which uses
 # cabal-install, and BUILD=stack which uses Stack. More documentation on each
