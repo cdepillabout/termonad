@@ -1,33 +1,72 @@
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Termonad where
 
-import Termonad.Prelude hiding (on)
+import Termonad.Prelude
 
+import Data.Unique
+import qualified GI.Gdk as Gdk
 import GI.Gdk
-import GI.Gio
+  ( AttrOp((:=))
+  , EventKey
+  , pattern KEY_1
+  , pattern KEY_2
+  , pattern KEY_3
+  , pattern KEY_4
+  , pattern KEY_5
+  , pattern KEY_6
+  , pattern KEY_7
+  , pattern KEY_8
+  , pattern KEY_9
+  , pattern KEY_T
+  , ModifierType(..)
+  , get
+  , new
+  )
+import GI.Gio (noCancellable)
 import GI.GLib.Flags (SpawnFlags(..))
 import GI.Gtk
+  ( Box(Box)
+  , Button(Button)
+  , Notebook(Notebook)
+  , Orientation(..)
+  , mainQuit
+  , noWidget
+  )
 import qualified GI.Gtk as Gtk
 import GI.Pango
-import GI.Vte
+  ( FontDescription
+  , pattern SCALE
+  , fontDescriptionNew
+  , fontDescriptionSetFamily
+  , fontDescriptionSetSize
+  )
+import GI.Vte (PtyFlags(..), Terminal(Terminal))
 
-isShift :: EventKey -> IO Bool
-isShift eventKey = do
-  modifiers <- get eventKey #state
-  pure $ ModifierTypeShiftMask `elem` modifiers
 
-isCtrl :: EventKey -> IO Bool
-isCtrl eventKey = do
-  modifiers <- get eventKey #state
-  pure $ ModifierTypeControlMask `elem` modifiers
+data Term = Term
+  { term :: Terminal
+  , unique :: Unique
+  }
 
-isT :: EventKey -> IO Bool
-isT eventKey = do
-  keyval <- get eventKey #keyval
-  pure $ keyval == KEY_T
+data Note = Note
+  { notebook :: Notebook
+  , children :: [Term]
+  , font :: FontDescription
+  }
+
+type TerState = MVar Note
+
+instance Eq Term where
+  (==) :: Term -> Term -> Bool
+  (==) = ((==) :: Unique -> Unique -> Bool) `on` (unique :: Term -> Unique)
 
 showKeys :: EventKey -> IO Bool
 showKeys eventKey = do
@@ -51,60 +90,99 @@ showKeys eventKey = do
 
   pure True
 
-createTerm :: FontDescription -> Notebook -> IO Terminal
-createTerm font notebook = do
-  term <- new Terminal [#fontDesc := font]
+newTerm :: TerState -> IO Term
+newTerm terState = do
+  fontDesc <- withMVar terState (pure . font)
+  terminal <- new Terminal [#fontDesc := fontDesc]
   _termResVal <-
     #spawnSync
-      term
+      terminal
       [PtyFlagsDefault]
       Nothing
       ["/usr/bin/env", "bash"]
       Nothing
       [SpawnFlagsDefault]
       Nothing
-      (Nothing :: Maybe Cancellable)
-  #show term
-  #appendPage notebook term noWidget
-  on term #keyPressEvent (openTab font notebook)
-  on term #childExited $ \_ -> #detachTab notebook term
-  pure term
+      noCancellable
+  #show terminal
+  uniq' <- newUnique
+  pure $ Term terminal uniq'
 
-openTab :: FontDescription -> Notebook -> EventKey -> IO Bool
-openTab font notebook eventKey = do
-  shiftRes <- isShift eventKey
-  ctrlRes <- isCtrl eventKey
-  tRes <- isT eventKey
-  let isShiftCtrlT = shiftRes && ctrlRes && tRes
-  when isShiftCtrlT $ void $ createTerm font notebook
+removeTerm :: [Term] -> Term -> [Term]
+removeTerm terms terminal = delete terminal terms
+
+createTerm :: TerState -> IO ()
+createTerm terState = do
+  terminal <- newTerm terState
+  modifyMVar_ terState $ \Note{..} -> do
+    #appendPage notebook (term terminal) noWidget
+    pure $ Note notebook (snoc children terminal) font
+  Gdk.on (term terminal) #keyPressEvent (handleKeyPress terState)
+  Gdk.on (term terminal) #childExited $ \_ -> do
+    modifyMVar_ terState $ \Note{..} -> do
+      #detachTab notebook (term terminal)
+      pure $ Note notebook (removeTerm children terminal) font
+  pure ()
+
+handleKeyPress :: TerState -> EventKey -> IO Bool
+handleKeyPress terState eventKey = do
+  keyval <- get eventKey #keyval
+  modifiers <- get eventKey #state
+
+  when (keyval == KEY_T && ModifierTypeControlMask `elem` modifiers) $
+    createTerm terState
+
+  let numKeys =
+        [ KEY_1
+        , KEY_2
+        , KEY_3
+        , KEY_4
+        , KEY_5
+        , KEY_6
+        , KEY_7
+        , KEY_8
+        , KEY_9
+        ]
+
+  when ((keyval `elem` numKeys) && (ModifierTypeMod1Mask `elem` modifiers)) $
+    putStrLn "hello"
+
   pure False
 
 defaultMain :: IO ()
 defaultMain = do
   void $ Gtk.init Nothing
   win <- new Gtk.Window [#title := "Hi there"]
-  void $ on win #destroy mainQuit
+  void $ Gdk.on win #destroy mainQuit
 
   box <- new Box [#orientation := OrientationVertical]
 
   button <- new Button [#label := "Click me"]
   void $
-    on
+    Gdk.on
       button
       #clicked
-      (set button [#sensitive := False, #label := "Thanks for clicking me"])
+      (Gdk.set button [#sensitive := False, #label := "Thanks for clicking me"])
   #packStart box button False False 0
 
-  font <- fontDescriptionNew
-  fontDescriptionSetFamily font "DejaVu Sans Mono"
+  fontDesc <- fontDescriptionNew
+  fontDescriptionSetFamily fontDesc "DejaVu Sans Mono"
   -- fontDescriptionSetFamily font "Source Code Pro"
-  fontDescriptionSetSize font (16 * SCALE)
+  fontDescriptionSetSize fontDesc (16 * SCALE)
 
-  notebook <- new Notebook []
-  #packStart box notebook True True 0
+  note <- new Notebook []
+  #packStart box note True True 0
 
-  void $ createTerm font notebook
-  void $ createTerm font notebook
+  terState <-
+    newMVar $
+      Note
+        { notebook = note
+        , children = []
+        , font = fontDesc
+        }
+
+  createTerm terState
+  createTerm terState
 
   #add win box
   #showAll win

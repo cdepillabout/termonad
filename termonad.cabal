@@ -27,6 +27,7 @@ library
                      , gi-pango
                      , gi-vte
                      , haskell-gi-base
+                     , lens
   default-language:    Haskell2010
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
   other-extensions:    TemplateHaskell
