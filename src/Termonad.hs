@@ -38,13 +38,19 @@ import GI.GLib.Flags (SpawnFlags(..))
 import GI.Gtk
   ( Box(Box)
   , CssProvider(CssProvider)
+  , Entry(Entry)
+  , IMContext(IMContext)
+  , IMContextSimple(IMContextSimple)
+  , IMMulticontext(IMMulticontext)
   , Notebook(Notebook)
   , Orientation(..)
   , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , pattern STYLE_PROVIDER_PRIORITY_USER
+  , iMContextSetClientWindow
   , mainQuit
   , noWidget
+  , settingsGetDefault
   , styleContextAddProviderForScreen
   )
 import qualified GI.Gtk as Gtk
@@ -278,6 +284,7 @@ defaultMain = do
   win <- new Gtk.Window [#title := "Hi there"]
   void $ Gdk.on win #destroy mainQuit
 
+
   box <- new Box [#orientation := OrientationVertical]
 
   fontDesc <- fontDescriptionNew
@@ -302,8 +309,35 @@ defaultMain = do
 
   terminal <- createTerm terState
 
+  entry <- new Entry []
+  #packEnd box entry True True 0
+
   #add win box
   #showAll win
   focusTerm terminal
+
+
+  -- maybeSettings <- settingsGetDefault
+  -- case maybeSettings of
+  --   Just settings -> do
+  --     Gdk.set settings [#gtkImModule := "fcitx"]
+  --     maybeImMod <- get settings #gtkImModule
+  --     print maybeImMod
+
+  imCon <- new IMMulticontext []
+
+  maybeGdkWin <- #getWindow win
+  case maybeGdkWin of
+    Just gdkWin -> do
+      iMContextSetClientWindow imCon (Just gdkWin)
+      #focusIn imCon
+
+  -- Gdk.on imCon #commit (\a -> print "commit" >> print a)
+  -- Gdk.on imCon #preeditStart (print "preedit")
+  -- Gdk.on imCon #preeditEnd (print "preedit")
+  -- Gdk.on imCon #preeditChanged (print "preedit")
+  -- void $ Gdk.on entry #keyPressEvent $ (\kp -> #filterKeypress imCon kp)
+
+  -- Gdk.on entry #focusInEvent $ (\_ -> print "got focus" >> #focusIn imCon >> pure False)
 
   Gtk.main
