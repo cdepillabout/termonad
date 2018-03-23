@@ -174,6 +174,7 @@ createTerm :: TerState -> IO Term
 createTerm terState = do
   terminal <- newTerm terState
   scrolledWin <- new ScrolledWindow []
+  #show scrolledWin
   #add scrolledWin (term terminal)
   modifyMVar_ terState $ \Note{..} -> do
     pageIndex <- #appendPage notebook scrolledWin noWidget
