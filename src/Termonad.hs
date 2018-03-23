@@ -156,7 +156,11 @@ altNumSwitchTerm i terState = do
   Note{..} <- readMVar terState
   void $ #setCurrentPage notebook (fromIntegral i)
 
-createTerm :: TerState -> IO ()
+focusTerm :: Term -> IO ()
+focusTerm Term{..} =
+  Gdk.set term [#hasFocus := True]
+
+createTerm :: TerState -> IO Term
 createTerm terState = do
   terminal <- newTerm terState
   modifyMVar_ terState $ \Note{..} -> do
@@ -168,7 +172,7 @@ createTerm terState = do
     modifyMVar_ terState $ \Note{..} -> do
       #detachTab notebook (term terminal)
       pure $ Note notebook (removeTerm children terminal) font
-  pure ()
+  pure terminal
 
 handleKeyPress :: TerState -> EventKey -> IO Bool
 handleKeyPress terState eventKey = do
@@ -195,20 +199,12 @@ defaultMain = do
 
   box <- new Box [#orientation := OrientationVertical]
 
-  button <- new Button [#label := "Click me"]
-  void $
-    Gdk.on
-      button
-      #clicked
-      (Gdk.set button [#sensitive := False, #label := "Thanks for clicking me"])
-  #packStart box button False False 0
-
   fontDesc <- fontDescriptionNew
   fontDescriptionSetFamily fontDesc "DejaVu Sans Mono"
   -- fontDescriptionSetFamily font "Source Code Pro"
   fontDescriptionSetSize fontDesc (16 * SCALE)
 
-  note <- new Notebook []
+  note <- new Notebook [#canFocus := False]
   #packStart box note True True 0
 
   terState <-
@@ -219,8 +215,10 @@ defaultMain = do
         , font = fontDesc
         }
 
-  createTerm terState
+  terminal <- createTerm terState
 
   #add win box
   #showAll win
+  focusTerm terminal
+
   Gtk.main
