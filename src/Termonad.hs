@@ -145,9 +145,20 @@ handleKeyPress terState eventKey = do
         ]
 
   when ((keyval `elem` numKeys) && (ModifierTypeMod1Mask `elem` modifiers)) $
-    putStrLn "hello"
+    case indexOf keyval numKeys of
+      Nothing -> pure ()
+      Just i -> do
+        Note{..} <- readMVar terState
+        #setCurrentPage notebook (fromIntegral i)
 
   pure False
+
+indexOf :: forall a. Eq a => a -> [a] -> Maybe Int
+indexOf a = go 0
+  where
+    go :: Int -> [a] -> Maybe Int
+    go _ [] = Nothing
+    go i (h:ts) = if h == a then Just i else go (i + 1) ts
 
 defaultMain :: IO ()
 defaultMain = do
