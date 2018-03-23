@@ -31,16 +31,20 @@ import GI.Gdk
   , ModifierType(..)
   , get
   , new
+  , screenGetDefault
   )
 import GI.Gio (noCancellable)
 import GI.GLib.Flags (SpawnFlags(..))
 import GI.Gtk
   ( Box(Box)
+  , CssProvider(CssProvider)
   , Notebook(Notebook)
   , Orientation(..)
   , ScrolledWindow(ScrolledWindow)
+  , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , mainQuit
   , noWidget
+  , styleContextAddProviderForScreen
   )
 import qualified GI.Gtk as Gtk
 import GI.Pango
@@ -199,6 +203,23 @@ indexOf a = go 0
 defaultMain :: IO ()
 defaultMain = do
   void $ Gtk.init Nothing
+  maybeScreen <- screenGetDefault
+  -- case maybeScreen of
+  --   Just screen -> do
+  --     print "got a screen"
+  --     cssProvider <- new CssProvider []
+  --     let (textLines :: [Text]) =
+  --           [ ".scrollbar {" :: Text
+  --           , "  -GtkRange-slider-width: 200;"
+  --           , "  -GtkRange-stepper-size: 200;"
+  --           , "}"
+  --           ]
+  --     let styleData = encodeUtf8 (unlines textLines :: Text)
+  --     #loadFromData cssProvider styleData
+  --     styleContextAddProviderForScreen
+  --       screen
+  --       cssProvider
+  --       (fromIntegral STYLE_PROVIDER_PRIORITY_APPLICATION)
   win <- new Gtk.Window [#title := "Hi there"]
   void $ Gdk.on win #destroy mainQuit
 
