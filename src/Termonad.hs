@@ -42,6 +42,7 @@ import GI.Gtk
   , Orientation(..)
   , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
+  , pattern STYLE_PROVIDER_PRIORITY_USER
   , mainQuit
   , noWidget
   , styleContextAddProviderForScreen
@@ -206,22 +207,74 @@ defaultMain :: IO ()
 defaultMain = do
   void $ Gtk.init Nothing
   maybeScreen <- screenGetDefault
-  -- case maybeScreen of
-  --   Just screen -> do
-  --     print "got a screen"
-  --     cssProvider <- new CssProvider []
-  --     let (textLines :: [Text]) =
-  --           [ ".scrollbar {" :: Text
-  --           , "  -GtkRange-slider-width: 200;"
-  --           , "  -GtkRange-stepper-size: 200;"
-  --           , "}"
-  --           ]
-  --     let styleData = encodeUtf8 (unlines textLines :: Text)
-  --     #loadFromData cssProvider styleData
-  --     styleContextAddProviderForScreen
-  --       screen
-  --       cssProvider
-  --       (fromIntegral STYLE_PROVIDER_PRIORITY_APPLICATION)
+  case maybeScreen of
+    Just screen -> do
+      print "got a screen"
+      cssProvider <- new CssProvider []
+      let (textLines :: [Text]) =
+            [ ".scrollbar {" :: Text
+            , "  -GtkRange-slider-width: 200px;"
+            , "  -GtkRange-stepper-size: 200px;"
+            , "  border-width: 200px;"
+            , "  background-color: #ff0000;"
+            , "  color: #ff0000;"
+            , "  min-width: 50px;"
+            , "}"
+            , "scrollbar {" :: Text
+            , "  -GtkRange-slider-width: 200px;"
+            , "  -GtkRange-stepper-size: 200px;"
+            , "  border-width: 200px;"
+            , "  background-color: #ff0000;"
+            , "  color: #ff0000;"
+            , "  min-width: 50px;"
+            , "}"
+            -- , ".scrollbar.trough {"
+            -- , "  -GtkRange-slider-width: 200px;"
+            -- , "  -GtkRange-stepper-size: 200px;"
+            -- , "  border-width: 200px;"
+            -- , "  background-color: #00ff00;"
+            -- , "  color: #00ff00;"
+            -- , "  min-width: 50px;"
+            -- , "}"
+            -- , "scrollbar trough {"
+            -- , "  -GtkRange-slider-width: 200px;"
+            -- , "  -GtkRange-stepper-size: 200px;"
+            -- , "  border-width: 200px;"
+            -- , "  background-color: #00ff00;"
+            -- , "  color: #00ff00;"
+            -- , "  min-width: 50px;"
+            -- , "}"
+            -- , ".scrollbar.slider {"
+            -- , "  -GtkRange-slider-width: 200px;"
+            -- , "  -GtkRange-stepper-size: 200px;"
+            -- , "  border-width: 200px;"
+            -- , "  background-color: #0000ff;"
+            -- , "  color: #0000ff;"
+            -- , "  min-width: 50px;"
+            -- , "}"
+            -- , "scrollbar slider {"
+            -- , "  -GtkRange-slider-width: 200px;"
+            -- , "  -GtkRange-stepper-size: 200px;"
+            -- , "  border-width: 200px;"
+            -- , "  background-color: #0000ff;"
+            -- , "  color: #0000ff;"
+            -- , "  min-width: 50px;"
+            -- , "}"
+            -- , "* {"
+            -- , "  -GtkRange-slider-width: 200px;"
+            -- , "  -GtkRange-stepper-size: 200px;"
+            -- , "  border-width: 200px;"
+            -- , "  background-color: #ff00ff;"
+            -- , "  color: #ff00ff;"
+            -- , "}"
+            -- , "default { -GtkRange-slider-width: 30px; }"
+            ]
+      let styleData = encodeUtf8 (unlines textLines :: Text)
+      #loadFromData cssProvider styleData
+      styleContextAddProviderForScreen
+        screen
+        cssProvider
+        (fromIntegral STYLE_PROVIDER_PRIORITY_USER)
   win <- new Gtk.Window [#title := "Hi there"]
   void $ Gdk.on win #destroy mainQuit
 
