@@ -111,6 +111,19 @@ newTerm terState = do
 removeTerm :: [Term] -> Term -> [Term]
 removeTerm terms terminal = delete terminal terms
 
+data Key = Key
+  { keyVal :: Word32
+  , keyMods :: [ModifierType]
+  }
+               
+
+keys :: Map Key (IO Bool)
+keys =
+  mapFromList
+    [
+    ]
+  
+
 createTerm :: TerState -> IO ()
 createTerm terState = do
   terminal <- newTerm terState
@@ -151,7 +164,7 @@ handleKeyPress terState eventKey = do
         Note{..} <- readMVar terState
         #setCurrentPage notebook (fromIntegral i)
 
-  pure False
+  pure True
 
 indexOf :: forall a. Eq a => a -> [a] -> Maybe Int
 indexOf a = go 0
