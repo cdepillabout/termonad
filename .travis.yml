@@ -14,8 +14,6 @@ sudo: false
 # Do not choose a language; we provide our own build tools.
 language: generic
 
-group: travis-latest
-
 # Caching so the next build will be fast too.
 cache:
   directories:
@@ -24,6 +22,12 @@ cache:
   - $HOME/.stack
 
 # Set of additional packages to install.
+#
+# (Note that as of 2018-03-23, the Travis-CI builds are running on ubuntu
+# 14.04. The version of libvte on Ubuntu 14.04 is too old to build the gi-vte
+# Haskell package.  The gi-vte Haskell package requires libvte-2.91, but Ubuntu
+# 14.04 only has libvte-2.90.  The Travis-CI build will always fail until we
+# can update to Ubuntu 16.04.)
 addons:
     apt:
       packages: &gtk_packages
