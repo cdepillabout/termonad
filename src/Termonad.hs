@@ -38,6 +38,7 @@ import GI.Gtk
   ( Box(Box)
   , Notebook(Notebook)
   , Orientation(..)
+  , ScrolledWindow(ScrolledWindow)
   , mainQuit
   , noWidget
   )
@@ -169,7 +170,9 @@ createTerm :: TerState -> IO Term
 createTerm terState = do
   terminal <- newTerm terState
   modifyMVar_ terState $ \Note{..} -> do
-    pageIndex <- #appendPage notebook (term terminal) noWidget
+    scrolledWin <- new ScrolledWindow []
+    #add scrolledWin (term terminal)
+    pageIndex <- #appendPage notebook scrolledWin noWidget
     void $ #setCurrentPage notebook pageIndex
     pure $ Note notebook (snoc children terminal) font
   void $ Gdk.on (term terminal) #keyPressEvent $ handleKeyPress terState
