@@ -163,8 +163,8 @@ createTerm terState = do
     pageIndex <- #appendPage notebook (term terminal) noWidget
     void $ #setCurrentPage notebook pageIndex
     pure $ Note notebook (snoc children terminal) font
-  Gdk.on (term terminal) #keyPressEvent (handleKeyPress terState)
-  Gdk.on (term terminal) #childExited $ \_ -> do
+  void $ Gdk.on (term terminal) #keyPressEvent (handleKeyPress terState)
+  void $ Gdk.on (term terminal) #childExited $ \_ -> do
     modifyMVar_ terState $ \Note{..} -> do
       #detachTab notebook (term terminal)
       pure $ Note notebook (removeTerm children terminal) font
