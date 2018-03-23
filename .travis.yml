@@ -157,7 +157,6 @@ matrix:
   - os: osx
 
 before_install:
-- apt-cache search gir | sort
 # Using compiler above sets CC to an invalid value, so unset it
 - unset CC
 
