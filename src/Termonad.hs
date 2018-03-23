@@ -36,10 +36,10 @@ import GI.Gio (noCancellable)
 import GI.GLib.Flags (SpawnFlags(..))
 import GI.Gtk
   ( Box(Box)
-  , Button(Button)
   , Notebook(Notebook)
   , Orientation(..)
   , mainQuit
+  , notebookGetNPages
   , noWidget
   )
 import qualified GI.Gtk as Gtk
@@ -160,6 +160,12 @@ focusTerm :: Term -> IO ()
 focusTerm Term{..} =
   Gdk.set term [#hasFocus := True]
 
+termExit :: Term -> TerState -> Int32 -> IO ()
+termExit terminal terState _exitStatus =
+  modifyMVar_ terState $ \Note{..} -> do
+    #detachTab notebook (term terminal)
+    pure $ Note notebook (removeTerm children terminal) font
+
 createTerm :: TerState -> IO Term
 createTerm terState = do
   terminal <- newTerm terState
@@ -167,11 +173,8 @@ createTerm terState = do
     pageIndex <- #appendPage notebook (term terminal) noWidget
     void $ #setCurrentPage notebook pageIndex
     pure $ Note notebook (snoc children terminal) font
-  void $ Gdk.on (term terminal) #keyPressEvent (handleKeyPress terState)
-  void $ Gdk.on (term terminal) #childExited $ \_ -> do
-    modifyMVar_ terState $ \Note{..} -> do
-      #detachTab notebook (term terminal)
-      pure $ Note notebook (removeTerm children terminal) font
+  void $ Gdk.on (term terminal) #keyPressEvent $ handleKeyPress terState
+  void $ Gdk.on (term terminal) #childExited $ termExit terminal terState
   pure terminal
 
 handleKeyPress :: TerState -> EventKey -> IO Bool
@@ -214,6 +217,10 @@ defaultMain = do
         , children = []
         , font = fontDesc
         }
+
+  void $ Gdk.on note #pageRemoved $ \_ _ -> do
+    pages <- notebookGetNPages note
+    when (pages == 0) mainQuit
 
   terminal <- createTerm terState
 
