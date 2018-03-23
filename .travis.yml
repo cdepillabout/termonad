@@ -25,10 +25,10 @@ cache:
 addons:
     apt:
       packages: &gtk_packages
-          - gir1.2-vte-2.91
+          # - gir1.2-vte-2.91
           - gobject-introspection
           - libgirepository1.0-dev
-          - libvte-2.91-dev
+          # - libvte-2.91-dev
 
 # The different configurations we want to test. We have BUILD=cabal which uses
 # cabal-install, and BUILD=stack which uses Stack. More documentation on each
@@ -157,6 +157,7 @@ matrix:
   - os: osx
 
 before_install:
+- apt-cache search gir | sort
 # Using compiler above sets CC to an invalid value, so unset it
 - unset CC
 
