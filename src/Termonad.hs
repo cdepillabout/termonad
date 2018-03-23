@@ -39,7 +39,6 @@ import GI.Gtk
   , Notebook(Notebook)
   , Orientation(..)
   , mainQuit
-  , notebookGetNPages
   , noWidget
   )
 import qualified GI.Gtk as Gtk
@@ -219,7 +218,7 @@ defaultMain = do
         }
 
   void $ Gdk.on note #pageRemoved $ \_ _ -> do
-    pages <- notebookGetNPages note
+    pages <- #getNPages note
     when (pages == 0) mainQuit
 
   terminal <- createTerm terState
