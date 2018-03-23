@@ -2,6 +2,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,7 +12,8 @@ module Termonad where
 
 import Termonad.Prelude
 
-import Data.Unique
+import Control.Lens (imap)
+import Data.Unique (Unique, newUnique)
 import qualified GI.Gdk as Gdk
 import GI.Gdk
   ( AttrOp((:=))
@@ -113,22 +115,53 @@ removeTerm terms terminal = delete terminal terms
 
 data Key = Key
   { keyVal :: Word32
-  , keyMods :: [ModifierType]
-  }
-               
+  , keyMods :: Set ModifierType
+  } deriving (Eq, Ord, Show)
 
-keys :: Map Key (IO Bool)
-keys =
-  mapFromList
-    [
-    ]
-  
+toKey :: Word32 -> Set ModifierType -> Key
+toKey = Key
+
+stopProp :: (TerState -> IO a) -> TerState -> IO Bool
+stopProp callback terState = callback terState $> True
+
+keyMap :: Map Key (TerState -> IO Bool)
+keyMap =
+  let numKeys =
+        [ KEY_1
+        , KEY_2
+        , KEY_3
+        , KEY_4
+        , KEY_5
+        , KEY_6
+        , KEY_7
+        , KEY_8
+        , KEY_9
+        ]
+      altNumKeys =
+        imap
+          (\i k ->
+             (toKey k [ModifierTypeMod1Mask], stopProp (altNumSwitchTerm i))
+          )
+          numKeys
+  in
+  mapFromList $
+    [ ( toKey KEY_T [ModifierTypeControlMask, ModifierTypeShiftMask]
+      , stopProp createTerm
+      )
+    ] <>
+    altNumKeys
+
+altNumSwitchTerm :: Int -> TerState -> IO ()
+altNumSwitchTerm i terState = do
+  Note{..} <- readMVar terState
+  void $ #setCurrentPage notebook (fromIntegral i)
 
 createTerm :: TerState -> IO ()
 createTerm terState = do
   terminal <- newTerm terState
   modifyMVar_ terState $ \Note{..} -> do
-    #appendPage notebook (term terminal) noWidget
+    pageIndex <- #appendPage notebook (term terminal) noWidget
+    void $ #setCurrentPage notebook pageIndex
     pure $ Note notebook (snoc children terminal) font
   Gdk.on (term terminal) #keyPressEvent (handleKeyPress terState)
   Gdk.on (term terminal) #childExited $ \_ -> do
@@ -141,30 +174,11 @@ handleKeyPress :: TerState -> EventKey -> IO Bool
 handleKeyPress terState eventKey = do
   keyval <- get eventKey #keyval
   modifiers <- get eventKey #state
-
-  when (keyval == KEY_T && ModifierTypeControlMask `elem` modifiers) $
-    createTerm terState
-
-  let numKeys =
-        [ KEY_1
-        , KEY_2
-        , KEY_3
-        , KEY_4
-        , KEY_5
-        , KEY_6
-        , KEY_7
-        , KEY_8
-        , KEY_9
-        ]
-
-  when ((keyval `elem` numKeys) && (ModifierTypeMod1Mask `elem` modifiers)) $
-    case indexOf keyval numKeys of
-      Nothing -> pure ()
-      Just i -> do
-        Note{..} <- readMVar terState
-        #setCurrentPage notebook (fromIntegral i)
-
-  pure True
+  let key = toKey keyval (setFromList modifiers)
+      maybeAction = lookup key keyMap
+  case maybeAction of
+    Just action -> action terState
+    Nothing -> pure False
 
 indexOf :: forall a. Eq a => a -> [a] -> Maybe Int
 indexOf a = go 0
@@ -205,7 +219,6 @@ defaultMain = do
         , font = fontDesc
         }
 
-  createTerm terState
   createTerm terState
 
   #add win box
