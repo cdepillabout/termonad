@@ -53,7 +53,6 @@ showKeys eventKey = do
 
 createTerm :: FontDescription -> Notebook -> IO Terminal
 createTerm font notebook = do
-  print "creating a new terminal..."
   term <- new Terminal [#fontDesc := font]
   _termResVal <-
     #spawnSync
@@ -65,23 +64,19 @@ createTerm font notebook = do
       [SpawnFlagsDefault]
       Nothing
       (Nothing :: Maybe Cancellable)
-  print "created termina, appending it..."
   #show term
   #appendPage notebook term noWidget
-  print "appended terminal."
   on term #keyPressEvent (openTab font notebook)
+  on term #childExited $ \_ -> #detachTab notebook term
   pure term
 
 openTab :: FontDescription -> Notebook -> EventKey -> IO Bool
 openTab font notebook eventKey = do
-  print "got key press"
   shiftRes <- isShift eventKey
   ctrlRes <- isCtrl eventKey
   tRes <- isT eventKey
   let isShiftCtrlT = shiftRes && ctrlRes && tRes
-  putStrLn $ "isShiftCtrlT: " <> tshow isShiftCtrlT
   when isShiftCtrlT $ void $ createTerm font notebook
-  putStrLn ""
   pure False
 
 defaultMain :: IO ()
@@ -102,6 +97,7 @@ defaultMain = do
 
   font <- fontDescriptionNew
   fontDescriptionSetFamily font "DejaVu Sans Mono"
+  -- fontDescriptionSetFamily font "Source Code Pro"
   fontDescriptionSetSize font (16 * SCALE)
 
   notebook <- new Notebook []
