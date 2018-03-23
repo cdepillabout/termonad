@@ -164,23 +164,24 @@ focusTerm :: Term -> IO ()
 focusTerm Term{..} =
   Gdk.set term [#hasFocus := True]
 
-termExit :: Term -> TerState -> Int32 -> IO ()
-termExit terminal terState _exitStatus =
+termExit :: ScrolledWindow -> Term -> TerState -> Int32 -> IO ()
+termExit scrolledWin terminal terState _exitStatus =
   modifyMVar_ terState $ \Note{..} -> do
-    #detachTab notebook (term terminal)
+    #detachTab notebook scrolledWin
     pure $ Note notebook (removeTerm children terminal) font
 
 createTerm :: TerState -> IO Term
 createTerm terState = do
   terminal <- newTerm terState
+  scrolledWin <- new ScrolledWindow []
+  #add scrolledWin (term terminal)
   modifyMVar_ terState $ \Note{..} -> do
-    scrolledWin <- new ScrolledWindow []
-    #add scrolledWin (term terminal)
     pageIndex <- #appendPage notebook scrolledWin noWidget
     void $ #setCurrentPage notebook pageIndex
     pure $ Note notebook (snoc children terminal) font
   void $ Gdk.on (term terminal) #keyPressEvent $ handleKeyPress terState
-  void $ Gdk.on (term terminal) #childExited $ termExit terminal terState
+  void $ Gdk.on scrolledWin #keyPressEvent $ handleKeyPress terState
+  void $ Gdk.on (term terminal) #childExited $ termExit scrolledWin terminal terState
   pure terminal
 
 handleKeyPress :: TerState -> EventKey -> IO Bool
