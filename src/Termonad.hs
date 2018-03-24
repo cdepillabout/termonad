@@ -55,7 +55,27 @@ import GI.Pango
   , fontDescriptionSetSize
   )
 import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal))
+import Text.XML.QQ (xml)
 
+uiDoc :: Document
+uiDoc =
+  [xml|
+      <ui>
+        <menubar name='MenuBar'>
+          <menu action='FileMenu'>
+            <menuitem action='FileNewTab'/>
+            <separator />
+            <menuitem action='FileQuit' />
+          </menu>
+          <menu action='EditMenu'>
+            <menuitem action='EditCopy' />
+            <menuitem action='EditPaste' />
+          </menu>
+        </menubar>
+      </ui>
+   |]
+
+ui :: 
 
 data Term = Term
   { term :: Terminal
