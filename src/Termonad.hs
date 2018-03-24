@@ -324,13 +324,13 @@ defaultMain = do
   --     maybeImMod <- get settings #gtkImModule
   --     print maybeImMod
 
-  imCon <- new IMMulticontext []
+  -- imCon <- new IMMulticontext []
 
-  maybeGdkWin <- #getWindow win
-  case maybeGdkWin of
-    Just gdkWin -> do
-      iMContextSetClientWindow imCon (Just gdkWin)
-      #focusIn imCon
+  -- maybeGdkWin <- #getWindow win
+  -- case maybeGdkWin of
+  --   Just gdkWin -> do
+  --     iMContextSetClientWindow imCon (Just gdkWin)
+  --     #focusIn imCon
 
   -- Gdk.on imCon #commit (\a -> print "commit" >> print a)
   -- Gdk.on imCon #preeditStart (print "preedit")
