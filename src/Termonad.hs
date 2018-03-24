@@ -39,18 +39,12 @@ import GI.Gtk
   ( Box(Box)
   , CssProvider(CssProvider)
   , Entry(Entry)
-  , IMContext(IMContext)
-  , IMContextSimple(IMContextSimple)
-  , IMMulticontext(IMMulticontext)
   , Notebook(Notebook)
   , Orientation(..)
   , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
-  , pattern STYLE_PROVIDER_PRIORITY_USER
-  , iMContextSetClientWindow
   , mainQuit
   , noWidget
-  , settingsGetDefault
   , styleContextAddProviderForScreen
   )
 import qualified GI.Gtk as Gtk
@@ -214,11 +208,11 @@ defaultMain = do
   void $ Gtk.init Nothing
   maybeScreen <- screenGetDefault
   case maybeScreen of
+    Nothing -> pure ()
     Just screen -> do
-      print "got a screen"
       cssProvider <- new CssProvider []
       let (textLines :: [Text]) =
-            [ ".scrollbar {" :: Text
+            [ "scrollbar {" :: Text
             , "  -GtkRange-slider-width: 200px;"
             , "  -GtkRange-stepper-size: 200px;"
             , "  border-width: 200px;"
@@ -226,36 +220,12 @@ defaultMain = do
             , "  color: #ff0000;"
             , "  min-width: 50px;"
             , "}"
-            , "scrollbar {" :: Text
-            , "  -GtkRange-slider-width: 200px;"
-            , "  -GtkRange-stepper-size: 200px;"
-            , "  border-width: 200px;"
-            , "  background-color: #ff0000;"
-            , "  color: #ff0000;"
-            , "  min-width: 50px;"
-            , "}"
-            -- , ".scrollbar.trough {"
-            -- , "  -GtkRange-slider-width: 200px;"
-            -- , "  -GtkRange-stepper-size: 200px;"
-            -- , "  border-width: 200px;"
-            -- , "  background-color: #00ff00;"
-            -- , "  color: #00ff00;"
-            -- , "  min-width: 50px;"
-            -- , "}"
             -- , "scrollbar trough {"
             -- , "  -GtkRange-slider-width: 200px;"
             -- , "  -GtkRange-stepper-size: 200px;"
             -- , "  border-width: 200px;"
             -- , "  background-color: #00ff00;"
             -- , "  color: #00ff00;"
-            -- , "  min-width: 50px;"
-            -- , "}"
-            -- , ".scrollbar.slider {"
-            -- , "  -GtkRange-slider-width: 200px;"
-            -- , "  -GtkRange-stepper-size: 200px;"
-            -- , "  border-width: 200px;"
-            -- , "  background-color: #0000ff;"
-            -- , "  color: #0000ff;"
             -- , "  min-width: 50px;"
             -- , "}"
             -- , "scrollbar slider {"
@@ -266,21 +236,13 @@ defaultMain = do
             -- , "  color: #0000ff;"
             -- , "  min-width: 50px;"
             -- , "}"
-            -- , "* {"
-            -- , "  -GtkRange-slider-width: 200px;"
-            -- , "  -GtkRange-stepper-size: 200px;"
-            -- , "  border-width: 200px;"
-            -- , "  background-color: #ff00ff;"
-            -- , "  color: #ff00ff;"
-            -- , "}"
-            -- , "default { -GtkRange-slider-width: 30px; }"
             ]
       let styleData = encodeUtf8 (unlines textLines :: Text)
       #loadFromData cssProvider styleData
       styleContextAddProviderForScreen
         screen
         cssProvider
-        (fromIntegral STYLE_PROVIDER_PRIORITY_USER)
+        (fromIntegral STYLE_PROVIDER_PRIORITY_APPLICATION)
   win <- new Gtk.Window [#title := "Hi there"]
   void $ Gdk.on win #destroy mainQuit
 
@@ -315,29 +277,5 @@ defaultMain = do
   #add win box
   #showAll win
   focusTerm terminal
-
-
-  -- maybeSettings <- settingsGetDefault
-  -- case maybeSettings of
-  --   Just settings -> do
-  --     Gdk.set settings [#gtkImModule := "fcitx"]
-  --     maybeImMod <- get settings #gtkImModule
-  --     print maybeImMod
-
-  -- imCon <- new IMMulticontext []
-
-  -- maybeGdkWin <- #getWindow win
-  -- case maybeGdkWin of
-  --   Just gdkWin -> do
-  --     iMContextSetClientWindow imCon (Just gdkWin)
-  --     #focusIn imCon
-
-  -- Gdk.on imCon #commit (\a -> print "commit" >> print a)
-  -- Gdk.on imCon #preeditStart (print "preedit")
-  -- Gdk.on imCon #preeditEnd (print "preedit")
-  -- Gdk.on imCon #preeditChanged (print "preedit")
-  -- void $ Gdk.on entry #keyPressEvent $ (\kp -> #filterKeypress imCon kp)
-
-  -- Gdk.on entry #focusInEvent $ (\_ -> print "got focus" >> #focusIn imCon >> pure False)
 
   Gtk.main
