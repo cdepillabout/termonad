@@ -38,7 +38,6 @@ import GI.GLib.Flags (SpawnFlags(..))
 import GI.Gtk
   ( Box(Box)
   , CssProvider(CssProvider)
-  , Entry(Entry)
   , Notebook(Notebook)
   , Orientation(..)
   , ScrolledWindow(ScrolledWindow)
@@ -55,7 +54,7 @@ import GI.Pango
   , fontDescriptionSetFamily
   , fontDescriptionSetSize
   )
-import GI.Vte (PtyFlags(..), Terminal(Terminal))
+import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal))
 
 
 data Term = Term
@@ -96,24 +95,6 @@ showKeys eventKey = do
   putStrLn ""
 
   pure True
-
-newTerm :: TerState -> IO Term
-newTerm terState = do
-  fontDesc <- withMVar terState (pure . font)
-  terminal <- new Terminal [#fontDesc := fontDesc]
-  _termResVal <-
-    #spawnSync
-      terminal
-      [PtyFlagsDefault]
-      Nothing
-      ["/usr/bin/env", "bash"]
-      Nothing
-      [SpawnFlagsDefault]
-      Nothing
-      noCancellable
-  #show terminal
-  uniq' <- newUnique
-  pure $ Term terminal uniq'
 
 removeTerm :: [Term] -> Term -> [Term]
 removeTerm terms terminal = delete terminal terms
@@ -171,16 +152,40 @@ termExit scrolledWin terminal terState _exitStatus =
     #detachTab notebook scrolledWin
     pure $ Note notebook (removeTerm children terminal) font
 
-createTerm :: TerState -> IO Term
-createTerm terState = do
-  terminal <- newTerm terState
+createScrolledWin :: IO ScrolledWindow
+createScrolledWin = do
   scrolledWin <- new ScrolledWindow []
   #show scrolledWin
+  pure scrolledWin
+
+createTerm :: TerState -> IO Term
+createTerm terState = do
+  scrolledWin <- createScrolledWin
+  fontDesc <- withMVar terState (pure . font)
+  vteTerm <-
+    new Terminal [#fontDesc := fontDesc, #cursorBlinkMode := CursorBlinkModeOn]
+  _termResVal <-
+    #spawnSync
+      vteTerm
+      [PtyFlagsDefault]
+      Nothing
+      ["/usr/bin/env", "bash"]
+      Nothing
+      [SpawnFlagsDefault]
+      Nothing
+      noCancellable
+  #show vteTerm
+  uniq' <- newUnique
+  let terminal = Term vteTerm uniq'
   #add scrolledWin (term terminal)
   modifyMVar_ terState $ \Note{..} -> do
     pageIndex <- #appendPage notebook scrolledWin noWidget
     void $ #setCurrentPage notebook pageIndex
     pure $ Note notebook (snoc children terminal) font
+  void $ Gdk.on vteTerm #windowTitleChanged $ do
+    title <- get vteTerm #windowTitle
+    Note{..} <- readMVar terState
+    #setTabLabelText notebook scrolledWin title
   void $ Gdk.on (term terminal) #keyPressEvent $ handleKeyPress terState
   void $ Gdk.on scrolledWin #keyPressEvent $ handleKeyPress terState
   void $ Gdk.on (term terminal) #childExited $ termExit scrolledWin terminal terState
@@ -270,9 +275,6 @@ defaultMain = do
     when (pages == 0) mainQuit
 
   terminal <- createTerm terState
-
-  entry <- new Entry []
-  #packEnd box entry True True 0
 
   #add win box
   #showAll win
