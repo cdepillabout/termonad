@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -55,11 +56,11 @@ import GI.Pango
   , fontDescriptionSetSize
   )
 import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal))
-import Text.XML.QQ (xml)
+import Text.XML.QQ (Document, xmlRaw)
 
 uiDoc :: Document
 uiDoc =
-  [xml|
+  [xmlRaw|
       <ui>
         <menubar name='MenuBar'>
           <menu action='FileMenu'>
@@ -75,7 +76,7 @@ uiDoc =
       </ui>
    |]
 
-ui :: 
+-- ui ::
 
 data Term = Term
   { term :: Terminal
