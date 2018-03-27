@@ -274,6 +274,7 @@ defaultMain1 win = do
         cssProvider
         (fromIntegral STYLE_PROVIDER_PRIORITY_APPLICATION)
   -- win <- new Gtk.Window [#title := "Hi there"]
+  -- TODO: This no longer works?  I might have to make sure the entire application closes...
   void $ Gdk.on win #destroy mainQuit
 
 
@@ -302,7 +303,7 @@ defaultMain1 win = do
   terminal <- createTerm terState
 
   #add win box
-  -- #showAll win
+  #showAll win
   focusTerm terminal
   -- Gtk.main
 
@@ -318,7 +319,7 @@ appStartup _app = pure ()
 
 defaultMain :: IO ()
 defaultMain = do
-  app <- applicationNew (Just "termonad") [ApplicationFlagsFlagsNone]
+  app <- applicationNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
   void $ Gdk.on app #startup (appStartup app)
   void $ Gdk.on app #activate (appActivate app)
   void $ applicationRun app Nothing
