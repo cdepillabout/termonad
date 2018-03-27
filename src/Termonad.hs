@@ -309,6 +309,7 @@ defaultMain1 win = do
 appActivate :: Application -> IO ()
 appActivate app = do
   appWin <- applicationWindowNew app
+  defaultMain1 appWin
   #present appWin
 
 appStartup :: Application -> IO ()
