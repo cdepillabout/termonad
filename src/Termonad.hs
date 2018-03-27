@@ -34,15 +34,19 @@ import GI.Gdk
   , new
   , screenGetDefault
   )
-import GI.Gio (noCancellable)
+import GI.Gio (ApplicationFlags(ApplicationFlagsFlagsNone), applicationRun, noCancellable)
 import GI.GLib.Flags (SpawnFlags(..))
 import GI.Gtk
-  ( Box(Box)
+  ( Application
+  , ApplicationWindow
+  , Box(Box)
   , CssProvider(CssProvider)
   , Notebook(Notebook)
   , Orientation(..)
   , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
+  , applicationNew
+  , applicationWindowNew
   , mainQuit
   , noWidget
   , styleContextAddProviderForScreen
@@ -229,9 +233,9 @@ indexOf a = go 0
     go _ [] = Nothing
     go i (h:ts) = if h == a then Just i else go (i + 1) ts
 
-defaultMain :: IO ()
-defaultMain = do
-  void $ Gtk.init Nothing
+defaultMain1 :: ApplicationWindow -> IO ()
+defaultMain1 win = do
+  -- void $ Gtk.init Nothing
   maybeScreen <- screenGetDefault
   case maybeScreen of
     Nothing -> pure ()
@@ -269,7 +273,7 @@ defaultMain = do
         screen
         cssProvider
         (fromIntegral STYLE_PROVIDER_PRIORITY_APPLICATION)
-  win <- new Gtk.Window [#title := "Hi there"]
+  -- win <- new Gtk.Window [#title := "Hi there"]
   void $ Gdk.on win #destroy mainQuit
 
 
@@ -298,7 +302,22 @@ defaultMain = do
   terminal <- createTerm terState
 
   #add win box
-  #showAll win
+  -- #showAll win
   focusTerm terminal
+  -- Gtk.main
 
-  Gtk.main
+appActivate :: Application -> IO ()
+appActivate app = do
+  appWin <- applicationWindowNew app
+  #present appWin
+
+appStartup :: Application -> IO ()
+appStartup _app = pure ()
+  -- this is probably where I should create actions and builders
+
+defaultMain :: IO ()
+defaultMain = do
+  app <- applicationNew (Just "termonad") [ApplicationFlagsFlagsNone]
+  void $ Gdk.on app #startup (appStartup app)
+  void $ Gdk.on app #activate (appActivate app)
+  void $ applicationRun app Nothing
