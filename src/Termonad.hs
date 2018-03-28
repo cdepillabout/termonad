@@ -233,9 +233,8 @@ indexOf a = go 0
     go _ [] = Nothing
     go i (h:ts) = if h == a then Just i else go (i + 1) ts
 
-defaultMain1 :: ApplicationWindow -> IO ()
-defaultMain1 win = do
-  -- void $ Gtk.init Nothing
+setupTermonad :: Application -> ApplicationWindow -> IO ()
+setupTermonad app win = do
   maybeScreen <- screenGetDefault
   case maybeScreen of
     Nothing -> pure ()
@@ -273,9 +272,8 @@ defaultMain1 win = do
         screen
         cssProvider
         (fromIntegral STYLE_PROVIDER_PRIORITY_APPLICATION)
-  -- win <- new Gtk.Window [#title := "Hi there"]
-  -- TODO: This no longer works?  I might have to make sure the entire application closes...
-  void $ Gdk.on win #destroy mainQuit
+
+  void $ Gdk.on win #destroy (#quit app)
 
 
   box <- new Box [#orientation := OrientationVertical]
@@ -298,19 +296,18 @@ defaultMain1 win = do
 
   void $ Gdk.on note #pageRemoved $ \_ _ -> do
     pages <- #getNPages note
-    when (pages == 0) mainQuit
+    when (pages == 0) (#quit app)
 
   terminal <- createTerm terState
 
   #add win box
   #showAll win
   focusTerm terminal
-  -- Gtk.main
 
 appActivate :: Application -> IO ()
 appActivate app = do
   appWin <- applicationWindowNew app
-  defaultMain1 appWin
+  setupTermonad app appWin
   #present appWin
 
 appStartup :: Application -> IO ()
