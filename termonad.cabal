@@ -20,6 +20,7 @@ library
                      , Termonad.Prelude
   build-depends:       base >= 4.7 && < 5
                      , classy-prelude
+                     , data-default
                      , gi-gdk
                      , gi-gio
                      , gi-glib
@@ -29,6 +30,7 @@ library
                      , haskell-gi-base
                      , haskell-gi-overloading >= 1.0
                      , lens
+                     , xml-conduit
                      , xml-html-qq
   default-language:    Haskell2010
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates

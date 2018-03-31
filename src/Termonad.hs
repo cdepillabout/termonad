@@ -14,11 +14,13 @@ module Termonad where
 import Termonad.Prelude
 
 import Control.Lens (imap)
+import Data.Default (def)
 import Data.Unique (Unique, newUnique)
 import qualified GI.Gdk as Gdk
 import GI.Gdk
   ( AttrOp((:=))
   , EventKey
+  , GObject
   , pattern KEY_1
   , pattern KEY_2
   , pattern KEY_3
@@ -29,7 +31,9 @@ import GI.Gdk
   , pattern KEY_8
   , pattern KEY_9
   , pattern KEY_T
+  , ManagedPtr
   , ModifierType(..)
+  , castTo
   , get
   , new
   , screenGetDefault
@@ -38,7 +42,7 @@ import GI.Gio (ApplicationFlags(ApplicationFlagsFlagsNone), applicationRun, noCa
 import GI.GLib.Flags (SpawnFlags(..))
 import GI.Gtk
   ( Application
-  , ApplicationWindow
+  , ApplicationWindow(ApplicationWindow)
   , Box(Box)
   , CssProvider(CssProvider)
   , Notebook(Notebook)
@@ -47,6 +51,8 @@ import GI.Gtk
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , applicationNew
   , applicationWindowNew
+  , builderNewFromString
+  , builderSetApplication
   , mainQuit
   , noWidget
   , styleContextAddProviderForScreen
@@ -60,27 +66,47 @@ import GI.Pango
   , fontDescriptionSetSize
   )
 import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal))
+import Text.XML (renderText)
 import Text.XML.QQ (Document, xmlRaw)
 
-uiDoc :: Document
-uiDoc =
+interfaceDoc :: Document
+interfaceDoc =
   [xmlRaw|
-      <ui>
-        <menubar name='MenuBar'>
-          <menu action='FileMenu'>
-            <menuitem action='FileNewTab'/>
-            <separator />
-            <menuitem action='FileQuit' />
-          </menu>
-          <menu action='EditMenu'>
-            <menuitem action='EditCopy' />
-            <menuitem action='EditPaste' />
-          </menu>
-        </menubar>
-      </ui>
+    <?xml version="1.0" encoding="UTF-8"?>
+    <interface>
+      <!-- interface-requires gtk+ 3.8 -->
+      <object id="appWin" class="GtkApplicationWindow">
+        <property name="title" translatable="yes">Example Application</property>
+        <property name="default-width">600</property>
+        <property name="default-height">400</property>
+        <child>
+          <object class="GtkBox" id="content_box">
+            <property name="visible">True</property>
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkHeaderBar" id="header">
+                <property name="visible">True</property>
+                <child type="title">
+                  <object class="GtkStackSwitcher" id="tabs">
+                    <property name="visible">True</property>
+                    <property name="stack">stack</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkStack" id="stack">
+                <property name="visible">True</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </interface>
    |]
 
--- ui ::
+interfaceText :: Text
+interfaceText = toStrict $ renderText def interfaceDoc
 
 data Term = Term
   { term :: Terminal
@@ -123,6 +149,22 @@ showKeys eventKey = do
 
 removeTerm :: [Term] -> Term -> [Term]
 removeTerm terms terminal = delete terminal terms
+
+objFromBuildUnsafe ::
+     GObject o => Gtk.Builder -> Text -> (ManagedPtr o -> o) -> IO o
+objFromBuildUnsafe builder name constructor = do
+  maybePlainObj <- #getObject builder name
+  case maybePlainObj of
+    Nothing -> error $ "Couldn't get " <> unpack name <> " from builder!"
+    Just plainObj -> do
+      maybeNewObj <- castTo constructor plainObj
+      case maybeNewObj of
+        Nothing ->
+          error $
+            "Got " <>
+            unpack name <>
+            " from builder, but couldn't convert to object!"
+        Just obj -> pure obj
 
 data Key = Key
   { keyVal :: Word32
@@ -233,8 +275,8 @@ indexOf a = go 0
     go _ [] = Nothing
     go i (h:ts) = if h == a then Just i else go (i + 1) ts
 
-setupTermonad :: Application -> ApplicationWindow -> IO ()
-setupTermonad app win = do
+setupTermonad :: Application -> ApplicationWindow -> Gtk.Builder -> IO ()
+setupTermonad app win builder = do
   maybeScreen <- screenGetDefault
   case maybeScreen of
     Nothing -> pure ()
@@ -276,7 +318,7 @@ setupTermonad app win = do
   void $ Gdk.on win #destroy (#quit app)
 
 
-  box <- new Box [#orientation := OrientationVertical]
+  box <- objFromBuildUnsafe builder "content_box" Box
 
   fontDesc <- fontDescriptionNew
   fontDescriptionSetFamily fontDesc "DejaVu Sans Mono"
@@ -306,8 +348,12 @@ setupTermonad app win = do
 
 appActivate :: Application -> IO ()
 appActivate app = do
-  appWin <- applicationWindowNew app
-  setupTermonad app appWin
+  builder <-
+    builderNewFromString interfaceText $ fromIntegral (length interfaceText)
+  builderSetApplication builder app
+  appWin <- objFromBuildUnsafe builder "appWin" ApplicationWindow
+  #addWindow app appWin
+  setupTermonad app appWin builder
   #present appWin
 
 appStartup :: Application -> IO ()
