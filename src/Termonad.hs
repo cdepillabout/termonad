@@ -90,6 +90,10 @@ interfaceDoc =
                   <object class="GtkStackSwitcher" id="tabs">
                     <property name="visible">True</property>
                     <property name="stack">stack</property>
+                    <style>
+                      <class name="my-special-stackswitcher-class"/>
+                      <class name="dark-stackswitcher"/>
+                    </style>
                   </object>
                 </child>
               </object>
@@ -342,7 +346,6 @@ setupTermonad app win builder = do
 
   terminal <- createTerm terState
 
-  #add win box
   #showAll win
   focusTerm terminal
 
