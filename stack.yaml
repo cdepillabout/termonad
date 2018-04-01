@@ -62,3 +62,4 @@ nix:
         - gobjectIntrospection
         - gtk3
         - pkgconfig
+        - zlib
