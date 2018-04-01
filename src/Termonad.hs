@@ -51,6 +51,7 @@ import GI.Gtk
   , ApplicationWindow(ApplicationWindow)
   , Box(Box)
   , CssProvider(CssProvider)
+  , Dialog(Dialog)
   , Notebook(Notebook)
   , Orientation(..)
   , ScrolledWindow(ScrolledWindow)
@@ -75,6 +76,12 @@ import GI.Pango
 import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal))
 import Text.XML (renderText)
 import Text.XML.QQ (Document, xmlRaw)
+
+-- TODO: A number of widgets have different places where a child can be added
+-- (e.g. tabs vs. page content in notebooks). This can be reflected in a UI
+-- definition by specifying the “type” attribute on a <child> The possible
+-- values for the “type” attribute are described in the sections describing the
+-- widget-specific portions of UI definitions.
 
 interfaceDoc :: Document
 interfaceDoc =
@@ -125,25 +132,113 @@ menuDoc =
     <?xml version="1.0"?>
     <interface>
       <!-- interface-requires gtk+ 3.0 -->
-      <menu id="appmenu">
-        <section>
+      <menu id="menubar">
+        <submenu>
+          <attribute name="label" translatable="yes">_File</attribute>
+          <section>
+            <item>
+              <attribute name="label" translatable="yes">_Preferences</attribute>
+              <attribute name="action">app.preferences</attribute>
+            </item>
+          </section>
+          <section>
+            <item>
+              <attribute name="label" translatable="yes">_Quit</attribute>
+              <attribute name="action">app.quit</attribute>
+            </item>
+          </section>
+        </submenu>
+        <submenu>
+          <attribute name="label" translatable="yes">_Help</attribute>
           <item>
-            <attribute name="label" translatable="yes">_Preferences</attribute>
-            <attribute name="action">app.preferences</attribute>
+            <attribute name="label" translatable="yes">_About</attribute>
+            <attribute name="action">app.about</attribute>
           </item>
-        </section>
-        <section>
-          <item>
-            <attribute name="label" translatable="yes">_Quit</attribute>
-            <attribute name="action">app.quit</attribute>
-          </item>
-        </section>
+        </submenu>
       </menu>
     </interface>
    |]
 
 menuText :: Text
 menuText = toStrict $ renderText def menuDoc
+
+aboutDoc :: Document
+aboutDoc =
+  [xmlRaw|
+    <?xml version="1.0"?>
+    <interface>
+    <!-- interface-requires gtk+ 3.8 -->
+      <object id="aboutDialog" class="GtkDialog">
+        <property name="title" translatable="yes">About</property>
+        <property name="resizable">False</property>
+        <property name="modal">True</property>
+        <child internal-child="vbox">
+          <object class="GtkBox" id="vbox">
+            <child>
+              <object class="GtkGrid" id="grid">
+                <property name="visible">True</property>
+                <property name="margin">6</property>
+                <property name="row-spacing">12</property>
+                <property name="column-spacing">6</property>
+                <child>
+                  <object class="GtkLabel" id="fontlabel">
+                    <property name="visible">True</property>
+                    <property name="label">_Font:</property>
+                    <property name="use-underline">True</property>
+                    <property name="mnemonic-widget">font</property>
+                    <property name="xalign">1</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkFontButton" id="font">
+                    <property name="visible">True</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">1</property>
+                    <property name="top-attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="transitionlabel">
+                    <property name="visible">True</property>
+                    <property name="label">_Transition:</property>
+                    <property name="use-underline">True</property>
+                    <property name="mnemonic-widget">transition</property>
+                    <property name="xalign">1</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText" id="transition">
+                    <property name="visible">True</property>
+                    <items>
+                      <item translatable="yes" id="none">None</item>
+                      <item translatable="yes" id="crossfade">Fade</item>
+                      <item translatable="yes" id="slide-left-right">Slide</item>
+                    </items>
+                  </object>
+                  <packing>
+                    <property name="left-attach">1</property>
+                    <property name="top-attach">1</property>
+                  </packing>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </interface>
+   |]
+
+aboutText :: Text
+aboutText = toStrict $ renderText def aboutDoc
 
 data Term = Term
   { term :: Terminal
@@ -392,15 +487,31 @@ appActivate app = do
   setupTermonad app appWin uiBuilder
   #present appWin
 
+-- | TODO: I should probably be using the actual Gtk.AboutDialog class.
+showAboutDialog :: Application -> IO ()
+showAboutDialog app = do
+  win <- #getActiveWindow app
+  builder <- builderNewFromString aboutText $ fromIntegral (length aboutText)
+  builderSetApplication builder app
+  aboutDialog <- objFromBuildUnsafe builder "aboutDialog" Dialog
+  #setTransientFor aboutDialog (Just win)
+  #present aboutDialog
+
 appStartup :: Application -> IO ()
 appStartup app = do
+  aboutAction <- simpleActionNew "about" Nothing
+  void $ Gdk.on aboutAction #activate (const $ showAboutDialog app)
+  #addAction app aboutAction
+
   quitAction <- simpleActionNew "quit" Nothing
-  Gtk.on quitAction #activate (\_ -> putStrLn "got quit!")
+  void $ Gdk.on quitAction #activate (\_ -> putStrLn "got quit!")
   #addAction app quitAction
   #setAccelsForAction app "app.quit" ["<Shift><Ctrl>Q"]
+
   menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
-  menuModel <- objFromBuildUnsafe menuBuilder "appmenu" MenuModel
-  applicationSetAppMenu app (Just menuModel)
+  menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
+  -- applicationSetAppMenu app (Just menuModel)
+  #setMenubar app (Just menuModel)
 
 defaultMain :: IO ()
 defaultMain = do
