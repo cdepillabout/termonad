@@ -397,6 +397,7 @@ appStartup app = do
   quitAction <- simpleActionNew "quit" Nothing
   Gtk.on quitAction #activate (\_ -> putStrLn "got quit!")
   #addAction app quitAction
+  gtk_application_set_accels_for_action (GTK_APPLICATION (app), "app.quit", quit_accels);
   menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
   menuModel <- objFromBuildUnsafe menuBuilder "appmenu" MenuModel
   applicationSetAppMenu app (Just menuModel)
