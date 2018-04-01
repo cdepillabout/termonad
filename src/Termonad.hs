@@ -38,7 +38,13 @@ import GI.Gdk
   , new
   , screenGetDefault
   )
-import GI.Gio (ApplicationFlags(ApplicationFlagsFlagsNone), applicationRun, noCancellable)
+import GI.Gio
+  ( ApplicationFlags(ApplicationFlagsFlagsNone)
+  , MenuModel(MenuModel)
+  , applicationRun
+  , noCancellable
+  , simpleActionNew
+  )
 import GI.GLib.Flags (SpawnFlags(..))
 import GI.Gtk
   ( Application
@@ -50,6 +56,7 @@ import GI.Gtk
   , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , applicationNew
+  , applicationSetAppMenu
   , applicationWindowNew
   , builderNewFromString
   , builderSetApplication
@@ -111,6 +118,32 @@ interfaceDoc =
 
 interfaceText :: Text
 interfaceText = toStrict $ renderText def interfaceDoc
+
+menuDoc :: Document
+menuDoc =
+  [xmlRaw|
+    <?xml version="1.0"?>
+    <interface>
+      <!-- interface-requires gtk+ 3.0 -->
+      <menu id="appmenu">
+        <section>
+          <item>
+            <attribute name="label" translatable="yes">_Preferences</attribute>
+            <attribute name="action">app.preferences</attribute>
+          </item>
+        </section>
+        <section>
+          <item>
+            <attribute name="label" translatable="yes">_Quit</attribute>
+            <attribute name="action">app.quit</attribute>
+          </item>
+        </section>
+      </menu>
+    </interface>
+   |]
+
+menuText :: Text
+menuText = toStrict $ renderText def menuDoc
 
 data Term = Term
   { term :: Terminal
@@ -351,17 +384,22 @@ setupTermonad app win builder = do
 
 appActivate :: Application -> IO ()
 appActivate app = do
-  builder <-
+  uiBuilder <-
     builderNewFromString interfaceText $ fromIntegral (length interfaceText)
-  builderSetApplication builder app
-  appWin <- objFromBuildUnsafe builder "appWin" ApplicationWindow
+  builderSetApplication uiBuilder app
+  appWin <- objFromBuildUnsafe uiBuilder "appWin" ApplicationWindow
   #addWindow app appWin
-  setupTermonad app appWin builder
+  setupTermonad app appWin uiBuilder
   #present appWin
 
 appStartup :: Application -> IO ()
-appStartup _app = pure ()
-  -- this is probably where I should create actions and builders
+appStartup app = do
+  quitAction <- simpleActionNew "quit" Nothing
+  Gtk.on quitAction #activate (\_ -> putStrLn "got quit!")
+  #addAction app quitAction
+  menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
+  menuModel <- objFromBuildUnsafe menuBuilder "appmenu" MenuModel
+  applicationSetAppMenu app (Just menuModel)
 
 defaultMain :: IO ()
 defaultMain = do
