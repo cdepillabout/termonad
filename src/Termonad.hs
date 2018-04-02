@@ -16,6 +16,7 @@ import Termonad.Prelude
 import Control.Lens (imap)
 import Data.Default (def)
 import Data.Unique (Unique, newUnique)
+import Foreign (nullPtr)
 import qualified GI.Gdk as Gdk
 import GI.Gdk
   ( AttrOp((:=))
@@ -59,6 +60,8 @@ import GI.Gtk
   , applicationNew
   , applicationSetAppMenu
   , applicationWindowNew
+  , builderAddCallbackSymbol
+  , builderConnectSignals
   , builderNewFromString
   , builderSetApplication
   , mainQuit
@@ -115,6 +118,29 @@ interfaceDoc =
             <child>
               <object class="GtkStack" id="stack">
                 <property name="visible">True</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkImage" id="image1">
+                <property name="visible">True</property>
+                <property name="stock">gtk-apply</property>
+                <property name="icon_size">4</property>
+                <property name="xalign">0.5</property>
+                <property name="yalign">0.5</property>
+                <property name="xpad">0</property>
+                <property name="ypad">0</property>
+              </object>
+              <packing>
+                <property name="padding">0</property>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="button1">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="relief">GTK_RELIEF_NORMAL</property>
               </object>
             </child>
           </object>
@@ -493,6 +519,10 @@ showAboutDialog app = do
   win <- #getActiveWindow app
   builder <- builderNewFromString aboutText $ fromIntegral (length aboutText)
   builderSetApplication builder app
+  -- NOTE: This does not actually work.  We will have to pull out the buttons and stuff
+  -- and connect the signals manually.
+  -- builderAddCallbackSymbol builder "onButtonPressed" (print "hello button pressed!!")
+  -- builderConnectSignals builder nullPtr
   aboutDialog <- objFromBuildUnsafe builder "aboutDialog" Dialog
   #setTransientFor aboutDialog (Just win)
   #present aboutDialog
