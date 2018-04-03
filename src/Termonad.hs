@@ -163,8 +163,8 @@ menuDoc =
           <attribute name="label" translatable="yes">_File</attribute>
           <section>
             <item>
-              <attribute name="label" translatable="yes">_Preferences</attribute>
-              <attribute name="action">app.preferences</attribute>
+              <attribute name="label" translatable="yes">New _Tab</attribute>
+              <attribute name="action">app.newtab</attribute>
             </item>
           </section>
           <section>
@@ -504,6 +504,11 @@ setupTermonad app win builder = do
   void $ Gdk.on aboutAction #activate (const $ showAboutDialog app)
   #addAction app aboutAction
 
+  newTabAction <- simpleActionNew "newtab" Nothing
+  void $ Gdk.on newTabAction #activate (\_ -> void $ createTerm terState)
+  #addAction app newTabAction
+  #setAccelsForAction app "app.newtab" ["<Shift><Ctrl>T"]
+
   quitAction <- simpleActionNew "quit" Nothing
   void $ Gdk.on quitAction #activate (\_ -> putStrLn "got quit!")
   #addAction app quitAction
@@ -519,6 +524,7 @@ setupTermonad app win builder = do
 
 appActivate :: Application -> IO ()
 appActivate app = do
+  putStrLn "called appActivate"
   uiBuilder <-
     builderNewFromString interfaceText $ fromIntegral (length interfaceText)
   builderSetApplication uiBuilder app
