@@ -356,10 +356,10 @@ keyMap =
           numKeys
   in
   mapFromList $
-    [ ( toKey KEY_T [ModifierTypeControlMask, ModifierTypeShiftMask]
-      , stopProp createTerm
-      )
-    ] <>
+    -- [ ( toKey KEY_T [ModifierTypeControlMask, ModifierTypeShiftMask]
+    --   , stopProp createTerm
+    --   )
+    -- ] <>
     altNumKeys
 
 altNumSwitchTerm :: Int -> TerState -> IO ()
