@@ -16,7 +16,6 @@ import Termonad.Prelude
 import Control.Lens (imap)
 import Data.Default (def)
 import Data.Unique (Unique, newUnique)
-import Foreign (nullPtr)
 import qualified GI.Gdk as Gdk
 import GI.Gdk
   ( AttrOp((:=))
