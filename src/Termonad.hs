@@ -519,10 +519,6 @@ showAboutDialog app = do
   win <- #getActiveWindow app
   builder <- builderNewFromString aboutText $ fromIntegral (length aboutText)
   builderSetApplication builder app
-  -- NOTE: This does not actually work.  We will have to pull out the buttons and stuff
-  -- and connect the signals manually.
-  -- builderAddCallbackSymbol builder "onButtonPressed" (print "hello button pressed!!")
-  -- builderConnectSignals builder nullPtr
   aboutDialog <- objFromBuildUnsafe builder "aboutDialog" Dialog
   #setTransientFor aboutDialog (Just win)
   #present aboutDialog
