@@ -524,20 +524,7 @@ showAboutDialog app = do
   #present aboutDialog
 
 appStartup :: Application -> IO ()
-appStartup app = do
-  aboutAction <- simpleActionNew "about" Nothing
-  void $ Gdk.on aboutAction #activate (const $ showAboutDialog app)
-  #addAction app aboutAction
-
-  quitAction <- simpleActionNew "quit" Nothing
-  void $ Gdk.on quitAction #activate (\_ -> putStrLn "got quit!")
-  #addAction app quitAction
-  #setAccelsForAction app "app.quit" ["<Shift><Ctrl>Q"]
-
-  menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
-  menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
-  -- applicationSetAppMenu app (Just menuModel)
-  #setMenubar app (Just menuModel)
+appStartup _app = putStrLn "called appStartup"
 
 defaultMain :: IO ()
 defaultMain = do
