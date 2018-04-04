@@ -279,6 +279,7 @@ data Note = Note
 
 data TMNotebookTab = TMNotebookTab
 
+-- TODO: Don't use type level stuff for this.
 data Tabs a = Tabs
   { tabsMap :: !(IntMap a)
   , tabsFocus :: {-# UNPACK #-} !Int
