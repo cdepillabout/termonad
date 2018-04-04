@@ -41,8 +41,10 @@ import GI.Gdk
 import GI.Gio
   ( ApplicationFlags(ApplicationFlagsFlagsNone)
   , MenuModel(MenuModel)
+  , actionMapAddAction
   , applicationRun
   , noCancellable
+  , onSimpleActionActivate
   , simpleActionNew
   )
 import GI.GLib.Flags (SpawnFlags(..))
@@ -53,17 +55,12 @@ import GI.Gtk
   , CssProvider(CssProvider)
   , Dialog(Dialog)
   , Notebook(Notebook)
-  , Orientation(..)
   , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , applicationNew
-  , applicationSetAppMenu
-  , applicationWindowNew
-  , builderAddCallbackSymbol
-  , builderConnectSignals
+  , applicationSetAccelsForAction
   , builderNewFromString
   , builderSetApplication
-  , mainQuit
   , noWidget
   , styleContextAddProviderForScreen
   )
@@ -167,6 +164,10 @@ menuDoc =
             </item>
           </section>
           <section>
+            <item>
+              <attribute name="label" translatable="yes">_Close Tab</attribute>
+              <attribute name="action">app.closetab</attribute>
+            </item>
             <item>
               <attribute name="label" translatable="yes">_Quit</attribute>
               <attribute name="action">app.quit</attribute>
@@ -276,7 +277,24 @@ data Note = Note
   , font :: FontDescription
   }
 
-type TerState = MVar Note
+data TMNotebookTab = TMNotebookTab
+
+data Tabs a = Tabs
+  { tabsMap :: !(IntMap a)
+  , tabsFocus :: {-# UNPACK #-} !Int
+  }
+
+data TMNotebook = TMNotebook
+  { tmNotebook :: !Notebook
+  , tmNotebookTabs :: !(Tabs TMNotebookTab)
+  }
+
+data TMState = TMState
+  { tmStateApp :: !Application
+  , tmStateAppWin :: !ApplicationWindow
+  , tmStateNotebook :: !TMNotebook
+  , tmStateFontDesc :: !FontDescription
+  }
 
 instance Eq Term where
   (==) :: Term -> Term -> Bool
@@ -500,18 +518,23 @@ setupTermonad app win builder = do
   terminal <- createTerm terState
 
   aboutAction <- simpleActionNew "about" Nothing
-  void $ Gdk.on aboutAction #activate (const $ showAboutDialog app)
-  #addAction app aboutAction
+  void $ onSimpleActionActivate aboutAction (const $ showAboutDialog app)
+  applicationSddAction app aboutAction
 
   newTabAction <- simpleActionNew "newtab" Nothing
-  void $ Gdk.on newTabAction #activate (\_ -> void $ createTerm terState)
-  #addAction app newTabAction
-  #setAccelsForAction app "app.newtab" ["<Shift><Ctrl>T"]
+  void $ onSimpleActionActivate newTabAction (\_ -> void $ createTerm terState)
+  actionMapAddAction app newTabAction
+  applicationSetAccelsForAction app "app.newtab" ["<Shift><Ctrl>T"]
+
+  closeTabAction <- simpleActionNew "closetab" Nothing
+  void $ onSimpleActionActivate closeTabAction (\_ -> putStrLn "got close tab!")
+  actionMapAddAction app closeTabAction
+  applicationSetAccelsForAction app "app.closetab" ["<Shift><Ctrl>W"]
 
   quitAction <- simpleActionNew "quit" Nothing
-  void $ Gdk.on quitAction #activate (\_ -> putStrLn "got quit!")
-  #addAction app quitAction
-  #setAccelsForAction app "app.quit" ["<Shift><Ctrl>Q"]
+  void $ onSimpleActionActivate quitAction (\_ -> putStrLn "got quit!")
+  actionMapAddAction app quitAction
+  applicationSetAccelsForAction app "app.quit" ["<Shift><Ctrl>Q"]
 
   menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
   menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
