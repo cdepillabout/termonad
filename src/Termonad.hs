@@ -279,7 +279,9 @@ data Note = Note
 
 data TMNotebookTab = TMNotebookTab
 
--- TODO: Don't use type level stuff for this.
+-- TODO: Use type level stuff for this!
+-- Might be better implemented as an Order statistic tree
+-- (https://en.wikipedia.org/wiki/Order_statistic_tree).
 data FocusedList a = FocusedList
   { focusedListMap :: !(IntMap a)
   , focusedListFocus :: {-# UNPACK #-} !Int
