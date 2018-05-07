@@ -258,42 +258,32 @@ aboutDoc =
 aboutText :: Text
 aboutText = toStrict $ renderText def aboutDoc
 
-data Term = Term
+data TMTerm = TMTerm
   { term :: Terminal
   , unique :: Unique
   }
 
-data Note = Note
-  { notebook :: Notebook
-  , children :: [Term]
-  , font :: FontDescription
-  }
-
 data TMNotebookTab = TMNotebookTab
-
--- TODO: Use type level stuff for this!
--- Might be better implemented as an Order statistic tree
--- (https://en.wikipedia.org/wiki/Order_statistic_tree).
-data FocusedList a = FocusedList
-  { focusedListMap :: !(IntMap a)
-  , focusedListFocus :: {-# UNPACK #-} !Int
+  {
   }
 
 data TMNotebook = TMNotebook
   { tmNotebook :: !Notebook
-  , tmNotebookTabs :: !(Tabs TMNotebookTab)
+  , tmNotebookTabs :: !(FocusedList TMNotebookTab)
   }
 
-data TMState = TMState
+data TMState' = TMState
   { tmStateApp :: !Application
   , tmStateAppWin :: !ApplicationWindow
   , tmStateNotebook :: !TMNotebook
   , tmStateFontDesc :: !FontDescription
   }
 
-instance Eq Term where
-  (==) :: Term -> Term -> Bool
-  (==) = ((==) :: Unique -> Unique -> Bool) `on` (unique :: Term -> Unique)
+type TMState = MVar TMState'
+
+instance Eq TMTerm where
+  (==) :: TMTerm -> TMTerm -> Bool
+  (==) = (==) `on` (unique :: TMTerm -> Unique)
 
 showKeys :: EventKey -> IO Bool
 showKeys eventKey = do
