@@ -5,3 +5,4 @@ module Termonad.Prelude
   ) where
 
 import ClassyPrelude as X
+import Data.Proxy as X

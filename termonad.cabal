@@ -21,6 +21,7 @@ library
                      , Termonad.Prelude
   build-depends:       base >= 4.7 && < 5
                      , classy-prelude
+                     , constraints
                      , data-default
                      , finite-typelits
                      , gi-gdk
@@ -47,6 +48,9 @@ library
                      , PatternSynonyms
                      , RecordWildCards
                      , ScopedTypeVariables
+                     , TypeApplications
+                     , TypeFamilies
+                     , TypeOperators
   other-extensions:    TemplateHaskell
 
 executable termonad
