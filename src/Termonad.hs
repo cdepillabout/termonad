@@ -68,6 +68,8 @@ import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal))
 import Text.XML (renderText)
 import Text.XML.QQ (Document, xmlRaw)
 
+import Termonad.FocusedList
+
 -- TODO: A number of widgets have different places where a child can be added
 -- (e.g. tabs vs. page content in notebooks). This can be reflected in a UI
 -- definition by specifying the “type” attribute on a <child> The possible
@@ -264,7 +266,8 @@ data TMTerm = TMTerm
   }
 
 data TMNotebookTab = TMNotebookTab
-  {
+  { tmNotebookTabTermContainer :: ScrolledWindow
+  , tmNotebookTabTerm :: TMTerm
   }
 
 data TMNotebook = TMNotebook
@@ -307,8 +310,8 @@ showKeys eventKey = do
 
   pure True
 
-removeTerm :: [Term] -> Term -> [Term]
-removeTerm terms terminal = delete terminal terms
+-- removeTerm :: [Term] -> Term -> [Term]
+-- removeTerm terms terminal = delete terminal terms
 
 objFromBuildUnsafe ::
      GObject o => Gtk.Builder -> Text -> (ManagedPtr o -> o) -> IO o
