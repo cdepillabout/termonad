@@ -17,8 +17,14 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Termonad
+                     , Termonad.App
                      , Termonad.FocusedList
+                     , Termonad.Gtk
+                     , Termonad.Keys
                      , Termonad.Prelude
+                     , Termonad.Term
+                     , Termonad.Types
+                     , Termonad.XML
   build-depends:       base >= 4.7 && < 5
                      , classy-prelude
                      , constraints
