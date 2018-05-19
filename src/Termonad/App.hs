@@ -1,8 +1,75 @@
 
 module Termonad.App where
 
-setupTermonad :: Application -> ApplicationWindow -> Gtk.Builder -> IO ()
-setupTermonad app win builder = do
+import Termonad.Prelude
+
+import Control.Lens (imap)
+import Data.Default (def)
+import Data.Unique (Unique, newUnique)
+import qualified GI.Gdk as Gdk
+import GI.Gdk
+  ( AttrOp((:=))
+  , EventKey
+  , GObject
+  , pattern KEY_1
+  , pattern KEY_2
+  , pattern KEY_3
+  , pattern KEY_4
+  , pattern KEY_5
+  , pattern KEY_6
+  , pattern KEY_7
+  , pattern KEY_8
+  , pattern KEY_9
+  , pattern KEY_T
+  , ManagedPtr
+  , ModifierType(..)
+  , castTo
+  , get
+  , new
+  , screenGetDefault
+  )
+import GI.Gio
+  ( ApplicationFlags(ApplicationFlagsFlagsNone)
+  , MenuModel(MenuModel)
+  , actionMapAddAction
+  , applicationRun
+  , noCancellable
+  , onSimpleActionActivate
+  , simpleActionNew
+  )
+import GI.GLib.Flags (SpawnFlags(..))
+import GI.Gtk
+  ( Application
+  , ApplicationWindow(ApplicationWindow)
+  , Box(Box)
+  , CssProvider(CssProvider)
+  , Dialog(Dialog)
+  , Notebook(Notebook)
+  , ScrolledWindow(ScrolledWindow)
+  , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
+  , applicationNew
+  , applicationSetAccelsForAction
+  , builderNewFromString
+  , builderSetApplication
+  , noWidget
+  , styleContextAddProviderForScreen
+  )
+import qualified GI.Gtk as Gtk
+import GI.Pango
+  ( FontDescription
+  , pattern SCALE
+  , fontDescriptionNew
+  , fontDescriptionSetFamily
+  , fontDescriptionSetSize
+  )
+import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal))
+import Text.XML (renderText)
+import Text.XML.QQ (Document, xmlRaw)
+
+import Termonad.XML
+
+setupScreenStyle :: IO ()
+setupScreenStyle = do
   maybeScreen <- screenGetDefault
   case maybeScreen of
     Nothing -> pure ()
@@ -41,26 +108,29 @@ setupTermonad app win builder = do
         cssProvider
         (fromIntegral STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-  void $ Gdk.on win #destroy (#quit app)
-
-
-  box <- objFromBuildUnsafe builder "content_box" Box
-
+createFontDesc :: IO FontDescription
+createFontDesc = do
   fontDesc <- fontDescriptionNew
   fontDescriptionSetFamily fontDesc "DejaVu Sans Mono"
   -- fontDescriptionSetFamily font "Source Code Pro"
   fontDescriptionSetSize fontDesc (16 * SCALE)
 
+setupTermonad :: Application -> ApplicationWindow -> Gtk.Builder -> IO ()
+setupTermonad app win builder = do
+  void $ Gdk.on win #destroy (#quit app)
+  setupScreenStyle
+  box <- objFromBuildUnsafe builder "content_box" Box
+  fontDesc <- createFontDesc
   note <- new Notebook [#canFocus := False]
   #packStart box note True True 0
 
-  terState <-
-    newMVar $
-      Note
-        { notebook = note
-        , children = []
-        , font = fontDesc
-        }
+  -- terState <-
+  --   newMVar $
+  --     Note
+  --       { notebook = note
+  --       , children = []
+  --       , font = fontDesc
+  --       }
 
   void $ Gdk.on note #pageRemoved $ \_ _ -> do
     pages <- #getNPages note

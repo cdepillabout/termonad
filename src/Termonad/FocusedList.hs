@@ -13,7 +13,11 @@ import GHC.TypeLits (type (+), type (<=), KnownNat, Nat, natVal)
 -- implemented as an Order statistic tree
 -- (https://en.wikipedia.org/wiki/Order_statistic_tree).
 data FocusedList :: Nat -> * -> * where
-  FocusedList :: KnownNat n => Finite n -> IntMap a -> FocusedList n a
+  FocusedList
+    :: KnownNat n
+    => Finite n
+    -> IntMap a
+    -> FocusedList n a
 
 singletonFL :: a -> FocusedList 1 a
 singletonFL a = FocusedList (finite 0) (singletonMap 0 a)
