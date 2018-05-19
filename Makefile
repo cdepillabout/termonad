@@ -64,7 +64,7 @@ hlint:
 #
 # In order to run this, you need to have run `make build-haddock`.
 haddock-server:
-	cd "$$(stack path --local-doc-root)" && python -m http.server 8001
+	cd "$$(stack path --local-doc-root)" && (python -m http.server 8001 || python3 -m http.server 8001)
 
 # Upload this package to hackage.
 upload:
