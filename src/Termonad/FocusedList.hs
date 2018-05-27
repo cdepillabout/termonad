@@ -51,7 +51,7 @@ appendFL :: a -> FocusList a -> FocusList a
 appendFL a fl =
   fl &
     focusListLenLens +~ 1 &
-    focusListAtLens (fl ^. focusListLenLens) .~ Just a
+    focusListAtLens (fl ^. focusListLenLens) ?~ a
 
 insertFL :: Int -> FocusList a -> Maybe (FocusList a)
 insertFL i fl = undefined
