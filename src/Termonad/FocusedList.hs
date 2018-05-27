@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Termonad.FocusedList where
+module Termonad.FocusList where
 
 import Termonad.Prelude
 
@@ -22,47 +22,47 @@ newtype Focus = Focus
 -- TODO: Probably be better
 -- implemented as an Order statistic tree
 -- (https://en.wikipedia.org/wiki/Order_statistic_tree).
-data FocusedList a = FocusedList
-  { focusedListFocus :: {-# UNPACK #-} !Focus
-  , focusedListLen :: {-# UNPACK #-} !Int
-  , focusedList :: !(IntMap a)
+data FocusList a = FocusList
+  { focusListFocus :: {-# UNPACK #-} !Focus
+  , focusListLen :: {-# UNPACK #-} !Int
+  , focusList :: !(IntMap a)
   } deriving (Read, Show)
 
 $(makeLensesFor
-    [ ("focusedListFocus", "focusedListFocusLens")
-    , ("focusedListLen", "focusedListLenLens")
-    , ("focusedList", "focusedListLens")
+    [ ("focusListFocus", "focusListFocusLens")
+    , ("focusListLen", "focusListLenLens")
+    , ("focusList", "focusListLens")
     ]
-    ''FocusedList
+    ''FocusList
  )
 
-focusedListAtLens :: Int -> Lens' (FocusedList a) (Maybe a)
-focusedListAtLens i = focusedListLens . at i
+focusListAtLens :: Int -> Lens' (FocusList a) (Maybe a)
+focusListAtLens i = focusListLens . at i
 
-singletonFL :: a -> FocusedList a
+singletonFL :: a -> FocusList a
 singletonFL a =
-  FocusedList
-    { focusedListFocus = 0
-    , focusedListLen = 1
-    , focusedList = singletonMap 0 a
+  FocusList
+    { focusListFocus = 0
+    , focusListLen = 1
+    , focusList = singletonMap 0 a
     }
 
-appendFL :: a -> FocusedList a -> FocusedList a
+appendFL :: a -> FocusList a -> FocusList a
 appendFL a fl =
   fl &
-    focusedListLenLens +~ 1 &
-    focusedListAtLens (fl ^. focusedListLenLens) .~ Just a
+    focusListLenLens +~ 1 &
+    focusListAtLens (fl ^. focusListLenLens) .~ Just a
 
-insertFL :: Int -> FocusedList a -> Maybe (FocusedList a)
+insertFL :: Int -> FocusList a -> Maybe (FocusList a)
 insertFL i fl = undefined
 
--- -- | This will return a 'FocusedList' with an empty element at index @m@.
+-- -- | This will return a 'FocusList' with an empty element at index @m@.
 -- unsafeShiftUpFrom ::
 --      forall proxy m n a. (KnownNat m, KnownNat n, m <= n, 1 <= n)
 --   => proxy m
---   -> FocusedList n a
---   -> FocusedList (n + 1) a
--- unsafeShiftUpFrom _ (FocusedList fin intmap) =
+--   -> FocusList n a
+--   -> FocusList (n + 1) a
+-- unsafeShiftUpFrom _ (FocusList fin intmap) =
 --   let newFin =
 --         if getFiniteInt fin < natValInt @m
 --           then weaken fin
@@ -70,7 +70,7 @@ insertFL i fl = undefined
 --       newMap = unsafeShiftMapUp (natValInt @n - 1) (natValInt @m - 1) intmap
 --   in
 --   case plusNat @n @1 of
---     Sub Dict -> FocusedList newFin newMap
+--     Sub Dict -> FocusList newFin newMap
 
 -- unsafeLookup :: Int -> IntMap a -> a
 -- unsafeLookup i intmap =
@@ -90,19 +90,19 @@ insertFL i fl = undefined
 --      forall proxy m n a. (KnownNat m, KnownNat n, m <= n)
 --   => proxy m
 --   -> a
---   -> FocusedList n a
---   -> FocusedList (n + 1) a
--- insertFL _ a FocusedListEmpty = singletonFL a
--- insertFL proxyM a focusedList@(FocusedList fin _) =
+--   -> FocusList n a
+--   -> FocusList (n + 1) a
+-- insertFL _ a FocusListEmpty = singletonFL a
+-- insertFL proxyM a focusList@(FocusList fin _) =
 --   case lala fin of
 --     Refl ->
---       case unsafeShiftUpFrom proxyM focusedList of
---         FocusedListEmpty -> absurd $ gaga (Proxy @n)
---         FocusedList newFin intmap ->
+--       case unsafeShiftUpFrom proxyM focusList of
+--         FocusListEmpty -> absurd $ gaga (Proxy @n)
+--         FocusList newFin intmap ->
 --           let newMap = insertMap (natValInt @m) a intmap
 --           in
 --           case plusNat @n @1 of
---             Sub Dict -> FocusedList newFin newMap
+--             Sub Dict -> FocusList newFin newMap
 
 -- natValInt :: forall m. KnownNat m => Int
 -- natValInt = fromIntegral $ natVal (Proxy @m)
