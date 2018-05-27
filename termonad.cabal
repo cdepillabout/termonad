@@ -45,6 +45,7 @@ library
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
   default-extensions:  DataKinds
                      , GADTs
+                     , GeneralizedNewtypeDeriving
                      , InstanceSigs
                      , KindSignatures
                      , NoImplicitPrelude
@@ -52,6 +53,7 @@ library
                      , OverloadedLabels
                      , OverloadedLists
                      , PatternSynonyms
+                     , RankNTypes
                      , RecordWildCards
                      , ScopedTypeVariables
                      , TypeApplications
