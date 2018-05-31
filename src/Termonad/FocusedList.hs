@@ -19,6 +19,8 @@ newtype Focus = Focus
   { unFocus :: Int
   } deriving newtype (Eq, Num, Read, Show)
 
+-- TODO: Might want to deal with having an empty focus list??
+
 -- TODO: Probably be better
 -- implemented as an Order statistic tree
 -- (https://en.wikipedia.org/wiki/Order_statistic_tree).
@@ -71,7 +73,7 @@ unsafeInsertNewFL i a fl =
 -- 'Focus' of the 'FocusList' if it has been shifted.
 --
 -- It does not check that the 'Int' is greater than 0.
-unsafeShiftUpFrom :: forall a. Show a => Int -> FocusList a -> FocusList a
+unsafeShiftUpFrom :: forall a. Int -> FocusList a -> FocusList a
 unsafeShiftUpFrom i fl =
   let intMap = fl ^. lensFocusList
       lastElemIdx = (fl ^. lensFocusListLen) - 1
@@ -82,7 +84,7 @@ unsafeShiftUpFrom i fl =
     lensFocusList .~ newIntMap &
     lensFocusListFocus .~ if i > lastElemIdx then oldFocus else oldFocus + 1
   where
-    go :: Show a => Int -> Int -> IntMap a -> IntMap a
+    go :: Int -> Int -> IntMap a -> IntMap a
     go idxToInsert idxToShiftUp intMap
       | idxToInsert <= idxToShiftUp =
         let val = unsafeLookup idxToShiftUp intMap
@@ -99,7 +101,7 @@ unsafeLookup i intmap =
     Nothing -> error $ "unsafeLookup: key " <> show i <> " not found in intmap"
     Just a -> a
 
-insertFL :: Show a => Int -> a -> FocusList a -> Maybe (FocusList a)
+insertFL :: Int -> a -> FocusList a -> Maybe (FocusList a)
 insertFL i a fl =
   if i < 0 || i > (fl ^. lensFocusListLen)
     then
@@ -111,51 +113,11 @@ insertFL i a fl =
       let shiftedUpFL = unsafeShiftUpFrom i fl
       in Just $ unsafeInsertNewFL i a shiftedUpFL
 
--- -- | This will return a 'FocusList' with an empty element at index @m@.
--- unsafeShiftUpFrom ::
---      forall proxy m n a. (KnownNat m, KnownNat n, m <= n, 1 <= n)
---   => proxy m
---   -> FocusList n a
---   -> FocusList (n + 1) a
--- unsafeShiftUpFrom _ (FocusList fin intmap) =
---   let newFin =
---         if getFiniteInt fin < natValInt @m
---           then weaken fin
---           else shift fin
---       newMap = unsafeShiftMapUp (natValInt @n - 1) (natValInt @m - 1) intmap
---   in
---   case plusNat @n @1 of
---     Sub Dict -> FocusList newFin newMap
-
-
--- unsafeShiftMapUp :: Int -> Int -> IntMap a -> IntMap a
--- unsafeShiftMapUp start end intmap
---   | start > end =
---       let val = unsafeLookup start intmap
---           newMap = insertMap (start + 1) val (deleteMap start intmap)
---       in unsafeShiftMapUp (start - 1) end newMap
---   | otherwise = intmap
-
--- insertFL ::
---      forall proxy m n a. (KnownNat m, KnownNat n, m <= n)
---   => proxy m
---   -> a
---   -> FocusList n a
---   -> FocusList (n + 1) a
--- insertFL _ a FocusListEmpty = singletonFL a
--- insertFL proxyM a focusList@(FocusList fin _) =
---   case lala fin of
---     Refl ->
---       case unsafeShiftUpFrom proxyM focusList of
---         FocusListEmpty -> absurd $ gaga (Proxy @n)
---         FocusList newFin intmap ->
---           let newMap = insertMap (natValInt @m) a intmap
---           in
---           case plusNat @n @1 of
---             Sub Dict -> FocusList newFin newMap
-
--- natValInt :: forall m. KnownNat m => Int
--- natValInt = fromIntegral $ natVal (Proxy @m)
-
--- getFiniteInt :: Finite n -> Int
--- getFiniteInt = fromIntegral . getFinite
+-- | Remove an element from a 'FocusList'.
+removeFL
+  :: Int -- ^ Index of the element to remove from the 'FocusList'.
+  -> FocusList a  -- ^ The 'FocusList' to remove an element from.
+  -> (Focus -> FocusList a -> Focus) -- ^ An function to use to update the
+                                     -- 'Focus' of the 'FocusList'.
+  -> Maybe (FocusList a)
+removeFL = undefined
