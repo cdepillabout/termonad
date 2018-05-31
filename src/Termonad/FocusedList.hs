@@ -6,20 +6,8 @@ module Termonad.FocusList where
 import Termonad.Prelude
 
 import Control.Lens
-import Control.Lens.TH
-import Data.Constraint ((:-)(Sub), Dict(Dict))
-import Data.Constraint.Nat (plusNat)
-import Data.Finite (Finite, finite, getFinite, shift, weaken)
-import Data.Type.Equality ((:~:)(Refl))
-import Data.Void
-import GHC.TypeLits (type (+), type (<=), type (<=?), KnownNat, Nat, natVal)
-import Unsafe.Coerce (unsafeCoerce)
 
-newtype Focus = Focus
-  { unFocus :: Int
-  } deriving newtype (Eq, Num, Read, Show)
-
--- TODO: Might want to deal with having an empty focus list??
+data Focus = Focus Int | NoFocus deriving (Eq, Read, Show)
 
 -- TODO: Probably be better
 -- implemented as an Order statistic tree
@@ -44,7 +32,7 @@ lensFocusListAt i = lensFocusList . at i
 singletonFL :: a -> FocusList a
 singletonFL a =
   FocusList
-    { focusListFocus = 0
+    { focusListFocus = Focus 1
     , focusListLen = 1
     , focusList = singletonMap 0 a
     }
@@ -56,6 +44,19 @@ invariantFL fl = False
 -- | Append a new value to the end of a 'FocusList'.
 appendFL :: a -> FocusList a -> FocusList a
 appendFL a fl = unsafeInsertNewFL (fl ^. lensFocusListLen) a fl
+
+-- | Unsafely get the value in a 'Focus' from a 'FocusList'.  If the 'Focus' is
+-- 'NoFocus', this function returns 'error'.
+unsafeGetFocus :: FocusList a -> Int
+unsafeGetFocus fl =
+  let focus = fl ^. lensFocusListFocus
+  in
+  case focus of
+    NoFocus ->
+      error $
+        "unsafeGetFocus: the focus list doesn't have a focus: " <> show focus
+    Focus i -> i
+
 
 -- | Unsafely insert a new @a@ in a 'FocusList'.  This sets the 'Int' value to
 -- @a@.  The length of the 'FocusList' will be increased by 1.  The
@@ -72,17 +73,22 @@ unsafeInsertNewFL i a fl =
 -- | This unsafely shifts all values up in a 'FocusList'.  It also updates the
 -- 'Focus' of the 'FocusList' if it has been shifted.
 --
--- It does not check that the 'Int' is greater than 0.
+-- It does not check that the 'Int' is greater than 0.  It also does not check
+-- that there is a 'Focus'.
 unsafeShiftUpFrom :: forall a. Int -> FocusList a -> FocusList a
 unsafeShiftUpFrom i fl =
   let intMap = fl ^. lensFocusList
       lastElemIdx = (fl ^. lensFocusListLen) - 1
       newIntMap = go i lastElemIdx intMap
-      oldFocus = fl ^. lensFocusListFocus
+      oldFocus = unsafeGetFocus fl
+      newFocus =
+        if i > lastElemIdx
+          then oldFocus
+          else oldFocus + 1
   in
   fl &
     lensFocusList .~ newIntMap &
-    lensFocusListFocus .~ if i > lastElemIdx then oldFocus else oldFocus + 1
+    lensFocusListFocus .~ Focus newFocus
   where
     go :: Int -> Int -> IntMap a -> IntMap a
     go idxToInsert idxToShiftUp intMap
