@@ -29,6 +29,10 @@ $(makeLensesFor
 lensFocusListAt :: Int -> Lens' (FocusList a) (Maybe a)
 lensFocusListAt i = lensFocusList . at i
 
+-- | This is an invariant that the 'FocusList' must always protect.
+invariantFL :: FocusList a -> Bool
+invariantFL fl = False
+
 singletonFL :: a -> FocusList a
 singletonFL a =
   FocusList
@@ -37,13 +41,27 @@ singletonFL a =
     , focusList = singletonMap 0 a
     }
 
--- | This is an invariant that the 'FocusList' must always protect.
-invariantFL :: FocusList a -> Bool
-invariantFL fl = False
+-- | Return 'True' if the 'FocusList' is empty.
+isEmptyFL :: FocusList a -> Bool
+isEmptyFL fl = fl ^. lensFocusListLen == 0
 
--- | Append a new value to the end of a 'FocusList'.
-appendFL :: a -> FocusList a -> FocusList a
-appendFL a fl = unsafeInsertNewFL (fl ^. lensFocusListLen) a fl
+-- | Append a value to the end of a 'FocusList'.
+--
+-- This can be thought of as a \"snoc\" operation.
+appendFL :: FocusList a -> a -> FocusList a
+appendFL fl a =
+  if isEmptyFL fl
+    then singletonFL a
+    else unsafeInsertNewFL (fl ^. lensFocusListLen) a fl
+
+-- | Prepend a value to a 'FocusList'.
+--
+-- This can be thought of as a \"cons\" operation.
+prependFL :: a -> FocusList a -> FocusList a
+prependFL a fl =
+  if isEmptyFL fl
+    then singletonFL a
+    else unsafeInsertNewFL 0 a $ unsafeShiftUpFrom 0 fl
 
 -- | Unsafely get the value in a 'Focus' from a 'FocusList'.  If the 'Focus' is
 -- 'NoFocus', this function returns 'error'.
@@ -56,7 +74,6 @@ unsafeGetFocus fl =
       error $
         "unsafeGetFocus: the focus list doesn't have a focus: " <> show focus
     Focus i -> i
-
 
 -- | Unsafely insert a new @a@ in a 'FocusList'.  This sets the 'Int' value to
 -- @a@.  The length of the 'FocusList' will be increased by 1.  The
@@ -71,7 +88,8 @@ unsafeInsertNewFL i a fl =
     lensFocusListAt i ?~ a
 
 -- | This unsafely shifts all values up in a 'FocusList'.  It also updates the
--- 'Focus' of the 'FocusList' if it has been shifted.
+-- 'Focus' of the 'FocusList' if it has been shifted.  This does not change
+-- the length of the 'FocusList'.
 --
 -- It does not check that the 'Int' is greater than 0.  It also does not check
 -- that there is a 'Focus'.
@@ -107,7 +125,16 @@ unsafeLookup i intmap =
     Nothing -> error $ "unsafeLookup: key " <> show i <> " not found in intmap"
     Just a -> a
 
-insertFL :: Int -> a -> FocusList a -> Maybe (FocusList a)
+-- | Insert a new value into the 'FocusList'.  The 'Focus' of the list is
+-- changed appropriately.
+--
+-- This returns 'Nothing' if the index at which to insert the new value is
+-- either less than 0 or greater than the length of the list.
+insertFL
+  :: Int  -- ^ The index at which to insert the value.
+  -> a
+  -> FocusList a
+  -> Maybe (FocusList a)
 insertFL i a fl =
   if i < 0 || i > (fl ^. lensFocusListLen)
     then
@@ -120,10 +147,39 @@ insertFL i a fl =
       in Just $ unsafeInsertNewFL i a shiftedUpFL
 
 -- | Remove an element from a 'FocusList'.
+--
+-- If the element to remove is not the 'Focus', then update the 'Focus'
+-- accordingly.  (For example, if the 'Focus' is on index 3, and we have
+-- removed index 5, then the focus is not affected, so it is not changed.  If
+-- the 'Focus' is on index 9 and we have removed index 6, then the 'Focus' will
+-- be set to 8.)
+--
+-- If the element to remove is the only element in the list, then the 'Focus'
+-- will be set to 'NoFocus'.
+--
+-- If the element to remove is the 'Focus', then use the function passed in to
+-- compute the new 'Focus'.  This lets the use decide which element should get
+-- the new focus.  Keep in mind that if the old 'Focus' was index 8, and the
+-- function returns the new 'Focus' as index 8, then effectively the element
+-- AFTER the element that was removed will have the focus.
+--
+-- If the 'Int' for the index to remove is either less than 0 or greater then
+-- the length of the list, then 'Nothing' is returned.  If the 'FocusList'
+-- passed in is 'Empty', then 'Nothing' is returned.  If the 'Int' returned
+-- by the update function is less than 0 or greater than the length of the new
+-- list, then 'Nothing' is returned.
 removeFL
-  :: Int -- ^ Index of the element to remove from the 'FocusList'.
+  :: Int          -- ^ Index of the element to remove from the 'FocusList'.
   -> FocusList a  -- ^ The 'FocusList' to remove an element from.
-  -> (Focus -> FocusList a -> Focus) -- ^ An function to use to update the
-                                     -- 'Focus' of the 'FocusList'.
+  -> (Int -> Int) -- ^ A function to use to update the
+                  -- 'Focus' of the 'FocusList'.  This function is only used if
+                  -- the index to remove from the 'FocusList' is the current
+                  -- 'Focus'.
   -> Maybe (FocusList a)
-removeFL = undefined
+removeFL i fl updateFocus =
+  if i < 0 || i >= (fl ^. lensFocusListLen) || isEmptyFL fl
+    then
+      -- Return Nothing if the removal position is out of bounds.
+      Nothing
+    else
+      undefined
