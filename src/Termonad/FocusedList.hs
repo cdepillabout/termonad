@@ -26,8 +26,18 @@ $(makeLensesFor
     ''FocusList
  )
 
+foldFocus :: b -> (Int -> b) -> Focus -> b
+foldFocus b _ NoFocus = b
+foldFocus _ f (Focus i) = f i
+
 lensFocusListAt :: Int -> Lens' (FocusList a) (Maybe a)
 lensFocusListAt i = lensFocusList . at i
+
+_Focus :: Prism' Focus Int
+_Focus = prism' Focus (foldFocus Nothing Just)
+
+_NoFocus :: Prism' Focus ()
+_NoFocus = prism' (const NoFocus) (foldFocus (Just ()) (const Nothing))
 
 -- | This is an invariant that the 'FocusList' must always protect.
 invariantFL :: FocusList a -> Bool
@@ -39,6 +49,14 @@ singletonFL a =
     { focusListFocus = Focus 1
     , focusListLen = 1
     , focusList = singletonMap 0 a
+    }
+
+emptyFL :: FocusList a
+emptyFL =
+  FocusList
+    { focusListFocus = NoFocus
+    , focusListLen = 0
+    , focusList = mempty
     }
 
 -- | Return 'True' if the 'FocusList' is empty.
@@ -63,16 +81,18 @@ prependFL a fl =
     then singletonFL a
     else unsafeInsertNewFL 0 a $ unsafeShiftUpFrom 0 fl
 
+unsafeGetFocus :: Focus -> Int
+unsafeGetFocus NoFocus = error "unsafeGetFocus: NoFocus"
+unsafeGetFocus (Focus i) = i
+
 -- | Unsafely get the value in a 'Focus' from a 'FocusList'.  If the 'Focus' is
 -- 'NoFocus', this function returns 'error'.
-unsafeGetFocus :: FocusList a -> Int
-unsafeGetFocus fl =
+unsafeGetFLFocus :: FocusList a -> Int
+unsafeGetFLFocus fl =
   let focus = fl ^. lensFocusListFocus
   in
   case focus of
-    NoFocus ->
-      error $
-        "unsafeGetFocus: the focus list doesn't have a focus: " <> show focus
+    NoFocus -> error "unsafeGetFLFocus: the focus list doesn't have a focus"
     Focus i -> i
 
 -- | Unsafely insert a new @a@ in a 'FocusList'.  This sets the 'Int' value to
@@ -98,7 +118,7 @@ unsafeShiftUpFrom i fl =
   let intMap = fl ^. lensFocusList
       lastElemIdx = (fl ^. lensFocusListLen) - 1
       newIntMap = go i lastElemIdx intMap
-      oldFocus = unsafeGetFocus fl
+      oldFocus = unsafeGetFLFocus fl
       newFocus =
         if i > lastElemIdx
           then oldFocus
@@ -146,6 +166,38 @@ insertFL i a fl =
       let shiftedUpFL = unsafeShiftUpFrom i fl
       in Just $ unsafeInsertNewFL i a shiftedUpFL
 
+-- | Unsafely remove a value from a 'FocusList'.  It effectively leaves a hole
+-- inside the 'FocusList'.
+--
+-- This function does not check that a value actually exists in the
+-- 'FocusList'.  It also does not update the 'Focus'.
+--
+-- This function does update the length of the 'FocusList'.
+unsafeRemove
+  :: Int
+  -> FocusList a
+  -> FocusList a
+unsafeRemove i fl =
+  fl &
+    lensFocusListLen -~ 1 &
+    lensFocusListAt i .~ Nothing
+
+unsafeShiftDownFrom :: forall a. Int -> FocusList a -> FocusList a
+unsafeShiftDownFrom i fl =
+  let intMap = fl ^. lensFocusList
+      len = fl ^. lensFocusListLen
+      newIntMap = go (i + 1) len intMap
+  in fl & lensFocusList .~ newIntMap
+  where
+    go :: Int -> Int -> IntMap a -> IntMap a
+    go idxToShiftDown len intMap
+      | idxToShiftDown < len =
+        let val = unsafeLookup idxToShiftDown intMap
+            newMap =
+              insertMap (idxToShiftDown - 1) val (deleteMap idxToShiftDown intMap)
+        in go (idxToShiftDown + 1) len newMap
+      | otherwise = intMap
+
 -- | Remove an element from a 'FocusList'.
 --
 -- If the element to remove is not the 'Focus', then update the 'Focus'
@@ -157,8 +209,8 @@ insertFL i a fl =
 -- If the element to remove is the only element in the list, then the 'Focus'
 -- will be set to 'NoFocus'.
 --
--- If the element to remove is the 'Focus', then use the function passed in to
--- compute the new 'Focus'.  This lets the use decide which element should get
+-- If the element to remove is the 'Focus', then use the value passed in as
+-- new 'Focus'.  This lets the use decide which element should get
 -- the new focus.  Keep in mind that if the old 'Focus' was index 8, and the
 -- function returns the new 'Focus' as index 8, then effectively the element
 -- AFTER the element that was removed will have the focus.
@@ -171,15 +223,42 @@ insertFL i a fl =
 removeFL
   :: Int          -- ^ Index of the element to remove from the 'FocusList'.
   -> FocusList a  -- ^ The 'FocusList' to remove an element from.
-  -> (Int -> Int) -- ^ A function to use to update the
-                  -- 'Focus' of the 'FocusList'.  This function is only used if
-                  -- the index to remove from the 'FocusList' is the current
-                  -- 'Focus'.
+  -> Int          -- ^ The new 'Focus' of the 'FocusList'.
+                  -- This value is only used if the index to remove from the
+                  -- 'FocusList' is the current 'Focus'.
   -> Maybe (FocusList a)
-removeFL i fl updateFocus =
-  if i < 0 || i >= (fl ^. lensFocusListLen) || isEmptyFL fl
-    then
-      -- Return Nothing if the removal position is out of bounds.
-      Nothing
-    else
-      undefined
+removeFL i fl newFocus
+  | i < 0 || i >= (fl ^. lensFocusListLen) || isEmptyFL fl =
+    -- Return Nothing if the removal position is out of bounds.
+    Nothing
+  | fl ^. lensFocusListLen == 1 =
+    -- Return an empty focus list if there is currently only one element
+    Just emptyFL
+  | otherwise =
+    let newFLWithHole = unsafeRemove i fl
+        newFL = unsafeShiftDownFrom i newFLWithHole
+    in
+    if Focus i == fl ^. lensFocusListFocus
+      then
+        if newFocus < 0 || newFocus >= (newFL ^. lensFocusListLen)
+          then
+            -- If we removed the old 'Focus', and the new 'Focus' is
+            -- out of bounds, return 'Nothing'.
+            Nothing
+          else
+            -- If we removed the old 'Focus', and the new 'Focus' is
+            -- within the bounds of the new 'FocusList', then
+            -- return the new 'FocusList' with an updated 'Focus'.
+            Just $ newFL & lensFocusListFocus .~ Focus newFocus
+      else
+        if unsafeGetFocus (fl ^. lensFocusListFocus) > i
+          then
+            -- If we have removed an element that is less than the current
+            -- focus, then we need to decrement the focus by 1.
+            Just $ newFL & lensFocusListFocus . _Focus -~ 1
+          else
+            -- If we have removed an element that is greater than the current
+            -- focus, then we don't need to update the focus at all.
+            Just newFL
+
+
