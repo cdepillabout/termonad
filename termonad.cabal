@@ -18,7 +18,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Termonad
                      , Termonad.App
-                     , Termonad.FocusedList
+                     , Termonad.FocusList
                      , Termonad.Gtk
                      , Termonad.Keys
                      , Termonad.Prelude

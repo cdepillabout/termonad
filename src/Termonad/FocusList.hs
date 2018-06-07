@@ -46,7 +46,7 @@ invariantFL fl = False
 singletonFL :: a -> FocusList a
 singletonFL a =
   FocusList
-    { focusListFocus = Focus 1
+    { focusListFocus = Focus 0
     , focusListLen = 1
     , focusList = singletonMap 0 a
     }
