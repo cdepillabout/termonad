@@ -6,6 +6,7 @@ module Termonad.FocusList where
 import Termonad.Prelude
 
 import Control.Lens
+import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
 data Focus = Focus Int | NoFocus deriving (Eq, Read, Show)
 
@@ -13,10 +14,21 @@ data Focus = Focus Int | NoFocus deriving (Eq, Read, Show)
 -- implemented as an Order statistic tree
 -- (https://en.wikipedia.org/wiki/Order_statistic_tree).
 data FocusList a = FocusList
-  { focusListFocus :: {-# UNPACK #-} !Focus
+  { focusListFocus :: !Focus
   , focusListLen :: {-# UNPACK #-} !Int
   , focusList :: !(IntMap a)
-  } deriving (Read, Show)
+  }
+
+instance Show a => Show (FocusList a) where
+  showsPrec :: Int -> FocusList a -> ShowS
+  showsPrec d FocusList{..} =
+    let list = fmap fst $ sortOn fst $ mapToList focusList
+    in
+    showParen (d > 10) $
+      showString "FocusList " .
+      showsPrec 11 focusListFocus .
+      showString " " .
+      showsPrec 11 list
 
 $(makeLensesFor
     [ ("focusListFocus", "lensFocusListFocus")
@@ -42,6 +54,16 @@ _NoFocus = prism' (const NoFocus) (foldFocus (Just ()) (const Nothing))
 -- | This is an invariant that the 'FocusList' must always protect.
 invariantFL :: FocusList a -> Bool
 invariantFL fl = False
+
+unsafeFLFromList :: Focus -> [a] -> FocusList a
+unsafeFLFromList focus list =
+  let len = length list
+  in
+  FocusList
+    { focusListFocus = focus
+    , focusListLen = len
+    , focusList = mapFromList $ zip [0..] list
+    }
 
 singletonFL :: a -> FocusList a
 singletonFL a =
@@ -206,6 +228,10 @@ unsafeShiftDownFrom i fl =
 -- the 'Focus' is on index 9 and we have removed index 6, then the 'Focus' will
 -- be set to 8.)
 --
+-- >>> let focusList = unsafeFromList (Focus 3) [1,2,3,4,5,6,7,8,9,10,11,12]
+-- >>> removeFL 5 focusList undefined
+--
+--
 -- If the element to remove is the only element in the list, then the 'Focus'
 -- will be set to 'NoFocus'.
 --
@@ -260,5 +286,3 @@ removeFL i fl newFocus
             -- If we have removed an element that is greater than the current
             -- focus, then we don't need to update the focus at all.
             Just newFL
-
-
