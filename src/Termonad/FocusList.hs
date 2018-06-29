@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Termonad.FocusList where
@@ -6,9 +8,44 @@ module Termonad.FocusList where
 import Termonad.Prelude
 
 import Control.Lens
+import Test.QuickCheck
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
-data Focus = Focus Int | NoFocus deriving (Eq, Read, Show)
+-- $setup
+-- >>> :set -XFlexibleContexts
+-- >>> :set -XScopedTypeVariables
+
+data Focus = Focus {-# UNPACK #-} !Int | NoFocus deriving (Eq, Generic, Read, Show)
+
+-- | 'NoFocus' is always less than 'Focus'.
+--
+-- prop> NoFocus < Focus a
+instance Ord Focus where
+  compare :: Focus -> Focus -> Ordering
+  compare NoFocus NoFocus = EQ
+  compare NoFocus (Focus _) = LT
+  compare (Focus _) NoFocus = GT
+  compare (Focus a) (Focus b) = compare a b
+
+instance CoArbitrary Focus
+
+foldFocus :: b -> (Int -> b) -> Focus -> b
+foldFocus b _ NoFocus = b
+foldFocus _ f (Focus i) = f i
+
+_Focus :: Prism' Focus Int
+_Focus = prism' Focus (foldFocus Nothing Just)
+
+_NoFocus :: Prism' Focus ()
+_NoFocus = prism' (const NoFocus) (foldFocus (Just ()) (const Nothing))
+
+hasFocus :: Focus -> Bool
+hasFocus NoFocus = False
+hasFocus (Focus _) = True
+
+unsafeGetFocus :: Focus -> Int
+unsafeGetFocus NoFocus = error "unsafeGetFocus: NoFocus"
+unsafeGetFocus (Focus i) = i
 
 -- TODO: Probably be better
 -- implemented as an Order statistic tree
@@ -17,8 +54,34 @@ data FocusList a = FocusList
   { focusListFocus :: !Focus
   , focusListLen :: {-# UNPACK #-} !Int
   , focusList :: !(IntMap a)
-  }
+  } deriving (Eq, Generic)
 
+$(makeLensesFor
+    [ ("focusListFocus", "lensFocusListFocus")
+    , ("focusListLen", "lensFocusListLen")
+    , ("focusList", "lensFocusList")
+    ]
+    ''FocusList
+ )
+
+instance Arbitrary1 FocusList where
+  liftArbitrary :: Gen a -> Gen (FocusList a)
+  liftArbitrary genA = do
+    arbList <- liftArbitrary genA
+    case arbList of
+      [] -> pure emptyFL
+      (_:_) -> do
+        let listLen = length arbList
+        len <- choose (0, listLen - 1)
+        pure $ unsafeFLFromList (Focus len) arbList
+
+instance Arbitrary a => Arbitrary (FocusList a) where
+  arbitrary = arbitrary1
+
+instance CoArbitrary a => CoArbitrary (FocusList a)
+
+-- | A 'traceShow' function specifically for 'FocusList' that uses 'debugFL'
+-- instead of the default 'Show' instance for 'FocusList'.
 traceShowFL :: Show a => FocusList a -> b -> b
 traceShowFL fl = trace (debugFL fl)
 
@@ -38,7 +101,7 @@ debugFL FocusList{..} =
 instance Show a => Show (FocusList a) where
   showsPrec :: Int -> FocusList a -> ShowS
   showsPrec d FocusList{..} =
-    let list = fmap fst $ sortOn fst $ mapToList focusList
+    let list = fmap snd $ sortOn fst $ mapToList focusList
     in
     showParen (d > 10) $
       showString "FocusList " .
@@ -46,32 +109,23 @@ instance Show a => Show (FocusList a) where
       showString " " .
       showsPrec 11 list
 
-$(makeLensesFor
-    [ ("focusListFocus", "lensFocusListFocus")
-    , ("focusListLen", "lensFocusListLen")
-    , ("focusList", "lensFocusList")
-    ]
-    ''FocusList
- )
-
-foldFocus :: b -> (Int -> b) -> Focus -> b
-foldFocus b _ NoFocus = b
-foldFocus _ f (Focus i) = f i
-
 lensFocusListAt :: Int -> Lens' (FocusList a) (Maybe a)
 lensFocusListAt i = lensFocusList . at i
-
-_Focus :: Prism' Focus Int
-_Focus = prism' Focus (foldFocus Nothing Just)
-
-_NoFocus :: Prism' Focus ()
-_NoFocus = prism' (const NoFocus) (foldFocus (Just ()) (const Nothing))
 
 -- | This is an invariant that the 'FocusList' must always protect.
 invariantFL :: FocusList a -> Bool
 invariantFL fl = False
 
--- | TODO: Write doctests for this function.
+-- | Unsafely create a 'FocusList'.  This does not check that the focus
+-- actually exists in the list.
+--
+-- >>> let fl = unsafeFLFromList (Focus 1) [0..2]
+-- >>> debugFL fl
+-- "FocusList {focusListFocus = Focus 1, focusListLen = 3, focusList = fromList [(0,0),(1,1),(2,2)]}"
+
+-- >>> let fl = unsafeFLFromList NoFocus []
+-- >>> debugFL fl
+-- "FocusList {focusListFocus = NoFocus, focusListLen = 0, focusList = fromList []}"
 unsafeFLFromList :: Focus -> [a] -> FocusList a
 unsafeFLFromList focus list =
   let len = length list
@@ -82,6 +136,10 @@ unsafeFLFromList focus list =
     , focusList = mapFromList $ zip [0..] list
     }
 
+-- | Create a 'FocusList' with a single element.
+--
+-- >>> singletonFL "hello"
+-- FocusList (Focus 0) ["hello"]
 singletonFL :: a -> FocusList a
 singletonFL a =
   FocusList
@@ -90,6 +148,10 @@ singletonFL a =
     , focusList = singletonMap 0 a
     }
 
+-- | Create an empty 'FocusList' without a 'Focus'.
+--
+-- >>> emptyFL
+-- FocusList NoFocus []
 emptyFL :: FocusList a
 emptyFL =
   FocusList
@@ -99,12 +161,30 @@ emptyFL =
     }
 
 -- | Return 'True' if the 'FocusList' is empty.
+--
+-- >>> isEmptyFL emptyFL
+-- True
+--
+-- >>> isEmptyFL $ singletonFL "hello"
+-- False
+--
+-- Any 'FocusList' with a 'Focus' should never be empty.
 isEmptyFL :: FocusList a -> Bool
 isEmptyFL fl = fl ^. lensFocusListLen == 0
 
 -- | Append a value to the end of a 'FocusList'.
 --
 -- This can be thought of as a \"snoc\" operation.
+--
+-- >>> appendFL emptyFL "hello"
+-- FocusList (Focus 0) ["hello"]
+--
+-- >>> appendFL (singletonFL "hello") "bye"
+-- FocusList (Focus 0) ["hello","bye"]
+--
+-- Appending a value to an empty 'FocusList' is the same as using 'singletonFL'.
+--
+-- prop> appendFL emptyFL a == singletonFL a
 appendFL :: FocusList a -> a -> FocusList a
 appendFL fl a =
   if isEmptyFL fl
@@ -114,15 +194,23 @@ appendFL fl a =
 -- | Prepend a value to a 'FocusList'.
 --
 -- This can be thought of as a \"cons\" operation.
+--
+-- >>> prependFL "hello" emptyFL
+-- FocusList (Focus 0) ["hello"]
+--
+-- The focus will be updated when prepending:
+--
+-- >>> prependFL "bye" (singletonFL "hello")
+-- FocusList (Focus 1) ["bye","hello"]
+--
+-- Prepending to a 'FocusList' will always update the 'Focus':
+--
+-- prop> (fl ^. lensFocusListFocus) < (prependFL a fl ^. lensFocusListFocus)
 prependFL :: a -> FocusList a -> FocusList a
 prependFL a fl =
   if isEmptyFL fl
     then singletonFL a
     else unsafeInsertNewFL 0 a $ unsafeShiftUpFrom 0 fl
-
-unsafeGetFocus :: Focus -> Int
-unsafeGetFocus NoFocus = error "unsafeGetFocus: NoFocus"
-unsafeGetFocus (Focus i) = i
 
 -- | Unsafely get the value in a 'Focus' from a 'FocusList'.  If the 'Focus' is
 -- 'NoFocus', this function returns 'error'.
@@ -140,6 +228,14 @@ unsafeGetFLFocus fl =
 --
 -- If there is some value in the 'FocusList' already at the 'Int', then it will
 -- be overwritten.  Also, the 'Int' is not checked to make sure it is above 0.
+--
+-- >>> let fl = unsafeShiftUpFrom 2 $ unsafeFLFromList (Focus 1) [0,1,200]
+-- >>> debugFL $ unsafeInsertNewFL 2 100 fl
+-- "FocusList {focusListFocus = Focus 1, focusListLen = 4, focusList = fromList [(0,0),(1,1),(2,100),(3,200)]}"
+--
+-- >>> let fl = unsafeFLFromList NoFocus []
+-- >>> debugFL $ unsafeInsertNewFL 0 100 fl
+-- "FocusList {focusListFocus = NoFocus, focusListLen = 1, focusList = fromList [(0,100)]}"
 unsafeInsertNewFL :: Int -> a -> FocusList a -> FocusList a
 unsafeInsertNewFL i a fl =
   fl &
@@ -152,16 +248,31 @@ unsafeInsertNewFL i a fl =
 --
 -- It does not check that the 'Int' is greater than 0.  It also does not check
 -- that there is a 'Focus'.
+--
+-- ==== __EXAMPLES__
+--
+-- >>> let fl = unsafeShiftUpFrom 2 $ unsafeFLFromList (Focus 1) [0,1,200]
+-- >>> debugFL fl
+-- "FocusList {focusListFocus = Focus 1, focusListLen = 3, focusList = fromList [(0,0),(1,1),(3,200)]}"
+--
+-- >>> let fl = unsafeShiftUpFrom 1 $ unsafeFLFromList (Focus 1) [0,1,200]
+-- >>> debugFL fl
+-- "FocusList {focusListFocus = Focus 2, focusListLen = 3, focusList = fromList [(0,0),(2,1),(3,200)]}"
+--
+-- >>> let fl = unsafeShiftUpFrom 0 $ unsafeFLFromList (Focus 1) [0,1,200]
+-- >>> debugFL fl
+-- "FocusList {focusListFocus = Focus 2, focusListLen = 3, focusList = fromList [(1,0),(2,1),(3,200)]}"
+--
+-- >>> let fl = unsafeShiftUpFrom 0 $ unsafeFLFromList (Focus 1) [0,1,200]
+-- >>> debugFL fl
+-- "FocusList {focusListFocus = Focus 2, focusListLen = 3, focusList = fromList [(1,0),(2,1),(3,200)]}"
 unsafeShiftUpFrom :: forall a. Int -> FocusList a -> FocusList a
 unsafeShiftUpFrom i fl =
   let intMap = fl ^. lensFocusList
       lastElemIdx = (fl ^. lensFocusListLen) - 1
       newIntMap = go i lastElemIdx intMap
       oldFocus = unsafeGetFLFocus fl
-      newFocus =
-        if i > lastElemIdx
-          then oldFocus
-          else oldFocus + 1
+      newFocus = if i > oldFocus then oldFocus else oldFocus + 1
   in
   fl &
     lensFocusList .~ newIntMap &
