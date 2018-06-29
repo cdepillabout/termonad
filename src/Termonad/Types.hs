@@ -69,11 +69,7 @@ createTMTerm trm unq =
 newTMTerm :: Terminal -> IO TMTerm
 newTMTerm trm = do
   unq <- newUnique
-  pure $
-    TMTerm
-      { term = trm
-      , unique = unq
-      }
+  pure $ createTMTerm trm unq
 
 createTMNotebookTab :: ScrolledWindow -> TMTerm -> TMNotebookTab
 createTMNotebookTab scrollWin trm =
