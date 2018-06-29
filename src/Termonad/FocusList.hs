@@ -244,9 +244,9 @@ unsafeInsertNewFL i a fl =
     lensFocusListLen +~ 1 &
     lensFocusListAt i ?~ a
 
--- | This unsafely shifts all values up in a 'FocusList'.  It also updates the
--- 'Focus' of the 'FocusList' if it has been shifted.  This does not change
--- the length of the 'FocusList'.
+-- | This unsafely shifts all values up in a 'FocusList' starting at a given
+-- index.  It also updates the 'Focus' of the 'FocusList' if it has been
+-- shifted.  This does not change the length of the 'FocusList'.
 --
 -- It does not check that the 'Int' is greater than 0.  It also does not check
 -- that there is a 'Focus'.
@@ -300,31 +300,69 @@ unsafeLookup i intmap =
 -- | Insert a new value into the 'FocusList'.  The 'Focus' of the list is
 -- changed appropriately.
 --
+-- >>> insertFL 0 "hello" emptyFL
+-- Just (FocusList (Focus 0) ["hello"])
+--
+-- >>> insertFL 0 "hello" (singletonFL "bye")
+-- Just (FocusList (Focus 1) ["hello","bye"])
+--
+-- >>> insertFL 1 "hello" (singletonFL "bye")
+-- Just (FocusList (Focus 0) ["bye","hello"])
+--
 -- This returns 'Nothing' if the index at which to insert the new value is
 -- either less than 0 or greater than the length of the list.
+--
+-- >>> insertFL 100 "hello" emptyFL
+-- Nothing
+--
+-- >>> insertFL 100 "bye" (singletonFL "hello")
+-- Nothing
+--
+-- >>> insertFL (-1) "bye" (singletonFL "hello")
+-- Nothing
 insertFL
   :: Int  -- ^ The index at which to insert the value.
   -> a
   -> FocusList a
   -> Maybe (FocusList a)
-insertFL i a fl =
-  if i < 0 || i > (fl ^. lensFocusListLen)
-    then
-      -- Return Nothing if the insertion position is out of bounds.
-      Nothing
-    else
-      -- Otherwise, shift all existing values up one and insert the new
-      -- value in the opened place.
-      let shiftedUpFL = unsafeShiftUpFrom i fl
-      in Just $ unsafeInsertNewFL i a shiftedUpFL
+insertFL i a fl
+  | i < 0 || i > (fl ^. lensFocusListLen) =
+    -- Return Nothing if the insertion position is out of bounds.
+    Nothing
+  | i == 0 && isEmptyFL fl =
+    -- Return a 'FocusList' with one element if the insertion position is 0
+    -- and the 'FocusList' is empty.
+    Just $ singletonFL a
+  | otherwise =
+     -- Shift all existing values up one and insert the new
+     -- value in the opened place.
+     let shiftedUpFL = unsafeShiftUpFrom i fl
+     in Just $ unsafeInsertNewFL i a shiftedUpFL
 
 -- | Unsafely remove a value from a 'FocusList'.  It effectively leaves a hole
--- inside the 'FocusList'.
+-- inside the 'FocusList'.  It updates the length of the 'FocusList'.
 --
 -- This function does not check that a value actually exists in the
 -- 'FocusList'.  It also does not update the 'Focus'.
 --
 -- This function does update the length of the 'FocusList'.
+--
+-- >>> debugFL $ unsafeRemove 1 $ unsafeFLFromList (Focus 0) [0..2]
+-- "FocusList {focusListFocus = Focus 0, focusListLen = 2, focusList = fromList [(0,0),(2,2)]}"
+--
+-- >>> debugFL $ unsafeRemove 0 $ unsafeFLFromList (Focus 0) [0..2]
+-- "FocusList {focusListFocus = Focus 0, focusListLen = 2, focusList = fromList [(1,1),(2,2)]}"
+--
+-- Trying to remove the last element is completely safe (unless, of course, it
+-- is the 'Focus'):
+--
+-- >>> debugFL $ unsafeRemove 2 $ unsafeFLFromList (Focus 2) [0..2]
+-- "FocusList {focusListFocus = Focus 2, focusListLen = 2, focusList = fromList [(0,0),(1,1)]}"
+--
+-- If this function is passed an empty 'FocusList', it will make the length -1.
+--
+-- >>> debugFL $ unsafeRemove 0 emptyFL
+-- "FocusList {focusListFocus = NoFocus, focusListLen = -1, focusList = fromList []}"
 unsafeRemove
   :: Int
   -> FocusList a
@@ -334,7 +372,26 @@ unsafeRemove i fl =
     lensFocusListLen -~ 1 &
     lensFocusListAt i .~ Nothing
 
--- | TODO: Write doctests for this function.
+-- | This shifts all the values down in a 'FocusList' starting at a given
+-- index.  It does not change the 'Focus' of the 'FocusList'.  It does not change the
+-- length of the 'FocusList'.
+--
+-- It does not check that shifting elements down will not overwrite other elements.
+-- This function is meant to be called after 'unsafeRemove'.
+--
+-- >>> let fl = unsafeRemove 1 $ unsafeFLFromList (Focus 0) [0..2]
+-- >>> debugFL $ unsafeShiftDownFrom 1 fl
+-- "FocusList {focusListFocus = Focus 0, focusListLen = 2, focusList = fromList [(0,0),(1,2)]}"
+--
+-- >>> let fl = unsafeRemove 0 $ unsafeFLFromList (Focus 0) [0..2]
+-- >>> debugFL $ unsafeShiftDownFrom 0 fl
+-- "FocusList {focusListFocus = Focus 0, focusListLen = 2, focusList = fromList [(0,1),(1,2)]}"
+--
+-- Trying to shift down from the last element after it has been removed is a no-op:
+--
+-- >>> let fl = unsafeRemove 2 $ unsafeFLFromList (Focus 0) [0..2]
+-- >>> debugFL $ unsafeShiftDownFrom 2 fl
+-- "FocusList {focusListFocus = Focus 0, focusListLen = 2, focusList = fromList [(0,0),(1,1)]}"
 unsafeShiftDownFrom :: forall a. Int -> FocusList a -> FocusList a
 unsafeShiftDownFrom i fl =
   let intMap = fl ^. lensFocusList
@@ -344,7 +401,7 @@ unsafeShiftDownFrom i fl =
   where
     go :: Int -> Int -> IntMap a -> IntMap a
     go idxToShiftDown len intMap
-      | idxToShiftDown < len =
+      | idxToShiftDown < len + 1 =
         let val = unsafeLookup idxToShiftDown intMap
             newMap =
               insertMap (idxToShiftDown - 1) val (deleteMap idxToShiftDown intMap)
@@ -353,21 +410,22 @@ unsafeShiftDownFrom i fl =
 
 -- | Remove an element from a 'FocusList'.
 --
--- TODO: Finish writing doctests for this function.
---
 -- If the element to remove is not the 'Focus', then update the 'Focus'
--- accordingly.  (For example, if the 'Focus' is on index 1, and we have
--- removed index 3, then the focus is not affected, so it is not changed.  If
--- the 'Focus' is on index 3 and we have removed index 1, then the 'Focus' will
--- be set to 2.)
+-- accordingly.
 --
--- >>> let focusList = unsafeFLFromList (Focus 1) [0,1,2,3,4]
--- >>> removeFL 3 focusList
--- Just (FocusList (Focus 1) [0,1,2,4])
+-- For example, if the 'Focus' is on index 1, and we have removed index 2, then
+-- the focus is not affected, so it is not changed.
 --
--- >>> let focusList = unsafeFLFromList (Focus 3) [0,1,2,3,4]
+-- >>> let focusList = unsafeFLFromList (Focus 1) ["cat","goat","dog","hello"]
+-- >>> removeFL 2 focusList
+-- Just (FocusList (Focus 1) ["cat","goat","hello"])
+--
+-- If the 'Focus' is on index 2 and we have removed index 1, then the 'Focus'
+-- will be moved back one element to set to index 1.
+--
+-- >>> let focusList = unsafeFLFromList (Focus 2) ["cat","goat","dog","hello"]
 -- >>> removeFL 1 focusList
--- Just (FocusList (Focus 2) [0,2,3,4])
+-- Just (FocusList (Focus 1) ["cat","dog","hello"])
 --
 -- If the element to remove is the only element in the list, then the 'Focus'
 -- will be set to 'NoFocus'.
@@ -376,17 +434,21 @@ unsafeShiftDownFrom i fl =
 -- >>> removeFL 0 focusList
 -- Just (FocusList NoFocus [])
 --
--- If the element to remove is the 'Focus', then use the value passed in as
--- new 'Focus'.  This lets the use decide which element should get
--- the new focus.  Keep in mind that if the old 'Focus' was index 8, and the
--- function returns the new 'Focus' as index 8, then effectively the element
--- AFTER the element that was removed will have the focus.
---
 -- If the 'Int' for the index to remove is either less than 0 or greater then
--- the length of the list, then 'Nothing' is returned.  If the 'FocusList'
--- passed in is 'Empty', then 'Nothing' is returned.  If the 'Int' returned
--- by the update function is less than 0 or greater than the length of the new
--- list, then 'Nothing' is returned.
+-- the length of the list, then 'Nothing' is returned.
+--
+-- >>> let focusList = unsafeFLFromList (Focus 0) ["hello"]
+-- >>> removeFL (-1) focusList
+-- Nothing
+--
+-- >>> let focusList = unsafeFLFromList (Focus 1) ["hello","bye","cat"]
+-- >>> removeFL 3 focusList
+-- Nothing
+--
+-- If the 'FocusList' passed in is 'Empty', then 'Nothing' is returned.
+--
+-- >>> removeFL 0 emptyFL
+-- Nothing
 removeFL
   :: Show a => Int          -- ^ Index of the element to remove from the 'FocusList'.
   -> FocusList a  -- ^ The 'FocusList' to remove an element from.
@@ -401,13 +463,8 @@ removeFL i fl
   | otherwise =
     let newFLWithHole = unsafeRemove i fl
         newFL = unsafeShiftDownFrom i newFLWithHole
+        focus = unsafeGetFLFocus fl
     in
-    if traceShowFL newFLWithHole $ i == newFL ^. lensFocusListLen
-      then
-        -- The last item was deleted, so set the current last item as the
-        -- focus.
-        Just $ newFL & lensFocusListFocus . _Focus -~ 1
-      else
-        -- The new focus will be item AFTER the old @i@, which should have
-        -- the same index as @i@ now.
-        Just newFL
+    if focus >= i
+      then Just $ newFL & lensFocusListFocus . _Focus -~ 1
+      else Just newFL
