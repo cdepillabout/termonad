@@ -36,15 +36,36 @@ data TMTerm = TMTerm
   , unique :: Unique
   }
 
+$(makeLensesFor
+    [ ("term", "lensTerm")
+    , ("unique", "lensUnique")
+    ]
+    ''TMTerm
+ )
+
 data TMNotebookTab = TMNotebookTab
   { tmNotebookTabTermContainer :: ScrolledWindow
   , tmNotebookTabTerm :: TMTerm
   }
 
+$(makeLensesFor
+    [ ("tmNotebookTabTermContainer", "lensTMNotebookTabTermContainer")
+    , ("tmNotebookTabTerm", "lensTMNotebookTabTerm")
+    ]
+    ''TMTerm
+ )
+
 data TMNotebook = TMNotebook
   { tmNotebook :: !Notebook
   , tmNotebookTabs :: !(FocusList TMNotebookTab)
   }
+
+$(makeLensesFor
+    [ ("tmNotebook", "lensTMNotebook")
+    , ("tmNotebookTab", "lensTMNotebookTab")
+    ]
+    ''TMTerm
+ )
 
 data TMState' = TMState
   { tmStateApp :: !Application
@@ -52,6 +73,15 @@ data TMState' = TMState
   , tmStateNotebook :: !TMNotebook
   , tmStateFontDesc :: !FontDescription
   }
+
+$(makeLensesFor
+    [ ("tmStateApp", "lensTMStateApp")
+    , ("tmStateAppWin", "lensTMStateAppWin")
+    , ("tmStateNotebook", "lensTMStateNotebook")
+    , ("tmStateFontDesc", "lensTMStateFontDesc")
+    ]
+    ''TMTerm
+ )
 
 type TMState = MVar TMState'
 

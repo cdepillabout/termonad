@@ -66,6 +66,7 @@ import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal))
 import Text.XML (renderText)
 import Text.XML.QQ (Document, xmlRaw)
 
+import Termonad.Term
 import Termonad.Types
 
 
@@ -126,10 +127,10 @@ keyMap =
     -- ] <>
     altNumKeys
 
-stopProp :: (TerState -> IO a) -> TerState -> IO Bool
+stopProp :: (TMState -> IO a) -> TMState -> IO Bool
 stopProp callback terState = callback terState $> True
 
-handleKeyPress :: TerState -> EventKey -> IO Bool
+handleKeyPress :: TMState -> EventKey -> IO Bool
 handleKeyPress terState eventKey = do
   keyval <- get eventKey #keyval
   modifiers <- get eventKey #state
