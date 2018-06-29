@@ -80,11 +80,6 @@ instance Arbitrary a => Arbitrary (FocusList a) where
 
 instance CoArbitrary a => CoArbitrary (FocusList a)
 
--- | A 'traceShow' function specifically for 'FocusList' that uses 'debugFL'
--- instead of the default 'Show' instance for 'FocusList'.
-traceShowFL :: Show a => FocusList a -> b -> b
-traceShowFL fl = trace (debugFL fl)
-
 debugFL :: Show a => FocusList a -> String
 debugFL FocusList{..} =
   showString "FocusList {" .
@@ -122,7 +117,7 @@ invariantFL fl = False
 -- >>> let fl = unsafeFLFromList (Focus 1) [0..2]
 -- >>> debugFL fl
 -- "FocusList {focusListFocus = Focus 1, focusListLen = 3, focusList = fromList [(0,0),(1,1),(2,2)]}"
-
+--
 -- >>> let fl = unsafeFLFromList NoFocus []
 -- >>> debugFL fl
 -- "FocusList {focusListFocus = NoFocus, focusListLen = 0, focusList = fromList []}"
@@ -135,6 +130,41 @@ unsafeFLFromList focus list =
     , focusListLen = len
     , focusList = mapFromList $ zip [0..] list
     }
+
+-- | Safely create a 'FocusList' from a list.
+--
+-- >>> flFromList (Focus 1) ["cat","dog","goat"]
+-- Just (FocusList (Focus 1) ["cat","dog","goat"])
+--
+-- >>> flFromList NoFocus []
+-- Just (FocusList NoFocus [])
+--
+-- If the 'Focus' is out of range for the list, then 'Nothing' will be returned.
+--
+-- >>> flFromList (Focus (-1)) ["cat","dog","goat"]
+-- Nothing
+--
+-- >>> flFromList (Focus 3) ["cat","dog","goat"]
+-- Nothing
+--
+-- >>> flFromList NoFocus ["cat","dog","goat"]
+-- Nothing
+flFromList :: Focus -> [a] -> Maybe (FocusList a)
+flFromList NoFocus [] = Just emptyFL
+flFromList _ [] = Nothing
+flFromList NoFocus (_:_) = Nothing
+flFromList (Focus i) list =
+  let len = length list
+  in
+  if i < 0 || i >= len
+    then Nothing
+    else
+      Just $
+        FocusList
+          { focusListFocus = Focus i
+          , focusListLen = len
+          , focusList = mapFromList $ zip [0..] list
+          }
 
 -- | Create a 'FocusList' with a single element.
 --
@@ -468,3 +498,32 @@ removeFL i fl
     if focus >= i
       then Just $ newFL & lensFocusListFocus . _Focus -~ 1
       else Just newFL
+
+-- | Set the 'Focus' for a 'FocusList'.
+--
+-- >>> setFocusFL 1 =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
+-- Just (FocusList (Focus 1) ["hello","bye","dog","cat"])
+--
+-- If the 'FocusList' is empty, then return 'Nothing'.
+--
+-- >>> setFocusFL 1 emptyFL
+-- Nothing
+--
+-- If the new focus is less than 0, or greater than or equal to the length of
+-- the 'FocusList', then return 'Nothing'.
+--
+-- >>> setFocusFL (-1) =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
+-- Nothing
+--
+-- >>> setFocusFL 4 =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
+-- Nothing
+setFocusFL :: Int -> FocusList a -> Maybe (FocusList a)
+setFocusFL i fl
+  | isEmptyFL fl = Nothing
+  | otherwise =
+    let focus = unsafeGetFLFocus fl
+        len = fl ^. lensFocusListLen
+    in
+    if i < 0 || i >= len
+      then Nothing
+      else Just $ fl & lensFocusListFocus . _Focus .~ i
