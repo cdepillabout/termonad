@@ -229,6 +229,8 @@ unsafeGetFLFocus fl =
 -- If there is some value in the 'FocusList' already at the 'Int', then it will
 -- be overwritten.  Also, the 'Int' is not checked to make sure it is above 0.
 --
+-- This function is meant to be used after 'unsafeShiftUpFrom'.
+--
 -- >>> let fl = unsafeShiftUpFrom 2 $ unsafeFLFromList (Focus 1) [0,1,200]
 -- >>> debugFL $ unsafeInsertNewFL 2 100 fl
 -- "FocusList {focusListFocus = Focus 1, focusListLen = 4, focusList = fromList [(0,0),(1,1),(2,100),(3,200)]}"
