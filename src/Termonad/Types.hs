@@ -1,7 +1,35 @@
 
 module Termonad.Types where
 
-import Termonad.FocusedList
+import Termonad.Prelude
+
+import Data.Unique (Unique, newUnique)
+import GI.Gtk
+  ( Application
+  , ApplicationWindow(ApplicationWindow)
+  , Box(Box)
+  , CssProvider(CssProvider)
+  , Dialog(Dialog)
+  , Notebook(Notebook)
+  , ScrolledWindow(ScrolledWindow)
+  , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
+  , applicationNew
+  , applicationSetAccelsForAction
+  , builderNewFromString
+  , builderSetApplication
+  , noWidget
+  , styleContextAddProviderForScreen
+  )
+import GI.Pango
+  ( FontDescription
+  , pattern SCALE
+  , fontDescriptionNew
+  , fontDescriptionSetFamily
+  , fontDescriptionSetSize
+  )
+import GI.Vte (Terminal(Terminal))
+
+import Termonad.FocusList
 
 data TMTerm = TMTerm
   { term :: Terminal
@@ -15,7 +43,7 @@ data TMNotebookTab = TMNotebookTab
 
 data TMNotebook = TMNotebook
   { tmNotebook :: !Notebook
-  , tmNotebookTabs :: !(FocusedList TMNotebookTab)
+  , tmNotebookTabs :: !(FocusList TMNotebookTab)
   }
 
 data TMState' = TMState
@@ -39,7 +67,7 @@ createTMTerm trm unq =
     }
 
 newTMTerm :: Terminal -> IO TMTerm
-newTMTerm trm =
+newTMTerm trm = do
   unq <- newUnique
   pure $
     TMTerm
@@ -54,7 +82,7 @@ createTMNotebookTab scrollWin trm =
     , tmNotebookTabTerm = trm
     }
 
-createTMNotebook :: Notebook -> FocusedList TMNotebookTab -> TMNotebook
+createTMNotebook :: Notebook -> FocusList TMNotebookTab -> TMNotebook
 createTMNotebook note tabs =
   TMNotebook
     { tmNotebook = note
@@ -75,7 +103,7 @@ newTMStateSingleTerm ::
      Application
   -> ApplicationWindow
   -> Notebook
-  -> SrolledWindow
+  -> ScrolledWindow
   -> Terminal
   -> FontDescription
   -> IO TMState
