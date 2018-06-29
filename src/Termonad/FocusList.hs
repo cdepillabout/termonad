@@ -242,7 +242,7 @@ prependFL a fl =
     then singletonFL a
     else unsafeInsertNewFL 0 a $ unsafeShiftUpFrom 0 fl
 
--- | Unsafely get the value in a 'Focus' from a 'FocusList'.  If the 'Focus' is
+-- | Unsafely get the 'Focus' from a 'FocusList'.  If the 'Focus' is
 -- 'NoFocus', this function returns 'error'.
 unsafeGetFLFocus :: FocusList a -> Int
 unsafeGetFLFocus fl =
@@ -251,6 +251,25 @@ unsafeGetFLFocus fl =
   case focus of
     NoFocus -> error "unsafeGetFLFocus: the focus list doesn't have a focus"
     Focus i -> i
+
+-- | Unsafely get the value of the 'Focus' from a 'FocusList'.  If the 'Focus' is
+-- 'NoFocus', this function returns 'error'.
+unsafeGetFLFocusItem :: FocusList a -> a
+unsafeGetFLFocusItem fl =
+  let focus = fl ^. lensFocusListFocus
+  in
+  case focus of
+    NoFocus -> error "unsafeGetFLFocusItem: the focus list doesn't have a focus"
+    Focus i ->
+      let intmap = fl ^. lensFocusList
+      in
+      case lookup i intmap of
+        Nothing ->
+          error $
+            "unsafeGetFLFocusItem: i (" <>
+            show i <>
+            ") doesnt exist in intmap"
+        Just a -> a
 
 -- | Unsafely insert a new @a@ in a 'FocusList'.  This sets the 'Int' value to
 -- @a@.  The length of the 'FocusList' will be increased by 1.  The
@@ -501,22 +520,9 @@ removeFL i fl
 
 -- | Set the 'Focus' for a 'FocusList'.
 --
--- >>> setFocusFL 1 =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
--- Just (FocusList (Focus 1) ["hello","bye","dog","cat"])
+-- This is just like 'updateFocusFL', but doesn't return the new focused item.
 --
--- If the 'FocusList' is empty, then return 'Nothing'.
---
--- >>> setFocusFL 1 emptyFL
--- Nothing
---
--- If the new focus is less than 0, or greater than or equal to the length of
--- the 'FocusList', then return 'Nothing'.
---
--- >>> setFocusFL (-1) =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
--- Nothing
---
--- >>> setFocusFL 4 =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
--- Nothing
+-- prop> setFocusFL i fl == fmap snd (updateFocusFL i fl)
 setFocusFL :: Int -> FocusList a -> Maybe (FocusList a)
 setFocusFL i fl
   | isEmptyFL fl = Nothing
@@ -527,3 +533,34 @@ setFocusFL i fl
     if i < 0 || i >= len
       then Nothing
       else Just $ fl & lensFocusListFocus . _Focus .~ i
+
+-- | Update the 'Focus' for a 'FocusList' and get the new focused element.
+--
+-- >>> updateFocusFL 1 =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
+-- Just ("bye",FocusList (Focus 1) ["hello","bye","dog","cat"])
+--
+-- If the 'FocusList' is empty, then return 'Nothing'.
+--
+-- >>> updateFocusFL 1 emptyFL
+-- Nothing
+--
+-- If the new focus is less than 0, or greater than or equal to the length of
+-- the 'FocusList', then return 'Nothing'.
+--
+-- >>> updateFocusFL (-1) =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
+-- Nothing
+--
+-- >>> updateFocusFL 4 =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
+-- Nothing
+updateFocusFL :: Int -> FocusList a -> Maybe (a, FocusList a)
+updateFocusFL i fl
+  | isEmptyFL fl = Nothing
+  | otherwise =
+    let focus = unsafeGetFLFocus fl
+        len = fl ^. lensFocusListLen
+    in
+    if i < 0 || i >= len
+      then Nothing
+      else
+        let newFL = fl & lensFocusListFocus . _Focus .~ i
+        in Just (unsafeGetFLFocusItem newFL, newFL)
