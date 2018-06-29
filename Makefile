@@ -1,4 +1,4 @@
-.PHONY: bench benchmark build build-fast clean dump-th ghci haddock haddock-server hlint install run run-fast test upload watch watch-test
+.PHONY: bench benchmark build build-fast clean dump-th ghci ghcid haddock haddock-server hlint install run run-fast test upload watch watch-test
 all: build
 
 # Run the benchmark.
@@ -50,6 +50,9 @@ run-fast: build-fast
 # Run ghci (REPL).
 ghci:
 	stack ghci
+
+ghcid:
+	ghcid -c 'stack ghci'
 
 # Run the tests.
 test:
