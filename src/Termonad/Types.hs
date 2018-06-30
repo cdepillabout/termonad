@@ -54,7 +54,7 @@ $(makeLensesFor
     [ ("tmNotebookTabTermContainer", "lensTMNotebookTabTermContainer")
     , ("tmNotebookTabTerm", "lensTMNotebookTabTerm")
     ]
-    ''TMTerm
+    ''TMNotebookTab
  )
 
 data TMNotebook = TMNotebook
@@ -64,10 +64,12 @@ data TMNotebook = TMNotebook
 
 $(makeLensesFor
     [ ("tmNotebook", "lensTMNotebook")
-    , ("tmNotebookTab", "lensTMNotebookTab")
+    , ("tmNotebookTab", "lensTMNotebookTabs")
     ]
-    ''TMTerm
+    ''TMNotebook
  )
+
+lala = lensTMNotebookTabs
 
 data TMState' = TMState
   { tmStateApp :: !Application
@@ -82,7 +84,7 @@ $(makeLensesFor
     , ("tmStateNotebook", "lensTMStateNotebook")
     , ("tmStateFontDesc", "lensTMStateFontDesc")
     ]
-    ''TMTerm
+    ''TMState'
  )
 
 type TMState = MVar TMState'

@@ -1,13 +1,34 @@
-
 module Termonad.Term where
 
 import Termonad.Prelude
 
 import Control.Lens
+import GI.Gdk
+  ( EventKey
+  )
+import GI.Gtk
+  ( Application
+  , ApplicationWindow(ApplicationWindow)
+  , Box(Box)
+  , CssProvider(CssProvider)
+  , Dialog(Dialog)
+  , Notebook(Notebook)
+  , ScrolledWindow(ScrolledWindow)
+  , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
+  , applicationNew
+  , applicationSetAccelsForAction
+  , builderNewFromString
+  , builderSetApplication
+  , notebookSetCurrentPage
+  , noWidget
+  , setWidgetHasFocus
+  , styleContextAddProviderForScreen
+  )
 
+import Termonad.FocusList
 import Termonad.Types
+import Termonad.Types (lensTMNotebookTabs)
 
--- TODO: Rewrite these types of functions
 focusTerm :: Int -> TMState -> IO ()
 focusTerm i tmState = do
   modifyMVar_ tmState $ \oldTMState@TMState{tmStateNotebook} -> do
@@ -16,8 +37,8 @@ focusTerm i tmState = do
     case maybeNewTabs of
       Nothing -> pure oldTMState
       Just (notebookTab, newTabs) -> do
-        notebookSetCurrentPage (tmNotebook tmNotebookTabs) (fromIntegral i)
-        let term = notebookTab .^ lensTMNotebookTabTerm . lensTerm
+        notebookSetCurrentPage (tmNotebook tmStateNotebook) (fromIntegral i)
+        let term = notebookTab ^. lensTMNotebookTabTerm . lensTerm
         setWidgetHasFocus term True
         let newTMState =
               oldTMState $ lensTMStateNotebook . lensTMNotebookTabs .~ newTabs

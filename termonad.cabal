@@ -49,6 +49,7 @@ library
                      , GeneralizedNewtypeDeriving
                      , InstanceSigs
                      , KindSignatures
+                     , NamedFieldPuns
                      , NoImplicitPrelude
                      , OverloadedStrings
                      , OverloadedLabels
