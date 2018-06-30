@@ -121,6 +121,9 @@ createTMNotebook note tabs =
     , tmNotebookTabs = tabs
     }
 
+createEmptyTMNotebook :: Notebook -> TMNotebook
+createEmptyTMNotebook notebook = createTMNotebook notebook emptyFL
+
 newTMState :: Application -> ApplicationWindow -> TMNotebook -> FontDescription -> IO TMState
 newTMState app appWin note fontDesc =
   newMVar $
@@ -128,6 +131,16 @@ newTMState app appWin note fontDesc =
       { tmStateApp = app
       , tmStateAppWin = appWin
       , tmStateNotebook = note
+      , tmStateFontDesc = fontDesc
+      }
+
+newEmptyTMState :: Application -> ApplicationWindow -> Notebook -> FontDescription -> IO TMState
+newEmptyTMState app appWin note fontDesc =
+  newMVar $
+    TMState
+      { tmStateApp = app
+      , tmStateAppWin = appWin
+      , tmStateNotebook = createEmptyTMNotebook note
       , tmStateFontDesc = fontDesc
       }
 

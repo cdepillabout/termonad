@@ -66,6 +66,10 @@ import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal))
 import Text.XML (renderText)
 import Text.XML.QQ (Document, xmlRaw)
 
+import Termonad.Gtk
+import Termonad.Keys
+import Termonad.Term
+import Termonad.Types
 import Termonad.XML
 
 setupScreenStyle :: IO ()
@@ -114,6 +118,7 @@ createFontDesc = do
   fontDescriptionSetFamily fontDesc "DejaVu Sans Mono"
   -- fontDescriptionSetFamily font "Source Code Pro"
   fontDescriptionSetSize fontDesc (16 * SCALE)
+  pure fontDesc
 
 setupTermonad :: Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad app win builder = do
@@ -124,26 +129,19 @@ setupTermonad app win builder = do
   note <- new Notebook [#canFocus := False]
   #packStart box note True True 0
 
-  -- terState <-
-  --   newMVar $
-  --     Note
-  --       { notebook = note
-  --       , children = []
-  --       , font = fontDesc
-  --       }
-
   void $ Gdk.on note #pageRemoved $ \_ _ -> do
     pages <- #getNPages note
     when (pages == 0) (#quit app)
 
-  terminal <- createTerm terState
+  tmState <- newEmptyTMState app win note fontDesc
+  terminal <- createTerm handleKeyPress tmState
 
   aboutAction <- simpleActionNew "about" Nothing
   void $ onSimpleActionActivate aboutAction (const $ showAboutDialog app)
-  applicationSddAction app aboutAction
+  actionMapAddAction app aboutAction
 
   newTabAction <- simpleActionNew "newtab" Nothing
-  void $ onSimpleActionActivate newTabAction (\_ -> void $ createTerm terState)
+  void $ onSimpleActionActivate newTabAction (\_ -> void $ createTerm handleKeyPress tmState)
   actionMapAddAction app newTabAction
   applicationSetAccelsForAction app "app.newtab" ["<Shift><Ctrl>T"]
 
@@ -163,7 +161,7 @@ setupTermonad app win builder = do
   #setMenubar app (Just menuModel)
 
   #showAll win
-  focusTerm terminal
+  focusTerm 0 tmState
 
 appActivate :: Application -> IO ()
 appActivate app = do
