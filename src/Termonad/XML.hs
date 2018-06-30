@@ -1,5 +1,12 @@
+{-# LANGUAGE QuasiQuotes #-}
 
 module Termonad.XML where
+
+import Termonad.Prelude
+
+import Data.Default (def)
+import Text.XML (renderText)
+import Text.XML.QQ (Document, xmlRaw)
 
 -- TODO: A number of widgets have different places where a child can be added
 -- (e.g. tabs vs. page content in notebooks). This can be reflected in a UI
