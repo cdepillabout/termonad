@@ -499,7 +499,7 @@ unsafeShiftDownFrom i fl =
 -- >>> removeFL 0 emptyFL
 -- Nothing
 removeFL
-  :: Show a => Int          -- ^ Index of the element to remove from the 'FocusList'.
+  :: Int          -- ^ Index of the element to remove from the 'FocusList'.
   -> FocusList a  -- ^ The 'FocusList' to remove an element from.
   -> Maybe (FocusList a)
 removeFL i fl
@@ -517,6 +517,74 @@ removeFL i fl
     if focus >= i
       then Just $ newFL & lensFocusListFocus . _Focus -~ 1
       else Just newFL
+
+-- | Find the index of the first element in the 'FocusList'.
+--
+-- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "tree"]
+-- >>> indexOfFL "hello" fl
+-- Just 0
+--
+-- If more than one element exists, then return the index of the first one.
+--
+-- >>> let Just fl = flFromList (Focus 1) ["dog", "cat", "cat"]
+-- >>> indexOfFL "cat" fl
+-- Just 1
+--
+-- If the element doesn't exist, then return 'Nothing'
+--
+-- >>> let Just fl = flFromList (Focus 1) ["foo", "bar", "baz"]
+-- >>> indexOfFL "hogehoge" fl
+-- Nothing
+indexOfFL :: Eq a => a -> FocusList a -> Maybe Int
+indexOfFL a fl =
+  let intmap = focusList fl
+      keyVals = sortOn fst $ mapToList intmap
+      maybeKeyVal = find (\(_, val) -> val == a) keyVals
+  in fmap fst maybeKeyVal
+
+-- | Delete an element from a 'FocusList'.
+--
+-- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "tree"]
+-- >>> deleteFL "bye" fl
+-- FocusList (Focus 0) ["hello","tree"]
+--
+-- The focus will be updated if an item before it is deleted.
+--
+-- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "tree"]
+-- >>> deleteFL "hello" fl
+-- FocusList (Focus 0) ["bye","tree"]
+--
+-- If there are multiple matching elements in the 'FocusList', remove them all.
+--
+-- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "bye"]
+-- >>> deleteFL "bye" fl
+-- FocusList (Focus 0) ["hello"]
+--
+-- If there are no matching elements, return the original 'FocusList'.
+--
+-- >>> let Just fl = flFromList (Focus 2) ["hello", "good", "bye"]
+-- >>> deleteFL "frog" fl
+-- FocusList (Focus 2) ["hello","good","bye"]
+deleteFL
+  :: forall a.
+     (Eq a)
+  => a
+  -> FocusList a
+  -> FocusList a
+deleteFL item = go
+  where
+    go :: FocusList a -> FocusList a
+    go fl =
+      let maybeIndex = indexOfFL item fl
+      in
+      case maybeIndex of
+        Nothing -> fl
+        Just i ->
+          let maybeNewFL = removeFL i fl
+          in
+          case maybeNewFL of
+            Nothing -> fl
+            Just newFL -> go newFL
 
 -- | Set the 'Focus' for a 'FocusList'.
 --
