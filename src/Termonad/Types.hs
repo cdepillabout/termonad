@@ -1,8 +1,10 @@
+{-# LANGUAGE TemplateHaskell #-}
 
 module Termonad.Types where
 
 import Termonad.Prelude
 
+import Control.Lens
 import Data.Unique (Unique, newUnique)
 import GI.Gtk
   ( Application

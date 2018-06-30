@@ -3,51 +3,56 @@ module Termonad.Term where
 
 import Termonad.Prelude
 
+import Control.Lens
+
 import Termonad.Types
 
 -- TODO: Rewrite these types of functions
 focusTerm :: Int -> TMState -> IO ()
 focusTerm i tmState = do
-  modifyMVar_ tmState $ \oldTMState@TMState{..} -> do
+  modifyMVar_ tmState $ \oldTMState@TMState{tmStateNotebook} -> do
     let tabs = tmNotebookTabs tmStateNotebook
-        maybeNewTabs = setFocusFL i tabs
+        maybeNewTabs = updateFocusFL i tabs
     case maybeNewTabs of
       Nothing -> pure oldTMState
-      Just newTabs -> do
+      Just (notebookTab, newTabs) -> do
         notebookSetCurrentPage (tmNotebook tmNotebookTabs) (fromIntegral i)
+        let term = notebookTab .^ lensTMNotebookTabTerm . lensTerm
+        setWidgetHasFocus term True
         let newTMState =
               oldTMState $ lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
         pure newTMState
 
 altNumSwitchTerm :: Int -> TMState -> IO ()
 altNumSwitchTerm = focusTerm
-  Note{..} <- readMVar tmState
-  void $ #setCurrentPage notebook (fromIntegral i)
 
-focusTerm :: Term -> IO ()
-focusTerm Term{..} =
-  Gdk.set term [#hasFocus := True]
-
-termExit :: ScrolledWindow -> Term -> TMState -> Int32 -> IO ()
-termExit scrolledWin terminal tmState _exitStatus =
-  modifyMVar_ tmState $ \Note{..} -> do
-    #detachTab notebook scrolledWin
-    pure $ Note notebook (removeTerm children terminal) font
+termExit :: ScrolledWindow -> TMNotebookTab -> TMState -> Int32 -> IO ()
+termExit scrolledWin tab mvarTMState _exitStatus =
+  modifyMVar_ mvarTMState $ \tmState -> do
+    let notebook = tmStateNotebook tmState
+        note = tmNotebook notebook
+        oldTabs = tmNotebookTabs notebook
+    #detachTab note scrolledWin
+    let newTabs = deleteFL oldTabs tab
+    let newTMState =
+          set (lensTMStateNotebook . lensTMNotebookTabs) newTabs tmState
+    pure newTMState
 
 createScrolledWin :: IO ScrolledWindow
 createScrolledWin = do
   scrolledWin <- new ScrolledWindow []
-  #show scrolledWin
+  widgetShow scrolledWin
   pure scrolledWin
 
-createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO Term
-createTerm handleKeyPress tmState = do
+createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO TMTerm
+createTerm handleKeyPress mvarTMState = do
   scrolledWin <- createScrolledWin
-  fontDesc <- withMVar tmState (pure . font)
-  vteTerm <-
-    new Terminal [#fontDesc := fontDesc, #cursorBlinkMode := CursorBlinkModeOn]
+  TMState{tmStateFontDesc} <- readMVar mvarTMState
+  vteTerm <- terminalNew
+  terminalSetFont vteTerm (Just tmStateFontDesc)
+  terminalSetCursorBlinkMode vteTerm CursorBlinkModeOn
   _termResVal <-
-    #spawnSync
+    terminalSpawnSync
       vteTerm
       [PtyFlagsDefault]
       Nothing
@@ -56,19 +61,25 @@ createTerm handleKeyPress tmState = do
       [SpawnFlagsDefault]
       Nothing
       noCancellable
-  #show vteTerm
-  uniq' <- newUnique
-  let terminal = Term vteTerm uniq'
-  #add scrolledWin (term terminal)
-  modifyMVar_ tmState $ \Note{..} -> do
-    pageIndex <- #appendPage notebook scrolledWin noWidget
-    void $ #setCurrentPage notebook pageIndex
-    pure $ Note notebook (snoc children terminal) font
-  void $ Gdk.on vteTerm #windowTitleChanged $ do
-    title <- get vteTerm #windowTitle
-    Note{..} <- readMVar tmState
-    #setTabLabelText notebook scrolledWin title
-  void $ Gdk.on (term terminal) #keyPressEvent $ handleKeyPress tmState
-  void $ Gdk.on scrolledWin #keyPressEvent $ handleKeyPress tmState
-  void $ Gdk.on (term terminal) #childExited $ termExit scrolledWin terminal tmState
-  pure terminal
+  widgetShow vteTerm
+  tmTerm <- newTMTerm vteTerm
+  let notebookTab = createTMNotebookTab scrolledWin tmTerm
+  containerAdd scrolledWin vteTerm
+  modifyMVar_ mvarTMState $ \tmState -> do
+    let notebook = tmStateNotebook tmState
+        note = tmNotebook tmStateNotebook
+        tabs = tmNotebookTabs tmStateNotebook
+    pageIndex <- notebookAppendPage note scrolledWin noWidget
+    void $ notebookSetCurrentPage note pageIndex
+    let newTabs = appendFL tabs notebookTab
+    pure $ tmState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+  void $ onTerminalWindowTitleChanged vteTerm $ do
+    title <- terminalGetWindowTitle vteTerm
+    TMState{tmStateNotebook} <- readMVar mvarTMState
+    let notebook = tmNotebook tmStateNotebook
+    notebookSetTabLabelText notebook scrolledWin title
+  void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
+  void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
+  void $ onTerminalChildExited vteTerm $
+    termExit scrolledWin tmTerm mvarTMState
+  pure tmTerm
