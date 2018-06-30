@@ -6,6 +6,12 @@ import Control.Lens
 import GI.Gdk
   ( EventKey
   )
+import GI.Gio
+  ( noCancellable
+  )
+import GI.GLib
+  ( SpawnFlags(SpawnFlagsDefault)
+  )
 import GI.Gtk
   ( Application
   , ApplicationWindow(ApplicationWindow)
@@ -19,10 +25,29 @@ import GI.Gtk
   , applicationSetAccelsForAction
   , builderNewFromString
   , builderSetApplication
+  , containerAdd
+  , noAdjustment
+  , notebookAppendPage
+  , notebookDetachTab
   , notebookSetCurrentPage
+  , notebookSetTabLabelText
   , noWidget
+  , onWidgetKeyPressEvent
+  , scrolledWindowNew
   , setWidgetHasFocus
   , styleContextAddProviderForScreen
+  , widgetShow
+  )
+import GI.Vte
+  ( CursorBlinkMode(CursorBlinkModeOn)
+  , PtyFlags(PtyFlagsDefault)
+  , onTerminalChildExited
+  , onTerminalWindowTitleChanged
+  , terminalGetWindowTitle
+  , terminalNew
+  , terminalSetCursorBlinkMode
+  , terminalSetFont
+  , terminalSpawnSync
   )
 
 import Termonad.FocusList
@@ -41,7 +66,7 @@ focusTerm i tmState = do
         let term = notebookTab ^. lensTMNotebookTabTerm . lensTerm
         setWidgetHasFocus term True
         let newTMState =
-              oldTMState $ lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+              oldTMState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
         pure newTMState
 
 altNumSwitchTerm :: Int -> TMState -> IO ()
@@ -53,15 +78,15 @@ termExit scrolledWin tab mvarTMState _exitStatus =
     let notebook = tmStateNotebook tmState
         note = tmNotebook notebook
         oldTabs = tmNotebookTabs notebook
-    #detachTab note scrolledWin
-    let newTabs = deleteFL oldTabs tab
+    notebookDetachTab note scrolledWin
+    let newTabs = deleteFL tab oldTabs
     let newTMState =
           set (lensTMStateNotebook . lensTMNotebookTabs) newTabs tmState
     pure newTMState
 
 createScrolledWin :: IO ScrolledWindow
 createScrolledWin = do
-  scrolledWin <- new ScrolledWindow []
+  scrolledWin <- scrolledWindowNew noAdjustment noAdjustment
   widgetShow scrolledWin
   pure scrolledWin
 
@@ -88,8 +113,8 @@ createTerm handleKeyPress mvarTMState = do
   containerAdd scrolledWin vteTerm
   modifyMVar_ mvarTMState $ \tmState -> do
     let notebook = tmStateNotebook tmState
-        note = tmNotebook tmStateNotebook
-        tabs = tmNotebookTabs tmStateNotebook
+        note = tmNotebook notebook
+        tabs = tmNotebookTabs notebook
     pageIndex <- notebookAppendPage note scrolledWin noWidget
     void $ notebookSetCurrentPage note pageIndex
     let newTabs = appendFL tabs notebookTab
@@ -102,5 +127,5 @@ createTerm handleKeyPress mvarTMState = do
   void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
   void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
   void $ onTerminalChildExited vteTerm $
-    termExit scrolledWin tmTerm mvarTMState
+    termExit scrolledWin notebookTab mvarTMState
   pure tmTerm

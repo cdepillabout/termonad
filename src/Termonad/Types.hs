@@ -64,12 +64,10 @@ data TMNotebook = TMNotebook
 
 $(makeLensesFor
     [ ("tmNotebook", "lensTMNotebook")
-    , ("tmNotebookTab", "lensTMNotebookTabs")
+    , ("tmNotebookTabs", "lensTMNotebookTabs")
     ]
     ''TMNotebook
  )
-
-lala = lensTMNotebookTabs
 
 data TMState' = TMState
   { tmStateApp :: !Application
@@ -92,6 +90,10 @@ type TMState = MVar TMState'
 instance Eq TMTerm where
   (==) :: TMTerm -> TMTerm -> Bool
   (==) = (==) `on` (unique :: TMTerm -> Unique)
+
+instance Eq TMNotebookTab where
+  (==) :: TMNotebookTab -> TMNotebookTab -> Bool
+  (==) = (==) `on` tmNotebookTabTerm
 
 createTMTerm :: Terminal -> Unique -> TMTerm
 createTMTerm trm unq =
