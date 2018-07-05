@@ -266,10 +266,27 @@ unsafeGetFLFocusItem fl =
       case lookup i intmap of
         Nothing ->
           error $
-            "unsafeGetFLFocusItem: i (" <>
+            "unsafeGetFLFocusItem: internal error, i (" <>
             show i <>
             ") doesnt exist in intmap"
         Just a -> a
+
+getFLFocusItem :: FocusList a -> Maybe a
+getFLFocusItem fl =
+  let focus = fl ^. lensFocusListFocus
+  in
+  case focus of
+    NoFocus -> Nothing
+    Focus i ->
+      let intmap = fl ^. lensFocusList
+      in
+      case lookup i intmap of
+        Nothing ->
+          error $
+            "getFLFocusItem: internal error, i (" <>
+            show i <>
+            ") doesnt exist in intmap"
+        Just a -> Just a
 
 -- | Unsafely insert a new @a@ in a 'FocusList'.  This sets the 'Int' value to
 -- @a@.  The length of the 'FocusList' will be increased by 1.  The
@@ -593,10 +610,10 @@ deleteFL item = go
 -- prop> setFocusFL i fl == fmap snd (updateFocusFL i fl)
 setFocusFL :: Int -> FocusList a -> Maybe (FocusList a)
 setFocusFL i fl
+  -- Can't set a 'Focus' for an empty 'FocusList'.
   | isEmptyFL fl = Nothing
   | otherwise =
-    let focus = unsafeGetFLFocus fl
-        len = fl ^. lensFocusListLen
+    let len = fl ^. lensFocusListLen
     in
     if i < 0 || i >= len
       then Nothing
@@ -624,8 +641,7 @@ updateFocusFL :: Int -> FocusList a -> Maybe (a, FocusList a)
 updateFocusFL i fl
   | isEmptyFL fl = Nothing
   | otherwise =
-    let focus = unsafeGetFLFocus fl
-        len = fl ^. lensFocusListLen
+    let len = fl ^. lensFocusListLen
     in
     if i < 0 || i >= len
       then Nothing
