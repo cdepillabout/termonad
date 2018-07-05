@@ -72,17 +72,33 @@ focusTerm i tmState = do
 altNumSwitchTerm :: Int -> TMState -> IO ()
 altNumSwitchTerm = focusTerm
 
-termExit :: ScrolledWindow -> TMNotebookTab -> TMState -> Int32 -> IO ()
-termExit scrolledWin tab mvarTMState _exitStatus =
+termExitFocused :: TMState -> IO ()
+termExitFocused mvarTMState =
   modifyMVar_ mvarTMState $ \tmState -> do
-    let notebook = tmStateNotebook tmState
-        note = tmNotebook notebook
-        oldTabs = tmNotebookTabs notebook
-    notebookDetachTab note scrolledWin
-    let newTabs = deleteFL tab oldTabs
-    let newTMState =
-          set (lensTMStateNotebook . lensTMNotebookTabs) newTabs tmState
-    pure newTMState
+    let maybeTab =
+          tmState ^. lensTMStateNotebook . lensTMNotebookTabs . to getFLFocusItem
+    case maybeTab of
+      Nothing -> pure tmState
+      Just tab -> termExit' tab tmState
+
+termExit :: TMNotebookTab -> TMState -> IO ()
+termExit tab mvarTMState =
+  modifyMVar_ mvarTMState $ termExit' tab
+
+termExit' :: TMNotebookTab -> TMState' -> IO TMState'
+termExit' tab tmState = do
+  let notebook = tmStateNotebook tmState
+      note = tmNotebook notebook
+      oldTabs = tmNotebookTabs notebook
+      scrolledWin = tmNotebookTabTermContainer tab
+  notebookDetachTab note scrolledWin
+  let newTabs = deleteFL tab oldTabs
+  let newTMState =
+        set (lensTMStateNotebook . lensTMNotebookTabs) newTabs tmState
+  pure newTMState
+
+termExitHandler :: TMNotebookTab -> TMState -> Int32 -> IO ()
+termExitHandler tab mvarTMState _exitStatus = termExit tab mvarTMState
 
 createScrolledWin :: IO ScrolledWindow
 createScrolledWin = do
@@ -127,5 +143,5 @@ createTerm handleKeyPress mvarTMState = do
   void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
   void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
   void $ onTerminalChildExited vteTerm $
-    termExit scrolledWin notebookTab mvarTMState
+    termExitHandler notebookTab mvarTMState
   pure tmTerm
