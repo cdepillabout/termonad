@@ -146,7 +146,7 @@ setupTermonad app win builder = do
   applicationSetAccelsForAction app "app.newtab" ["<Shift><Ctrl>T"]
 
   closeTabAction <- simpleActionNew "closetab" Nothing
-  void $ onSimpleActionActivate closeTabAction (\_ -> putStrLn "got close tab!")
+  void $ onSimpleActionActivate closeTabAction (\_ -> putStrLn "before close tmstate:" >> pTraceShowMTMState tmState >> putStrLn "after close tmstate:" >> pTraceShowMTMState tmState >> termExitFocused tmState)
   actionMapAddAction app closeTabAction
   applicationSetAccelsForAction app "app.closetab" ["<Shift><Ctrl>W"]
 

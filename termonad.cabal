@@ -39,6 +39,7 @@ library
                      , haskell-gi-base
                      , haskell-gi-overloading >= 1.0
                      , lens
+                     , pretty-simple
                      , QuickCheck
                      , xml-conduit
                      , xml-html-qq
