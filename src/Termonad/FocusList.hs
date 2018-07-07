@@ -109,7 +109,40 @@ lensFocusListAt i = lensFocusList . at i
 
 -- | This is an invariant that the 'FocusList' must always protect.
 invariantFL :: FocusList a -> Bool
-invariantFL fl = False
+invariantFL fl =
+  invariantFocusNotNeg &&
+  invariantFocusInMap &&
+  invariantLenIsCorrect &&
+  invariantNoSkippedNumsInMap
+  where
+    invariantFocusNotNeg :: Bool
+    invariantFocusNotNeg =
+      case fl ^. lensFocusListFocus of
+        NoFocus -> True
+        Focus i -> i >= 0
+
+    invariantFocusInMap :: Bool
+    invariantFocusInMap =
+      case fl ^. lensFocusListFocus of
+        NoFocus -> length (fl ^. lensFocusList) == 0
+        Focus i ->
+          case lookup i (fl ^. lensFocusList) of
+            Nothing -> False
+            Just _ -> True
+
+    invariantLenIsCorrect :: Bool
+    invariantLenIsCorrect =
+      let len = fl ^. lensFocusListLen
+          intmap = fl ^. lensFocusList
+      in len == length intmap
+
+    invariantNoSkippedNumsInMap :: Bool
+    invariantNoSkippedNumsInMap =
+      let len = fl ^. lensFocusListLen
+          intmap = fl ^. lensFocusList
+          indexes = sort $ fmap fst $ mapToList intmap
+      in indexes == [0..(len - 1)]
+
 
 -- | Unsafely create a 'FocusList'.  This does not check that the focus
 -- actually exists in the list.
