@@ -1,24 +1,27 @@
 
 module Main where
 
-import Termonad.Prelude
+import Termonad.Prelude hiding (assert)
 
 import Hedgehog
-  ( Callback(Update)
+  ( Callback(Ensure, Update)
   , Command(Command)
-  , Concrete
+  , Concrete(Concrete)
   , HTraversable(htraverse)
+  , MonadGen
   , MonadTest
   , Property
   , Symbolic
-  , Var
+  , Test
+  , Var(Var)
   , annotate
+  , assert
   , executeSequential
   , failure
   , forAll
   , property
   )
-import Hedgehog.Gen (sequential)
+import Hedgehog.Gen (ascii, sequential, string)
 import Hedgehog.Range (linear)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
@@ -80,33 +83,45 @@ foo =
 --         [Callback input output state]
 --     }
 
-data State a (v :: k) = State { unState :: Var (FocusList a) v } deriving (Eq, Show)
+newtype State a (v :: * -> *) = State { unState :: FocusList (Var a v) } deriving (Eq, Show)
 
 initialState :: State a v
 initialState = State emptyFL
 
-data InsertFL a v = InsertFL { unInsertFL :: FocusList a } deriving (Eq, Show)
+data InsertFL a v = InsertFL !(FocusList (Var a v)) !a deriving (Eq, Show)
 
 instance HTraversable (InsertFL x) where
   htraverse :: forall f g h. Applicative f => (forall a. g a -> f (h a)) -> InsertFL x g -> f (InsertFL x h)
-  htraverse func (InsertFL x) = pure (InsertFL x)
+  htraverse func (InsertFL fl newVal) = InsertFL <$> traverse go fl <*> pure newVal
+    where
+      go :: forall a. Var a g -> f (Var a h)
+      go var = htraverse func var
 
-insertFLCommand :: forall n m. (Monad n, MonadTest m) => Command n m (State String)
-insertFLCommand = Command generator execute [Update update]
+insertFLCommand :: forall n m. (MonadGen n, MonadTest m) => Command n m (State String)
+insertFLCommand = Command generator execute [Update update, Ensure ensure]
   where
     generator :: State String Symbolic -> Maybe (n (InsertFL String Symbolic))
-    generator (State fl) = Just $ pure (InsertFL fl)
+    generator (State fl) =
+      Just $ do
+        newStr <- string (linear 0 25) ascii
+        pure (InsertFL fl newStr)
 
-    execute :: InsertFL String Concrete -> m (FocusList String)
-    execute (InsertFL fl) =
-      case insertFL 0 "hello" fl of
+    execute :: InsertFL String Concrete -> m String
+    execute (InsertFL fl newVal) =
+      case insertFL 0 (Var (Concrete newVal)) fl of
         Nothing -> do
           annotate "Failed to insert a value into the FocusList"
           failure
-        Just newFL -> pure newFL
+        Just _ -> pure newVal
 
-    update :: State String v -> InsertFL String v -> Var (FocusList String) v -> State String v
-    update (State fl) _ Var = undefined
+    update :: forall v. State String v -> InsertFL String v -> Var String v -> State String v
+    update (State fl) (InsertFL _ _) newVal =
+      case insertFL 0 newVal fl of
+        Nothing -> error "insertFLCommand, update: Failed to insert a value into the FocusList, even though we should be able to"
+        Just newFL -> State newFL
+
+    ensure :: State String Concrete -> State String Concrete -> InsertFL String Concrete -> String -> Test ()
+    ensure _ (State endingFL) _ _ = assert False
 
 
 -- data Callback input output state =
