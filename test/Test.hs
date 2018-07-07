@@ -1,9 +1,11 @@
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
-import Hedgehog (Command(Command), Concrete, Property, Symbolic, executeSequential, forAll, property)
+import Hedgehog (Command(Command), Concrete, HTraversable(htraverse), Property, Symbolic, executeSequential, forAll, property)
 import Hedgehog.Gen (sequential)
 import Hedgehog.Range (linear)
 import Test.Tasty (TestTree, defaultMain, testGroup)
@@ -73,8 +75,15 @@ initialState = State emptyFL
 
 data InsertFL v = InsertFL deriving (Eq, Show)
 
+instance HTraversable InsertFL where
+  htraverse :: forall f g h. Applicative f => (forall a. g a -> f (h a)) -> InsertFL g -> f (InsertFL h)
+  htraverse func InsertFL = pure InsertFL
+
 insertFLCommand :: forall n m. (Monad n, Monad m) => Command n m (State String)
-insertFLCommand = Command generator undefined undefined
+insertFLCommand = Command generator execute undefined
   where
     generator :: State String Symbolic -> Maybe (n (InsertFL Symbolic))
     generator _curState = Just $ pure InsertFL
+
+    execute :: InsertFL Concrete -> m ()
+    execute InsertFL = undefined
