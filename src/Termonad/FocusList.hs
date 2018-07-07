@@ -112,15 +112,19 @@ invariantFL :: FocusList a -> Bool
 invariantFL fl =
   invariantFocusNotNeg &&
   invariantFocusInMap &&
+  invariantFocusIfLenGT0 &&
   invariantLenIsCorrect &&
   invariantNoSkippedNumsInMap
   where
+    -- This makes sure that the 'Focus' in a 'FocusList' can never be negative.
     invariantFocusNotNeg :: Bool
     invariantFocusNotNeg =
       case fl ^. lensFocusListFocus of
         NoFocus -> True
         Focus i -> i >= 0
 
+    -- | This makes sure that if there is a 'Focus', then it actually exists in
+    -- the 'FocusList'.
     invariantFocusInMap :: Bool
     invariantFocusInMap =
       case fl ^. lensFocusListFocus of
@@ -130,12 +134,27 @@ invariantFL fl =
             Nothing -> False
             Just _ -> True
 
+    -- | This makes sure that there needs to be a 'Focus' if the length of the
+    -- 'FocusList' is greater than 0.
+    invariantFocusIfLenGT0 :: Bool
+    invariantFocusIfLenGT0 =
+      let len = fl ^. lensFocusListLen
+          focus = fl ^. lensFocusListFocus
+      in
+      case focus of
+        Focus _ -> len /= 0
+        NoFocus -> len == 0
+
+    -- | Make sure that the length of the 'FocusList' is actually the number of
+    -- elements in the inner 'IntMap'.
     invariantLenIsCorrect :: Bool
     invariantLenIsCorrect =
       let len = fl ^. lensFocusListLen
           intmap = fl ^. lensFocusList
       in len == length intmap
 
+    -- | Make sure that there are no numbers that have been skipped in the
+    -- inner 'IntMap'.
     invariantNoSkippedNumsInMap :: Bool
     invariantNoSkippedNumsInMap =
       let len = fl ^. lensFocusListLen
