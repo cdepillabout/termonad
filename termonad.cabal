@@ -29,7 +29,6 @@ library
                      , classy-prelude
                      , constraints
                      , data-default
-                     , finite-typelits
                      , gi-gdk
                      , gi-gio
                      , gi-glib
@@ -37,6 +36,7 @@ library
                      , gi-pango
                      , gi-vte
                      , haskell-gi-base
+                     , haskell-gi-overloading >= 1.0
                      , haskell-gi-overloading >= 1.0
                      , lens
                      , pretty-simple
@@ -87,8 +87,10 @@ test-suite termonad-test
   main-is:             Test.hs
   hs-source-dirs:      test
   build-depends:       base
+                     , hedgehog
                      , termonad
                      , tasty
+                     , tasty-hedgehog
   default-language:    Haskell2010
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
 
