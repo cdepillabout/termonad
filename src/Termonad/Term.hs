@@ -54,6 +54,8 @@ import Termonad.FocusList
 import Termonad.Types
 import Termonad.Types (lensTMNotebookTabs)
 
+import Text.Pretty.Simple
+
 focusTerm :: Int -> TMState -> IO ()
 focusTerm i tmState = do
   modifyMVar_ tmState $ \oldTMState@TMState{tmStateNotebook} -> do
@@ -78,8 +80,8 @@ termExitFocused mvarTMState =
     let maybeTab =
           tmState ^. lensTMStateNotebook . lensTMNotebookTabs . to getFLFocusItem
     case maybeTab of
-      Nothing -> pure tmState
-      Just tab -> termExit' tab tmState
+      Nothing -> trace "in termExitFocused, no tab" $ pure tmState
+      Just tab -> trace ("in termExitFocused, found tab: " <> show tab) $ termExit' tab tmState
 
 termExit :: TMNotebookTab -> TMState -> IO ()
 termExit tab mvarTMState =
@@ -87,6 +89,8 @@ termExit tab mvarTMState =
 
 termExit' :: TMNotebookTab -> TMState' -> IO TMState'
 termExit' tab tmState = do
+  putStrLn "In termExit', tmState:"
+  pPrint tmState
   let notebook = tmStateNotebook tmState
       note = tmNotebook notebook
       oldTabs = tmNotebookTabs notebook
@@ -95,6 +99,8 @@ termExit' tab tmState = do
   let newTabs = deleteFL tab oldTabs
   let newTMState =
         set (lensTMStateNotebook . lensTMNotebookTabs) newTabs tmState
+  putStrLn "In termExit', newTMState:"
+  pPrint newTMState
   pure newTMState
 
 termExitHandler :: TMNotebookTab -> TMState -> Int32 -> IO ()
@@ -120,7 +126,7 @@ createTerm handleKeyPress mvarTMState = do
       Nothing
       ["/usr/bin/env", "bash"]
       Nothing
-      [SpawnFlagsDefault]
+      ([SpawnFlagsDefault] :: [SpawnFlags])
       Nothing
       noCancellable
   widgetShow vteTerm

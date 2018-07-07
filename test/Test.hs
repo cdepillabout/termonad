@@ -1,17 +1,27 @@
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
-import Hedgehog (Command(Command), Concrete, HTraversable(htraverse), Property, Symbolic, executeSequential, forAll, property)
+import Termonad.Prelude
+
+import Hedgehog
+  ( Command(Command)
+  , Concrete
+  , HTraversable(htraverse)
+  , MonadTest
+  , Property
+  , Symbolic
+  , annotate
+  , executeSequential
+  , failure
+  , forAll
+  , property
+  )
 import Hedgehog.Gen (sequential)
 import Hedgehog.Range (linear)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
-import Termonad.FocusList (FocusList, emptyFL)
+import Termonad.FocusList (FocusList, emptyFL, insertFL)
 
 main :: IO ()
 main = do
@@ -73,17 +83,22 @@ data State a (v :: k) = State { unState :: FocusList a } deriving (Eq, Show)
 initialState :: State a v
 initialState = State emptyFL
 
-data InsertFL v = InsertFL deriving (Eq, Show)
+data InsertFL a v = InsertFL { unInsertFL :: FocusList a } deriving (Eq, Show)
 
-instance HTraversable InsertFL where
-  htraverse :: forall f g h. Applicative f => (forall a. g a -> f (h a)) -> InsertFL g -> f (InsertFL h)
-  htraverse func InsertFL = pure InsertFL
+instance HTraversable (InsertFL x) where
+  htraverse :: forall f g h. Applicative f => (forall a. g a -> f (h a)) -> InsertFL x g -> f (InsertFL x h)
+  htraverse func (InsertFL x) = pure (InsertFL x)
 
-insertFLCommand :: forall n m. (Monad n, Monad m) => Command n m (State String)
-insertFLCommand = Command generator execute undefined
+insertFLCommand :: forall n m. (Monad n, MonadTest m) => Command n m (State String)
+insertFLCommand = Command generator execute []
   where
-    generator :: State String Symbolic -> Maybe (n (InsertFL Symbolic))
-    generator _curState = Just $ pure InsertFL
+    generator :: State String Symbolic -> Maybe (n (InsertFL String Symbolic))
+    generator (State fl) = Just $ pure (InsertFL fl)
 
-    execute :: InsertFL Concrete -> m ()
-    execute InsertFL = undefined
+    execute :: InsertFL String Concrete -> m (FocusList String)
+    execute (InsertFL fl) =
+      case insertFL 0 "hello" fl of
+        Nothing -> do
+          annotate "Failed to insert a value into the FocusList"
+          failure
+        Just newFL -> pure newFL
