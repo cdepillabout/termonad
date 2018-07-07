@@ -4,12 +4,14 @@ module Main where
 import Termonad.Prelude
 
 import Hedgehog
-  ( Command(Command)
+  ( Callback(Update)
+  , Command(Command)
   , Concrete
   , HTraversable(htraverse)
   , MonadTest
   , Property
   , Symbolic
+  , Var
   , annotate
   , executeSequential
   , failure
@@ -78,7 +80,7 @@ foo =
 --         [Callback input output state]
 --     }
 
-data State a (v :: k) = State { unState :: FocusList a } deriving (Eq, Show)
+data State a (v :: k) = State { unState :: Var (FocusList a) v } deriving (Eq, Show)
 
 initialState :: State a v
 initialState = State emptyFL
@@ -90,7 +92,7 @@ instance HTraversable (InsertFL x) where
   htraverse func (InsertFL x) = pure (InsertFL x)
 
 insertFLCommand :: forall n m. (Monad n, MonadTest m) => Command n m (State String)
-insertFLCommand = Command generator execute []
+insertFLCommand = Command generator execute [Update update]
   where
     generator :: State String Symbolic -> Maybe (n (InsertFL String Symbolic))
     generator (State fl) = Just $ pure (InsertFL fl)
@@ -102,3 +104,30 @@ insertFLCommand = Command generator execute []
           annotate "Failed to insert a value into the FocusList"
           failure
         Just newFL -> pure newFL
+
+    update :: State String v -> InsertFL String v -> Var (FocusList String) v -> State String v
+    update (State fl) _ Var = undefined
+
+
+-- data Callback input output state =
+--   -- | A pre-condition for a command that must be verified before the command
+--   --   can be executed. This is mainly used during shrinking to ensure that it
+--   --   is still OK to run a command despite the fact that some previously
+--   --   executed commands may have been removed from the sequence.
+--   --
+--     Require (state Symbolic -> input Symbolic -> Bool)
+
+--   -- | Updates the model state, given the input and output of the command. Note
+--   --   that this function is polymorphic in the type of values. This is because
+--   --   it must work over 'Symbolic' values when we are generating actions, and
+--   --   'Concrete' values when we are executing them.
+--   --
+--   | Update (forall v. Ord1 v => state v -> input v -> Var output v -> state v)
+
+--   -- | A post-condition for a command that must be verified for the command to
+--   --   be considered a success.
+--   --
+--   --   This callback receives the state prior to execution as the first
+--   --   argument, and the state after execution as the second argument.
+--   --
+--   | Ensure (state Concrete -> state Concrete -> input Concrete -> output -> Test ())
