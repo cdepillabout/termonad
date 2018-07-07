@@ -8,6 +8,7 @@ module Termonad.FocusList where
 import Termonad.Prelude
 
 import Control.Lens
+import qualified Data.Foldable as Foldable
 import Test.QuickCheck
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
@@ -63,6 +64,17 @@ $(makeLensesFor
     ]
     ''FocusList
  )
+
+instance Functor FocusList where
+  fmap :: (a -> b) -> FocusList a -> FocusList b
+  fmap f (FocusList focus len intmap) = FocusList focus len (fmap f intmap)
+
+instance Foldable FocusList where
+  foldr f b (FocusList _ _ intmap) = Foldable.foldr f b intmap
+
+instance Traversable FocusList where
+  traverse :: Applicative f => (a -> f b) -> FocusList a -> f (FocusList b)
+  traverse f (FocusList focus len intmap) = FocusList focus len <$> traverse f intmap
 
 instance Arbitrary1 FocusList where
   liftArbitrary :: Gen a -> Gen (FocusList a)
