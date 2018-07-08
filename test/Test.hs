@@ -92,14 +92,11 @@ ensureInvariants (State startingFL) (State endingFL) _ _ = do
 -- InsertFL --
 --------------
 
-data InsertFL a v = InsertFL !(FocusList (Var a v)) !Int !a deriving (Eq, Show)
+data InsertFL a v = InsertFL !Int !a deriving (Eq, Show)
 
 instance HTraversable (InsertFL x) where
   htraverse :: forall f g h. Applicative f => (forall a. g a -> f (h a)) -> InsertFL x g -> f (InsertFL x h)
-  htraverse func (InsertFL fl newKey newVal) = InsertFL <$> traverse go fl <*> pure newKey <*> pure newVal
-    where
-      go :: forall a. Var a g -> f (Var a h)
-      go var = htraverse func var
+  htraverse _ (InsertFL newKey newVal) = pure (InsertFL newKey newVal)
 
 insertFLCommand :: forall n m. (MonadGen n, MonadTest m) => Command n m (State String)
 insertFLCommand =
@@ -118,38 +115,44 @@ insertFLCommand =
         let len = fl ^. lensFocusListLen
         newKey <- int $ constant 0 len
         newVal <- string (constant 0 25) ascii
-        pure (InsertFL fl newKey newVal)
+        pure (InsertFL newKey newVal)
 
     execute :: InsertFL String Concrete -> m String
-    execute (InsertFL _ _ newVal) = pure newVal
+    execute (InsertFL _ newVal) = pure newVal
 
     require :: State String Symbolic -> InsertFL String Symbolic -> Bool
-    require (State stateFL) (InsertFL insertFLFL newKey _) =
-      newKey <= (stateFL ^. lensFocusListLen) &&
-      newKey <= (insertFLFL ^. lensFocusListLen)
+    require (State fl) (InsertFL newKey _) =
+        let len = fl ^. lensFocusListLen
+        in
+        if len == 0
+          then newKey == 0
+          else newKey >= 0 && newKey <= len
 
     update :: forall v. State String v -> InsertFL String v -> Var String v -> State String v
-    update (State fl) (InsertFL insertFLFL newKey _) newVal =
-      case insertFL newKey newVal fl of
+    update (State fl) (InsertFL newKey newVal) newValVar =
+      case insertFL newKey newValVar fl of
         Nothing ->
           let msg =
                 "insertFLCommand, update: Failed to insert a value into " <>
                 "the FocusList, even though we should be able to" <>
                   "\nnewKey: " <>
                   show newKey <>
-                  "\nlen of state focus list: " <>
-                  show (fl ^. lensFocusListLen) <>
-                  "\nlen of InsertFL focus list: " <>
-                  show (insertFLFL ^. lensFocusListLen)
+                  "\nnewVal: " <>
+                  show newVal <>
+                  "\nfocus list len: " <>
+                  show (fl ^. lensFocusListLen)
           in error msg
         Just newFL -> State newFL
 
     ensureStringInFL :: State String Concrete -> State String Concrete -> InsertFL String Concrete -> String -> Test ()
-    ensureStringInFL _ (State endingFL) (InsertFL _ newKey newVal) _ =
+    ensureStringInFL _ (State endingFL) (InsertFL newKey newVal) _ =
       let maybeVal = lookupFL newKey endingFL
       in
       case maybeVal of
         Nothing -> do
+          annotate (debugFL endingFL)
+          annotateShow newKey
+          annotateShow newVal
           annotate "Couldn't find inserted value in FocusList"
           failure
         Just val -> val === Var (Concrete newVal)
