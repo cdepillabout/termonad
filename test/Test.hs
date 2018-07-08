@@ -82,7 +82,6 @@ ensureInvariants (State startingFL) (State endingFL) _ _ = do
   annotate (debugFL endingFL)
   assert (invariantFL endingFL)
 
-
 --------------
 -- InsertFL --
 --------------

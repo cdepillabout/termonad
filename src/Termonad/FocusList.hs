@@ -604,7 +604,7 @@ removeFL i fl
         newFL = unsafeShiftDownFrom i newFLWithHole
         focus = unsafeGetFLFocus fl
     in
-    if focus >= i
+    if focus >= i && focus /= 0
       then Just $ newFL & lensFocusListFocus . _Focus -~ 1
       else Just newFL
 
