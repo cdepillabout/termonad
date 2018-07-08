@@ -18,6 +18,7 @@ import Hedgehog
   , Var(Var)
   , (===)
   , annotate
+  , annotateShow
   , assert
   , concrete
   , executeSequential
@@ -66,8 +67,8 @@ foo =
           (linear 1 200)
           initialState
           [ insertFLCommand
-          , removeFLCommand
-          , deleteFLCommand
+          -- , removeFLCommand
+          -- , deleteFLCommand
           ]
     traceShowM actions
     executeSequential initialState actions
@@ -120,22 +121,27 @@ insertFLCommand =
         pure (InsertFL fl newKey newVal)
 
     execute :: InsertFL String Concrete -> m String
-    execute (InsertFL fl newKey newVal) =
-      case insertFL newKey (Var (Concrete newVal)) fl of
-        Nothing -> do
-          annotate "Failed to insert a value into the FocusList"
-          failure
-        Just _ -> pure newVal
+    execute (InsertFL _ _ newVal) = pure newVal
 
-    require :: State String Symbolic -> InsertFL String v -> Bool
-    require (State fl) (InsertFL _ newKey _) =
-      let len = fl ^. lensFocusListLen
-      in newKey <= len
+    require :: State String Symbolic -> InsertFL String Symbolic -> Bool
+    require (State stateFL) (InsertFL insertFLFL newKey _) =
+      newKey <= (stateFL ^. lensFocusListLen) &&
+      newKey <= (insertFLFL ^. lensFocusListLen)
 
     update :: forall v. State String v -> InsertFL String v -> Var String v -> State String v
-    update (State fl) (InsertFL _ newKey _) newVal =
+    update (State fl) (InsertFL insertFLFL newKey _) newVal =
       case insertFL newKey newVal fl of
-        Nothing -> error "insertFLCommand, update: Failed to insert a value into the FocusList, even though we should be able to"
+        Nothing ->
+          let msg =
+                "insertFLCommand, update: Failed to insert a value into " <>
+                "the FocusList, even though we should be able to" <>
+                  "\nnewKey: " <>
+                  show newKey <>
+                  "\nlen of state focus list: " <>
+                  show (fl ^. lensFocusListLen) <>
+                  "\nlen of InsertFL focus list: " <>
+                  show (insertFLFL ^. lensFocusListLen)
+          in error msg
         Just newFL -> State newFL
 
     ensureStringInFL :: State String Concrete -> State String Concrete -> InsertFL String Concrete -> String -> Test ()
@@ -186,9 +192,11 @@ removeFLCommand =
     execute (RemoveFL fl keyToRemove) = pure ()
 
     require :: State String Symbolic -> RemoveFL String v -> Bool
-    require (State fl) (RemoveFL _ keyToRemove) =
-      let len = fl ^. lensFocusListLen
-      in not (isEmptyFL fl) && keyToRemove < len
+    require (State statefl) (RemoveFL insertflfl keyToRemove) =
+      not (isEmptyFL statefl) &&
+      not (isEmptyFL insertflfl) &&
+      keyToRemove < (statefl ^. lensFocusListLen) &&
+      keyToRemove < (insertflfl ^. lensFocusListLen)
 
     update :: forall a v. State String v -> RemoveFL String v -> Var a v -> State String v
     update (State fl) (RemoveFL _ keyToRemove) _ =
@@ -197,12 +205,13 @@ removeFLCommand =
         Just newFL -> State newFL
 
     ensureActuallyRemoved :: State String Concrete -> State String Concrete -> RemoveFL String Concrete -> a -> Test ()
-    ensureActuallyRemoved (State startingFL) (State endingFL) (RemoveFL _ _) _ =
+    ensureActuallyRemoved (State startingFL) (State endingFL) (RemoveFL _ keyToRemove) _ =
       if isEmptyFL startingFL
         then startingFL === endingFL
         else do
           let startingFLLen = startingFL ^. lensFocusListLen
               endingFLLen = endingFL ^. lensFocusListLen
+          annotateShow keyToRemove
           annotate (debugFL startingFL)
           annotate (debugFL endingFL)
           startingFLLen - 1 === endingFLLen
