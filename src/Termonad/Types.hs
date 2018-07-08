@@ -33,7 +33,7 @@ import GI.Vte (Terminal(Terminal))
 import Text.Pretty.Simple (pPrint)
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
-import Termonad.FocusList
+import Termonad.FocusList (FocusList, emptyFL, singletonFL)
 
 data TMTerm = TMTerm
   { term :: Terminal
