@@ -427,6 +427,9 @@ unsafeLookup i intmap =
     Nothing -> error $ "unsafeLookup: key " <> show i <> " not found in intmap"
     Just a -> a
 
+lookupFL :: Int -> FocusList a -> Maybe a
+lookupFL i fl = lookup i (fl ^. lensFocusList)
+
 -- | Insert a new value into the 'FocusList'.  The 'Focus' of the list is
 -- changed appropriately.
 --
