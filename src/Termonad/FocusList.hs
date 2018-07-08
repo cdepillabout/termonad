@@ -560,9 +560,11 @@ unsafeShiftDownFrom i fl =
 -- >>> removeFL 1 focusList
 -- Just (FocusList (Focus 1) ["cat","dog","hello"])
 --
+-- If we remove the 'Focus', then the next item is set to have the 'Focus'.
+--
 -- >>> let focusList = unsafeFLFromList (Focus 0) ["cat","goat","dog","hello"]
 -- >>> removeFL 0 focusList
--- Just (FocusList (Focus 0) ["cat","dog","hello"])
+-- Just (FocusList (Focus 0) ["goat","dog","hello"])
 --
 -- If the element to remove is the only element in the list, then the 'Focus'
 -- will be set to 'NoFocus'.
