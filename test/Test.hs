@@ -67,7 +67,7 @@ foo =
           (linear 1 200)
           initialState
           [ insertFLCommand
-          -- , removeFLCommand
+          , removeFLCommand
           -- , deleteFLCommand
           ]
     traceShowM actions
@@ -161,14 +161,11 @@ insertFLCommand =
 -- RemoveFL --
 --------------
 
-data RemoveFL a v = RemoveFL !(FocusList (Var a v)) !Int deriving (Eq, Show)
+newtype RemoveFL a v = RemoveFL Int deriving (Eq, Show)
 
 instance HTraversable (RemoveFL x) where
   htraverse :: forall f g h. Applicative f => (forall a. g a -> f (h a)) -> RemoveFL x g -> f (RemoveFL x h)
-  htraverse func (RemoveFL fl keyToRemove) = RemoveFL <$> traverse go fl <*> pure keyToRemove
-    where
-      go :: forall a. Var a g -> f (Var a h)
-      go var = htraverse func var
+  htraverse func (RemoveFL keyToRemove) = pure $ RemoveFL keyToRemove
 
 removeFLCommand :: forall n m. (MonadGen n, MonadTest m) => Command n m (State String)
 removeFLCommand =
@@ -189,35 +186,37 @@ removeFLCommand =
           Just $ do
             let len = fl ^. lensFocusListLen
             keyToRemove <- int $ constant 0 (len - 1)
-            pure (RemoveFL fl keyToRemove)
+            pure $ RemoveFL keyToRemove
 
     execute :: RemoveFL String Concrete -> m ()
-    execute (RemoveFL fl keyToRemove) = pure ()
+    execute _ = pure ()
 
     require :: State String Symbolic -> RemoveFL String v -> Bool
-    require (State statefl) (RemoveFL insertflfl keyToRemove) =
-      not (isEmptyFL statefl) &&
-      not (isEmptyFL insertflfl) &&
-      keyToRemove < (statefl ^. lensFocusListLen) &&
-      keyToRemove < (insertflfl ^. lensFocusListLen)
+    require (State fl) (RemoveFL keyToRemove) =
+      not (isEmptyFL fl) && keyToRemove < (fl ^. lensFocusListLen)
 
     update :: forall a v. State String v -> RemoveFL String v -> Var a v -> State String v
-    update (State fl) (RemoveFL _ keyToRemove) _ =
+    update (State fl) (RemoveFL keyToRemove) _ =
       case removeFL keyToRemove fl of
-        Nothing -> State fl
+        Nothing ->
+          let msg =
+                "removeFLCommand, update: Failed to remove a value from " <>
+                "the FocusList, even though we should be able to." <>
+                  "\nkeyToRemove: " <>
+                  show keyToRemove <>
+                  "\nfocus list len: " <>
+                  show (fl ^. lensFocusListLen)
+          in error msg
         Just newFL -> State newFL
 
     ensureActuallyRemoved :: State String Concrete -> State String Concrete -> RemoveFL String Concrete -> a -> Test ()
-    ensureActuallyRemoved (State startingFL) (State endingFL) (RemoveFL _ keyToRemove) _ =
-      if isEmptyFL startingFL
-        then startingFL === endingFL
-        else do
-          let startingFLLen = startingFL ^. lensFocusListLen
-              endingFLLen = endingFL ^. lensFocusListLen
-          annotateShow keyToRemove
-          annotate (debugFL startingFL)
-          annotate (debugFL endingFL)
-          startingFLLen - 1 === endingFLLen
+    ensureActuallyRemoved (State startingFL) (State endingFL) (RemoveFL keyToRemove) _ = do
+      let startingFLLen = startingFL ^. lensFocusListLen
+          endingFLLen = endingFL ^. lensFocusListLen
+      annotateShow keyToRemove
+      annotate (debugFL startingFL)
+      annotate (debugFL endingFL)
+      startingFLLen - 1 === endingFLLen
 
 --------------
 -- DeleteFL --
