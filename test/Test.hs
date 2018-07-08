@@ -22,7 +22,6 @@ import Hedgehog
   , failure
   , forAll
   , property
-  , withShrinks
   )
 import Hedgehog.Gen (ascii, int, sequential, string)
 import Hedgehog.Range (linear)
@@ -56,7 +55,7 @@ testsIO = do
 
 foo :: Property
 foo =
-  withShrinks 0 $ property $ do
+  property $ do
     actions <-
       forAll $ do
         sequential
@@ -79,7 +78,6 @@ initialState = State emptyFL
 
 ensureInvariants :: State String Concrete -> State String Concrete -> a -> b -> Test ()
 ensureInvariants (State startingFL) (State endingFL) _ _ = do
-  annotate (debugFL startingFL)
   assert (invariantFL startingFL)
   annotate (debugFL endingFL)
   assert (invariantFL endingFL)
