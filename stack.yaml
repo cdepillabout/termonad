@@ -25,6 +25,8 @@ extra-deps:
     - haskell-gi-overloading-1.0
     # Not sure about this one:
     - tasty-hedgehog-0.2.0.0
+    # temp
+    - hedgehog-0.6
 
 # Override default flag values for local packages and extra-deps
 flags: {}

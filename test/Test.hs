@@ -25,6 +25,7 @@ import Hedgehog
   , failure
   , forAll
   , property
+  , withShrinks
   )
 import Hedgehog.Gen (ascii, int, sequential, string)
 import Hedgehog.Range (constant, linear)
@@ -68,7 +69,7 @@ foo =
           initialState
           [ insertFLCommand
           , removeFLCommand
-          -- , deleteFLCommand
+          , deleteFLCommand
           ]
     traceShowM actions
     executeSequential initialState actions
@@ -122,11 +123,11 @@ insertFLCommand =
 
     require :: State String Symbolic -> InsertFL String Symbolic -> Bool
     require (State fl) (InsertFL newKey _) =
-        let len = fl ^. lensFocusListLen
-        in
-        if len == 0
-          then newKey == 0
-          else newKey >= 0 && newKey <= len
+      let len = fl ^. lensFocusListLen
+      in
+      if len == 0
+        then newKey == 0
+        else newKey >= 0 && newKey <= len
 
     update :: forall v. State String v -> InsertFL String v -> Var String v -> State String v
     update (State fl) (InsertFL newKey newVal) newValVar =
@@ -193,6 +194,7 @@ removeFLCommand =
 
     require :: State String Symbolic -> RemoveFL String v -> Bool
     require (State fl) (RemoveFL keyToRemove) =
+      traceShow fl $ traceShow keyToRemove $
       not (isEmptyFL fl) && keyToRemove < (fl ^. lensFocusListLen)
 
     update :: forall a v. State String v -> RemoveFL String v -> Var a v -> State String v
@@ -202,10 +204,10 @@ removeFLCommand =
           let msg =
                 "removeFLCommand, update: Failed to remove a value from " <>
                 "the FocusList, even though we should be able to." <>
-                  "\nkeyToRemove: " <>
-                  show keyToRemove <>
-                  "\nfocus list len: " <>
-                  show (fl ^. lensFocusListLen)
+                "\nkeyToRemove: " <>
+                show keyToRemove <>
+                "\nfocus list: " <>
+                debugFL (fmap (const "(can't show)") fl)
           in error msg
         Just newFL -> State newFL
 
@@ -222,14 +224,11 @@ removeFLCommand =
 -- DeleteFL --
 --------------
 
-data DeleteFL a v = DeleteFL !(FocusList (Var a v)) !(Var a v) deriving (Eq, Show)
+data DeleteFL a v = DeleteFL !(Var a v) deriving (Eq, Show)
 
 instance HTraversable (DeleteFL x) where
   htraverse :: forall f g h. Applicative f => (forall a. g a -> f (h a)) -> DeleteFL x g -> f (DeleteFL x h)
-  htraverse func (DeleteFL fl itemToRemove) = DeleteFL <$> traverse go fl <*> htraverse func itemToRemove
-    where
-      go :: forall a. Var a g -> f (Var a h)
-      go var = htraverse func var
+  htraverse func (DeleteFL itemToRemove) = DeleteFL <$> htraverse func itemToRemove
 
 deleteFLCommand :: forall n m. (MonadGen n, MonadTest m) => Command n m (State String)
 deleteFLCommand =
@@ -251,10 +250,10 @@ deleteFLCommand =
           then Nothing
           else
             Just $ do
-              keyToGetItem <- int $ constant 0 (if len == 0 then 0 else len - 1)
+              keyToGetItem <- int $ constant 0 (len - 1)
               let maybeItemToDelete = lookupFL keyToGetItem fl
               case maybeItemToDelete of
-                Just itemToDelete -> pure (DeleteFL fl itemToDelete)
+                Just itemToDelete -> pure (DeleteFL itemToDelete)
                 Nothing ->
                   let msg =
                         "Couldn't find item at index even though it should exist." <>
@@ -264,27 +263,24 @@ deleteFLCommand =
                         show keyToGetItem
                   in error msg
 
-    execute :: DeleteFL String Concrete -> m String
-    execute (DeleteFL fl itemToDelete) = pure $ concrete itemToDelete
+    execute :: DeleteFL String Concrete -> m ()
+    execute _ = pure ()
 
     require :: State String Symbolic -> DeleteFL String Symbolic -> Bool
-    require (State fl) (DeleteFL _ itemToRemove) =
-      isEmptyFL fl || isJust (indexOfFL itemToRemove fl)
+    require (State fl) (DeleteFL itemToRemove) =
+      isJust (indexOfFL itemToRemove fl)
 
     update :: forall v a. Eq1 v => State String v -> DeleteFL String v -> Var a v -> State String v
-    update (State fl) (DeleteFL _ itemToRemove) _ = State $ deleteFL itemToRemove fl
+    update (State fl) (DeleteFL itemToRemove) _ = State $ deleteFL itemToRemove fl
 
     ensureLenLess :: State String Concrete -> State String Concrete -> DeleteFL String Concrete -> a -> Test ()
-    ensureLenLess (State startingFL) (State endingFL) (DeleteFL _ itemToRemove) _ =
-      case indexOfFL itemToRemove startingFL of
-        Nothing -> startingFL === endingFL
-        Just _ -> do
-          let startingFLLen = startingFL ^. lensFocusListLen
-              endingFLLen = endingFL ^. lensFocusListLen
-          annotate (debugFL startingFL)
-          annotate (debugFL endingFL)
-          assert $ startingFLLen > endingFLLen
+    ensureLenLess (State startingFL) (State endingFL) (DeleteFL itemToRemove) _ = do
+      let startingFLLen = startingFL ^. lensFocusListLen
+          endingFLLen = endingFL ^. lensFocusListLen
+      annotate (debugFL startingFL)
+      annotate (debugFL endingFL)
+      assert $ startingFLLen > endingFLLen
 
-    ensureActuallyRemoved :: State String Concrete -> State String Concrete -> DeleteFL String Concrete -> String -> Test ()
-    ensureActuallyRemoved _ (State endingFL) _ itemDeleted =
-      indexOfFL (Var (Concrete itemDeleted)) endingFL === Nothing
+    ensureActuallyRemoved :: State String Concrete -> State String Concrete -> DeleteFL String Concrete -> a -> Test ()
+    ensureActuallyRemoved _ (State endingFL) (DeleteFL itemToRemove) _ =
+      indexOfFL itemToRemove endingFL === Nothing
