@@ -1,36 +1,21 @@
 
 module Main where
 
-import Termonad.Prelude hiding (assert)
+import Termonad.Prelude
 
 import Control.Lens ((^.))
-import Data.Functor.Classes (Eq1)
 import Hedgehog
-  ( Callback(Ensure, Require, Update)
-  , Command(Command)
-  , Concrete(Concrete)
-  , Gen
-  , HTraversable(htraverse)
-  , MonadGen
-  , MonadTest
+  ( Gen
   , Property
   , PropertyT
-  , Symbolic
-  , Test
-  , Var(Var)
-  , (===)
   , annotate
   , annotateShow
-  , assert
-  , concrete
-  , executeSequential
   , failure
   , forAll
   , property
   , success
-  , withShrinks
   )
-import Hedgehog.Gen (alphaNum, choice, int, sequential, string)
+import Hedgehog.Gen (alphaNum, choice, int, string)
 import Hedgehog.Range (constant, linear)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
@@ -40,7 +25,6 @@ import Termonad.FocusList
   , debugFL
   , deleteFL
   , emptyFL
-  , indexOfFL
   , insertFL
   , invariantFL
   , isEmptyFL
@@ -70,7 +54,7 @@ testInvariantsInFocusList =
     let strGen = string (constant 0 25) alphaNum
     -- traceM "----------------------------------"
     -- traceM $ "starting bar, numOfActions: " <> show numOfActions
-    runActions numOfActions strGen emptyFL
+    runActions numOfActions strGen initialState
 
 data Action a
   = InsertFL Int a
@@ -97,8 +81,8 @@ genRemoveFL fl
       keyToRemove <- int $ constant 0 (len - 1)
       pure $ RemoveFL keyToRemove
 
-genDeleteFL :: Show a => Gen a -> FocusList a -> Maybe (Gen (Action a))
-genDeleteFL valGen fl
+genDeleteFL :: Show a => FocusList a -> Maybe (Gen (Action a))
+genDeleteFL fl
   | isEmptyFL fl = Nothing
   | otherwise = Just $ do
       let len = fl ^. lensFocusListLen
@@ -122,7 +106,7 @@ generateAction valGen fl = do
         catMaybes
           [ genInsertFL valGen fl
           , genRemoveFL fl
-          , genDeleteFL valGen fl
+          , genDeleteFL fl
           ]
   case generators of
     [] ->
