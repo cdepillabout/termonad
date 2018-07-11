@@ -285,6 +285,21 @@ appendFL fl a =
     then singletonFL a
     else unsafeInsertNewFL (fl ^. lensFocusListLen) a fl
 
+-- | A combination of 'appendFL' and 'setFocusFL'.
+--
+-- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "tree"]
+-- >>> appendSetFocusFL fl "pie"
+-- FocusList (Focus 3) ["hello","bye","tree","pie"]
+--
+-- prop> (appendSetFocusFL fl a) ^. lensFocusListFocus /= fl ^. lensFocusListFocus
+appendSetFocusFL :: FocusList a -> a -> FocusList a
+appendSetFocusFL fl a =
+  let oldLen = fl ^. lensFocusListLen
+  in
+  case setFocusFL oldLen (appendFL fl a) of
+    Nothing -> error "Internal error with setting the focus.  This should never happen."
+    Just newFL -> newFL
+
 -- | Prepend a value to a 'FocusList'.
 --
 -- This can be thought of as a \"cons\" operation.
