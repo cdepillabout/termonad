@@ -57,7 +57,10 @@ import Termonad.Types (lensTMNotebookTabs)
 import Text.Pretty.Simple
 
 focusTerm :: Int -> TMState -> IO ()
-focusTerm i mvarTMState = modifyMVar_ mvarTMState $ focusTerm' i
+focusTerm i mvarTMState = do
+  putStrLn "In focusTerm, about to modify state..."
+  modifyMVar_ mvarTMState $ focusTerm' i
+  putStrLn "In focusTerm, finished modifying state."
 
 focusTerm' :: Int -> TMState' -> IO TMState'
 focusTerm' i oldTMState@TMState{tmStateNotebook} = do
@@ -66,7 +69,9 @@ focusTerm' i oldTMState@TMState{tmStateNotebook} = do
   case maybeNewTabs of
     Nothing -> pure oldTMState
     Just (notebookTab, newTabs) -> do
+      putStrLn "In focusTerm', about to set current page..."
       notebookSetCurrentPage (tmNotebook tmStateNotebook) (fromIntegral i)
+      putStrLn "In focusTerm', finished setting current page."
       let term = notebookTab ^. lensTMNotebookTabTerm . lensTerm
       setWidgetHasFocus term True
       let newTMState =
@@ -116,6 +121,7 @@ createScrolledWin = do
 
 createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO TMTerm
 createTerm handleKeyPress mvarTMState = do
+  putStrLn "createTerm, started..."
   scrolledWin <- createScrolledWin
   TMState{tmStateFontDesc} <- readMVar mvarTMState
   vteTerm <- terminalNew
@@ -135,15 +141,21 @@ createTerm handleKeyPress mvarTMState = do
   tmTerm <- newTMTerm vteTerm
   let notebookTab = createTMNotebookTab scrolledWin tmTerm
   containerAdd scrolledWin vteTerm
+  putStrLn "createTerm, created some stuff, about to go into mvar..."
   modifyMVar_ mvarTMState $ \tmState -> do
+    putStrLn "createTerm, in mvar thing, started..."
     let notebook = tmStateNotebook tmState
         note = tmNotebook notebook
         tabs = tmNotebookTabs notebook
+    putStrLn "createTerm, in mvar thing, about to notebookAppendPage..."
     pageIndex <- notebookAppendPage note scrolledWin noWidget
-    newTMState <- focusTerm' (fromIntegral pageIndex) tmState
-    void $ notebookSetCurrentPage note pageIndex
-    let newTabs = appendFL tabs notebookTab
-    pure $ tmState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+    putStrLn "createTerm, in mvar thing, about to notebookSetCurrentPage..."
+    notebookSetCurrentPage note pageIndex
+    let newTabs = appendSetFocusFL tabs notebookTab
+    pure $
+      tmState &
+        lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+  putStrLn "createTerm, after mvar thing..."
   void $ onTerminalWindowTitleChanged vteTerm $ do
     title <- terminalGetWindowTitle vteTerm
     TMState{tmStateNotebook} <- readMVar mvarTMState
