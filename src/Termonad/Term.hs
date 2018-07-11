@@ -57,19 +57,21 @@ import Termonad.Types (lensTMNotebookTabs)
 import Text.Pretty.Simple
 
 focusTerm :: Int -> TMState -> IO ()
-focusTerm i tmState = do
-  modifyMVar_ tmState $ \oldTMState@TMState{tmStateNotebook} -> do
-    let tabs = tmNotebookTabs tmStateNotebook
-        maybeNewTabs = updateFocusFL i tabs
-    case maybeNewTabs of
-      Nothing -> pure oldTMState
-      Just (notebookTab, newTabs) -> do
-        notebookSetCurrentPage (tmNotebook tmStateNotebook) (fromIntegral i)
-        let term = notebookTab ^. lensTMNotebookTabTerm . lensTerm
-        setWidgetHasFocus term True
-        let newTMState =
-              oldTMState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
-        pure newTMState
+focusTerm i mvarTMState = modifyMVar_ mvarTMState $ focusTerm' i
+
+focusTerm' :: Int -> TMState' -> IO TMState'
+focusTerm' i oldTMState@TMState{tmStateNotebook} = do
+  let tabs = tmNotebookTabs tmStateNotebook
+      maybeNewTabs = updateFocusFL i tabs
+  case maybeNewTabs of
+    Nothing -> pure oldTMState
+    Just (notebookTab, newTabs) -> do
+      notebookSetCurrentPage (tmNotebook tmStateNotebook) (fromIntegral i)
+      let term = notebookTab ^. lensTMNotebookTabTerm . lensTerm
+      setWidgetHasFocus term True
+      let newTMState =
+            oldTMState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+      pure newTMState
 
 altNumSwitchTerm :: Int -> TMState -> IO ()
 altNumSwitchTerm = focusTerm
@@ -138,6 +140,7 @@ createTerm handleKeyPress mvarTMState = do
         note = tmNotebook notebook
         tabs = tmNotebookTabs notebook
     pageIndex <- notebookAppendPage note scrolledWin noWidget
+    newTMState <- focusTerm' (fromIntegral pageIndex) tmState
     void $ notebookSetCurrentPage note pageIndex
     let newTabs = appendFL tabs notebookTab
     pure $ tmState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
