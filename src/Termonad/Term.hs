@@ -36,6 +36,7 @@ import GI.Gtk
   , scrolledWindowNew
   , setWidgetHasFocus
   , styleContextAddProviderForScreen
+  , widgetGrabFocus
   , widgetShow
   )
 import GI.Vte
@@ -107,6 +108,8 @@ createTerm handleKeyPress mvarTMState = do
   vteTerm <- terminalNew
   terminalSetFont vteTerm (Just tmStateFontDesc)
   terminalSetCursorBlinkMode vteTerm CursorBlinkModeOn
+  widgetShow vteTerm
+  widgetGrabFocus $ vteTerm
   _termResVal <-
     terminalSpawnSync
       vteTerm
@@ -117,7 +120,6 @@ createTerm handleKeyPress mvarTMState = do
       ([SpawnFlagsDefault] :: [SpawnFlags])
       Nothing
       noCancellable
-  widgetShow vteTerm
   tmTerm <- newTMTerm vteTerm
   let notebookTab = createTMNotebookTab scrolledWin tmTerm
   containerAdd scrolledWin vteTerm

@@ -158,6 +158,7 @@ setupTermonad app win builder = do
       case maybeNewTabs of
         Nothing -> pure tmState
         Just (tab, newTabs) -> do
+          putStrLn $ "In callback for onNotebookSwitchPage, trying to focus on " <> tshow tab
           widgetGrabFocus $ tab ^. lensTMNotebookTabTerm . lensTerm
           pure $
             tmState &
