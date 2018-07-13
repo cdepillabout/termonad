@@ -58,25 +58,8 @@ import Text.Pretty.Simple
 
 focusTerm :: Int -> TMState -> IO ()
 focusTerm i mvarTMState = do
-  putStrLn "In focusTerm, about to modify state..."
-  modifyMVar_ mvarTMState $ focusTerm' i
-  putStrLn "In focusTerm, finished modifying state."
-
-focusTerm' :: Int -> TMState' -> IO TMState'
-focusTerm' i oldTMState@TMState{tmStateNotebook} = do
-  let tabs = tmNotebookTabs tmStateNotebook
-      maybeNewTabs = updateFocusFL i tabs
-  case maybeNewTabs of
-    Nothing -> pure oldTMState
-    Just (notebookTab, newTabs) -> do
-      putStrLn "In focusTerm', about to set current page..."
-      notebookSetCurrentPage (tmNotebook tmStateNotebook) (fromIntegral i)
-      putStrLn "In focusTerm', finished setting current page."
-      let term = notebookTab ^. lensTMNotebookTabTerm . lensTerm
-      setWidgetHasFocus term True
-      let newTMState =
-            oldTMState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
-      pure newTMState
+  note <- tmNotebook . tmStateNotebook <$> readMVar mvarTMState
+  notebookSetCurrentPage note (fromIntegral i)
 
 altNumSwitchTerm :: Int -> TMState -> IO ()
 altNumSwitchTerm = focusTerm
@@ -122,6 +105,7 @@ createScrolledWin = do
 createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO TMTerm
 createTerm handleKeyPress mvarTMState = do
   putStrLn "createTerm, started..."
+  withMVar mvarTMState (\tmState -> putStrLn $ "createTerm, started tmState: " <> tshow tmState)
   scrolledWin <- createScrolledWin
   TMState{tmStateFontDesc} <- readMVar mvarTMState
   vteTerm <- terminalNew
@@ -142,20 +126,22 @@ createTerm handleKeyPress mvarTMState = do
   let notebookTab = createTMNotebookTab scrolledWin tmTerm
   containerAdd scrolledWin vteTerm
   putStrLn "createTerm, created some stuff, about to go into mvar..."
-  modifyMVar_ mvarTMState $ \tmState -> do
-    putStrLn "createTerm, in mvar thing, started..."
-    let notebook = tmStateNotebook tmState
-        note = tmNotebook notebook
-        tabs = tmNotebookTabs notebook
-    putStrLn "createTerm, in mvar thing, about to notebookAppendPage..."
-    pageIndex <- notebookAppendPage note scrolledWin noWidget
-    putStrLn "createTerm, in mvar thing, about to notebookSetCurrentPage..."
-    notebookSetCurrentPage note pageIndex
-    let newTabs = appendSetFocusFL tabs notebookTab
-    pure $
-      tmState &
-        lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+  setCurrPageAction <-
+    modifyMVar mvarTMState $ \tmState -> do
+      putStrLn "createTerm, in mvar thing, started..."
+      let notebook = tmStateNotebook tmState
+          note = tmNotebook notebook
+          tabs = tmNotebookTabs notebook
+      putStrLn "createTerm, in mvar thing, about to notebookAppendPage..."
+      pageIndex <- notebookAppendPage note scrolledWin noWidget
+      let newTabs = appendFL tabs notebookTab
+          newTMState =
+            tmState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+          setCurrPageAction = notebookSetCurrentPage note pageIndex
+      pure (newTMState, setCurrPageAction)
   putStrLn "createTerm, after mvar thing..."
+  putStrLn "createTerm, in mvar thing, about to notebookSetCurrentPage..."
+  setCurrPageAction
   void $ onTerminalWindowTitleChanged vteTerm $ do
     title <- terminalGetWindowTitle vteTerm
     TMState{tmStateNotebook} <- readMVar mvarTMState
@@ -165,4 +151,5 @@ createTerm handleKeyPress mvarTMState = do
   void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
   void $ onTerminalChildExited vteTerm $
     termExitHandler notebookTab mvarTMState
+  withMVar mvarTMState (\tmState -> putStrLn $ "createTerm, ending tmState: " <> tshow tmState)
   pure tmTerm
