@@ -170,11 +170,7 @@ setupTermonad app win builder = do
   actionMapAddAction app aboutAction
 
   newTabAction <- simpleActionNew "newtab" Nothing
-  void $ onSimpleActionActivate newTabAction $ \_ -> do
-    t <- createTerm handleKeyPress mvarTMState
-    pure ()
-    -- widgetGrabFocus $ t ^. lensTerm
-    -- setWidgetHasFocus (t ^. lensTerm) True
+  void $ onSimpleActionActivate newTabAction $ \_ -> void $ createTerm handleKeyPress mvarTMState
   actionMapAddAction app newTabAction
   applicationSetAccelsForAction app "app.newtab" ["<Shift><Ctrl>T"]
 
