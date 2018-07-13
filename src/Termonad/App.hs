@@ -3,7 +3,7 @@ module Termonad.App where
 
 import Termonad.Prelude
 
-import Control.Lens ((&), (.~), imap)
+import Control.Lens ((&), (^.), (.~), imap)
 import Data.Default (def)
 import Data.Unique (Unique, newUnique)
 import qualified GI.Gdk as Gdk
@@ -53,7 +53,9 @@ import GI.Gtk
   , builderSetApplication
   , noWidget
   , onNotebookSwitchPage
+  , setWidgetHasFocus
   , styleContextAddProviderForScreen
+  , widgetGrabFocus
   )
 import qualified GI.Gtk as Gtk
 import GI.Pango
@@ -67,7 +69,7 @@ import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal))
 import Text.XML (renderText)
 import Text.XML.QQ (Document, xmlRaw)
 
-import Termonad.FocusList (setFocusFL)
+import Termonad.FocusList (updateFocusFL)
 import Termonad.Gtk
 import Termonad.Keys
 import Termonad.Term
@@ -152,21 +154,27 @@ setupTermonad app win builder = do
       let notebook = tmStateNotebook tmState
           note = tmNotebook notebook
           tabs = tmNotebookTabs notebook
-          maybeNewTabs = setFocusFL (fromIntegral pageNum) tabs
+          maybeNewTabs = updateFocusFL (fromIntegral pageNum) tabs
       case maybeNewTabs of
         Nothing -> pure tmState
-        Just newTabs ->
+        Just (tab, newTabs) -> do
+          widgetGrabFocus $ tab ^. lensTMNotebookTabTerm . lensTerm
           pure $
             tmState &
               lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
     putStrLn "In callback for onNotebookSwitchPage, finished modifing state."
+
 
   aboutAction <- simpleActionNew "about" Nothing
   void $ onSimpleActionActivate aboutAction (const $ showAboutDialog app)
   actionMapAddAction app aboutAction
 
   newTabAction <- simpleActionNew "newtab" Nothing
-  void $ onSimpleActionActivate newTabAction (\_ -> void $ createTerm handleKeyPress mvarTMState)
+  void $ onSimpleActionActivate newTabAction $ \_ -> do
+    t <- createTerm handleKeyPress mvarTMState
+    pure ()
+    -- widgetGrabFocus $ t ^. lensTerm
+    -- setWidgetHasFocus (t ^. lensTerm) True
   actionMapAddAction app newTabAction
   applicationSetAccelsForAction app "app.newtab" ["<Shift><Ctrl>T"]
 
@@ -176,7 +184,9 @@ setupTermonad app win builder = do
   applicationSetAccelsForAction app "app.closetab" ["<Shift><Ctrl>W"]
 
   quitAction <- simpleActionNew "quit" Nothing
-  void $ onSimpleActionActivate quitAction $ \_ -> putStrLn "got quit!"
+  void $ onSimpleActionActivate quitAction $ \_ -> do
+    putStrLn "got quit!"
+    withMVar mvarTMState (\tmState -> putStrLn $ "tmState: " <> tshow tmState)
   actionMapAddAction app quitAction
   applicationSetAccelsForAction app "app.quit" ["<Shift><Ctrl>Q"]
 
@@ -186,7 +196,7 @@ setupTermonad app win builder = do
   #setMenubar app (Just menuModel)
 
   #showAll win
-  focusTerm 0 mvarTMState
+  widgetGrabFocus $ terminal ^. lensTerm
 
 appActivate :: Application -> IO ()
 appActivate app = do

@@ -65,36 +65,32 @@ altNumSwitchTerm :: Int -> TMState -> IO ()
 altNumSwitchTerm = focusTerm
 
 termExitFocused :: TMState -> IO ()
-termExitFocused mvarTMState =
-  modifyMVar_ mvarTMState $ \tmState -> do
-    let maybeTab =
-          tmState ^. lensTMStateNotebook . lensTMNotebookTabs . to getFLFocusItem
-    case maybeTab of
-      Nothing -> trace "in termExitFocused, no tab" $ pure tmState
-      Just tab -> trace ("in termExitFocused, found tab: " <> show tab) $ termExit' tab tmState
+termExitFocused mvarTMState = do
+  tmState <- readMVar mvarTMState
+  let maybeTab =
+        tmState ^. lensTMStateNotebook . lensTMNotebookTabs . to getFLFocusItem
+  case maybeTab of
+    Nothing -> pure ()
+    Just tab -> termExit tab mvarTMState
 
 termExit :: TMNotebookTab -> TMState -> IO ()
-termExit tab mvarTMState =
-  modifyMVar_ mvarTMState $ termExit' tab
-
-termExit' :: TMNotebookTab -> TMState' -> IO TMState'
-termExit' tab tmState = do
-  putStrLn "In termExit', tmState:"
-  pPrint tmState
-  let notebook = tmStateNotebook tmState
-      note = tmNotebook notebook
-      oldTabs = tmNotebookTabs notebook
-      scrolledWin = tmNotebookTabTermContainer tab
-  notebookDetachTab note scrolledWin
-  let newTabs = deleteFL tab oldTabs
-  let newTMState =
-        set (lensTMStateNotebook . lensTMNotebookTabs) newTabs tmState
-  putStrLn "In termExit', newTMState:"
-  pPrint newTMState
-  pure newTMState
-
-termExitHandler :: TMNotebookTab -> TMState -> Int32 -> IO ()
-termExitHandler tab mvarTMState _exitStatus = termExit tab mvarTMState
+termExit tab mvarTMState = do
+  detachTabAction <-
+    modifyMVar mvarTMState $ \tmState -> do
+      putStrLn "In termExit', tmState:"
+      pPrint tmState
+      let notebook = tmStateNotebook tmState
+          detachTabAction =
+            notebookDetachTab
+              (tmNotebook notebook)
+              (tmNotebookTabTermContainer tab)
+      let newTabs = deleteFL tab (tmNotebookTabs notebook)
+      let newTMState =
+            set (lensTMStateNotebook . lensTMNotebookTabs) newTabs tmState
+      putStrLn "In termExit', newTMState:"
+      pPrint newTMState
+      pure (newTMState, detachTabAction)
+  detachTabAction
 
 createScrolledWin :: IO ScrolledWindow
 createScrolledWin = do
@@ -137,7 +133,8 @@ createTerm handleKeyPress mvarTMState = do
       let newTabs = appendFL tabs notebookTab
           newTMState =
             tmState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
-          setCurrPageAction = notebookSetCurrentPage note pageIndex
+          setCurrPageAction = do
+            notebookSetCurrentPage note pageIndex
       pure (newTMState, setCurrPageAction)
   putStrLn "createTerm, after mvar thing..."
   putStrLn "createTerm, in mvar thing, about to notebookSetCurrentPage..."
@@ -149,7 +146,6 @@ createTerm handleKeyPress mvarTMState = do
     notebookSetTabLabelText notebook scrolledWin title
   void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
   void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
-  void $ onTerminalChildExited vteTerm $
-    termExitHandler notebookTab mvarTMState
+  void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState
   withMVar mvarTMState (\tmState -> putStrLn $ "createTerm, ending tmState: " <> tshow tmState)
   pure tmTerm
