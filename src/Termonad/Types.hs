@@ -33,7 +33,7 @@ import GI.Vte (Terminal(Terminal))
 import Text.Pretty.Simple (pPrint)
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
-import Termonad.FocusList (FocusList, emptyFL, singletonFL)
+import Termonad.FocusList (FocusList, emptyFL, focusItemGetter, singletonFL)
 
 data TMTerm = TMTerm
   { term :: Terminal
@@ -224,3 +224,18 @@ pTraceShowMTMState :: TMState -> IO ()
 pTraceShowMTMState mvarTMState = do
   tmState <- readMVar mvarTMState
   pPrint tmState
+
+getFocusedTermFromState :: TMState -> IO (Maybe Terminal)
+getFocusedTermFromState mvarTMState = do
+  withMVar
+    mvarTMState
+    ( pure .
+      firstOf
+        ( lensTMStateNotebook .
+          lensTMNotebookTabs .
+          focusItemGetter .
+          traverse .
+          lensTMNotebookTabTerm .
+          lensTerm
+        )
+    )

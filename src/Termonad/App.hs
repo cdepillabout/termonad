@@ -65,7 +65,7 @@ import GI.Pango
   , fontDescriptionSetFamily
   , fontDescriptionSetSize
   )
-import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal), terminalCopyClipboard)
+import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal), terminalCopyClipboard, terminalPasteClipboard)
 import Text.XML (renderText)
 import Text.XML.QQ (Document, xmlRaw)
 
@@ -189,25 +189,15 @@ setupTermonad app win builder = do
 
   copyAction <- simpleActionNew "copy" Nothing
   void $ onSimpleActionActivate copyAction $ \_ -> do
-    maybeTerm <-
-      withMVar
-      mvarTMState
-      ( pure .
-        firstOf
-          ( lensTMStateNotebook .
-            lensTMNotebookTabs .
-            focusItemGetter .
-            traverse .
-            lensTMNotebookTabTerm .
-            lensTerm
-          )
-      )
+    maybeTerm <- getFocusedTermFromState mvarTMState
     maybe (pure ()) terminalCopyClipboard maybeTerm
   actionMapAddAction app copyAction
   applicationSetAccelsForAction app "app.copy" ["<Shift><Ctrl>C"]
 
   pasteAction <- simpleActionNew "paste" Nothing
-  void $ onSimpleActionActivate pasteAction $ \_ -> print "paste"
+  void $ onSimpleActionActivate pasteAction $ \_ -> do
+    maybeTerm <- getFocusedTermFromState mvarTMState
+    maybe (pure ()) terminalPasteClipboard maybeTerm
   actionMapAddAction app pasteAction
   applicationSetAccelsForAction app "app.paste" ["<Shift><Ctrl>C"]
 
