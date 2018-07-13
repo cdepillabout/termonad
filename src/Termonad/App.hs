@@ -3,7 +3,7 @@ module Termonad.App where
 
 import Termonad.Prelude
 
-import Control.Lens ((&), (^.), (.~), imap)
+import Control.Lens ((&), (^.), (.~), firstOf, imap, mapped)
 import Data.Default (def)
 import Data.Unique (Unique, newUnique)
 import qualified GI.Gdk as Gdk
@@ -65,11 +65,11 @@ import GI.Pango
   , fontDescriptionSetFamily
   , fontDescriptionSetSize
   )
-import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal))
+import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal), terminalCopyClipboard)
 import Text.XML (renderText)
 import Text.XML.QQ (Document, xmlRaw)
 
-import Termonad.FocusList (updateFocusFL)
+import Termonad.FocusList (_Focus, focusItemGetter, updateFocusFL)
 import Termonad.Gtk
 import Termonad.Keys
 import Termonad.Term
@@ -186,6 +186,30 @@ setupTermonad app win builder = do
     withMVar mvarTMState (\tmState -> putStrLn $ "tmState: " <> tshow tmState)
   actionMapAddAction app quitAction
   applicationSetAccelsForAction app "app.quit" ["<Shift><Ctrl>Q"]
+
+  copyAction <- simpleActionNew "copy" Nothing
+  void $ onSimpleActionActivate copyAction $ \_ -> do
+    maybeTerm <-
+      withMVar
+      mvarTMState
+      ( pure .
+        firstOf
+          ( lensTMStateNotebook .
+            lensTMNotebookTabs .
+            focusItemGetter .
+            traverse .
+            lensTMNotebookTabTerm .
+            lensTerm
+          )
+      )
+    maybe (pure ()) terminalCopyClipboard maybeTerm
+  actionMapAddAction app copyAction
+  applicationSetAccelsForAction app "app.copy" ["<Shift><Ctrl>C"]
+
+  pasteAction <- simpleActionNew "paste" Nothing
+  void $ onSimpleActionActivate pasteAction $ \_ -> print "paste"
+  actionMapAddAction app pasteAction
+  applicationSetAccelsForAction app "app.paste" ["<Shift><Ctrl>C"]
 
   menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
   menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel

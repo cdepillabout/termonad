@@ -195,6 +195,9 @@ unsafeFLFromList focus list =
     , focusList = mapFromList $ zip [0..] list
     }
 
+focusItemGetter :: Getter (FocusList a) (Maybe a)
+focusItemGetter = to getFLFocusItem
+
 -- | Safely create a 'FocusList' from a list.
 --
 -- >>> flFromList (Focus 1) ["cat","dog","goat"]

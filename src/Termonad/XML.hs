@@ -107,6 +107,17 @@ menuDoc =
           </section>
         </submenu>
         <submenu>
+          <attribute name="label" translatable="yes">_Edit</attribute>
+          <item>
+            <attribute name="label" translatable="yes">_Copy</attribute>
+            <attribute name="action">app.copy</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">_Paste</attribute>
+            <attribute name="action">app.paste</attribute>
+          </item>
+        </submenu>
+        <submenu>
           <attribute name="label" translatable="yes">_Help</attribute>
           <item>
             <attribute name="label" translatable="yes">_About</attribute>
