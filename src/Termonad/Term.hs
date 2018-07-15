@@ -93,34 +93,6 @@ termExitFocused mvarTMState = do
 
 termExitWithConfirmation :: TMNotebookTab -> TMState -> IO ()
 termExitWithConfirmation tab mvarTMState = do
-  -- messageDialog <- new MessageDialog []
-  -- setMessageDialogMessageType messageDialog MessageTypeQuestion
-  -- setMessageDialogText messageDialog "Close tab?"
-  -- tmState <- readMVar mvarTMState
-  -- let app = tmState ^. lensTMStateApp
-  -- win <- applicationGetActiveWindow app
-  -- windowSetTransientFor messageDialog (Just win)
-  -- res <- dialogRun messageDialog
-  -- putStrLn $ "Result from running dialog: " <> tshow res
-
-  -- win <- #getActiveWindow app
-  -- builder <- builderNewFromString aboutText $ fromIntegral (length aboutText)
-  -- builderSetApplication builder app
-  -- aboutDialog <- objFromBuildUnsafe builder "aboutDialog" Dialog
-  -- #setTransientFor aboutDialog (Just win)
-  -- #present aboutDialog
-
-  -- tmState <- readMVar mvarTMState
-  -- let app = tmState ^. lensTMStateApp
-  -- win <- applicationGetActiveWindow app
-  -- builder <- builderNewFromString closeTabText $ fromIntegral (length closeTabText)
-  -- builderSetApplication builder app
-  -- dialog <- objFromBuildUnsafe builder "closeTabDialog" Dialog
-  -- windowSetTransientFor dialog (Just win)
-  -- -- windowPresent dialog
-  -- res <- dialogRun dialog
-  -- putStrLn $ "Result from running dialog: " <> tshow res
-
   tmState <- readMVar mvarTMState
   let app = tmState ^. lensTMStateApp
   win <- applicationGetActiveWindow app
