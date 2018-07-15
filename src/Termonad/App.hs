@@ -47,15 +47,24 @@ import GI.Gtk
   , Notebook(Notebook)
   , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
+  , aboutDialogNew
+  , applicationAddWindow
+  , applicationGetActiveWindow
   , applicationNew
   , applicationSetAccelsForAction
+  , applicationSetMenubar
   , builderNewFromString
   , builderSetApplication
+  , dialogRun
   , noWidget
   , onNotebookSwitchPage
   , setWidgetHasFocus
   , styleContextAddProviderForScreen
+  , widgetDestroy
   , widgetGrabFocus
+  , widgetShowAll
+  , windowPresent
+  , windowSetTransientFor
   )
 import qualified GI.Gtk as Gtk
 import GI.Pango
@@ -166,10 +175,6 @@ setupTermonad app win builder = do
     putStrLn "In callback for onNotebookSwitchPage, finished modifing state."
 
 
-  aboutAction <- simpleActionNew "about" Nothing
-  void $ onSimpleActionActivate aboutAction (const $ showAboutDialog app)
-  actionMapAddAction app aboutAction
-
   newTabAction <- simpleActionNew "newtab" Nothing
   void $ onSimpleActionActivate newTabAction $ \_ -> void $ createTerm handleKeyPress mvarTMState
   actionMapAddAction app newTabAction
@@ -201,12 +206,15 @@ setupTermonad app win builder = do
   actionMapAddAction app pasteAction
   applicationSetAccelsForAction app "app.paste" ["<Shift><Ctrl>C"]
 
+  aboutAction <- simpleActionNew "about" Nothing
+  void $ onSimpleActionActivate aboutAction (const $ showAboutDialog app)
+  actionMapAddAction app aboutAction
+
   menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
   menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
-  -- applicationSetAppMenu app (Just menuModel)
-  #setMenubar app (Just menuModel)
+  applicationSetMenubar app (Just menuModel)
 
-  #showAll win
+  widgetShowAll win
   widgetGrabFocus $ terminal ^. lensTerm
 
 appActivate :: Application -> IO ()
@@ -216,19 +224,27 @@ appActivate app = do
     builderNewFromString interfaceText $ fromIntegral (length interfaceText)
   builderSetApplication uiBuilder app
   appWin <- objFromBuildUnsafe uiBuilder "appWin" ApplicationWindow
-  #addWindow app appWin
+  applicationAddWindow app appWin
   setupTermonad app appWin uiBuilder
-  #present appWin
+  windowPresent appWin
 
 -- | TODO: I should probably be using the actual Gtk.AboutDialog class.
 showAboutDialog :: Application -> IO ()
 showAboutDialog app = do
-  win <- #getActiveWindow app
-  builder <- builderNewFromString aboutText $ fromIntegral (length aboutText)
-  builderSetApplication builder app
-  aboutDialog <- objFromBuildUnsafe builder "aboutDialog" Dialog
-  #setTransientFor aboutDialog (Just win)
-  #present aboutDialog
+  win <- applicationGetActiveWindow app
+  aboutDialog <- aboutDialogNew
+  windowSetTransientFor aboutDialog (Just win)
+  -- widgetShowAll aboutDialog
+  -- windowPresent aboutDialog
+  res <- dialogRun aboutDialog
+  putStrLn $ "Result from running dialog: " <> tshow res
+  widgetDestroy aboutDialog
+  -- win <- #getActiveWindow app
+  -- builder <- builderNewFromString aboutText $ fromIntegral (length aboutText)
+  -- builderSetApplication builder app
+  -- aboutDialog <- objFromBuildUnsafe builder "aboutDialog" Dialog
+  -- #setTransientFor aboutDialog (Just win)
+  -- #present aboutDialog
 
 appStartup :: Application -> IO ()
 appStartup _app = putStrLn "called appStartup"
