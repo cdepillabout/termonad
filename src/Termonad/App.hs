@@ -3,6 +3,7 @@ module Termonad.App where
 
 import Termonad.Prelude
 
+import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
 import Control.Lens ((&), (^.), (.~), firstOf, imap, mapped)
 import Data.Default (def)
 import Data.Unique (Unique, newUnique)
@@ -249,9 +250,19 @@ showAboutDialog app = do
 appStartup :: Application -> IO ()
 appStartup _app = putStrLn "called appStartup"
 
-defaultMain :: IO ()
-defaultMain = do
+start :: IO ()
+start = do
   app <- applicationNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
   void $ Gdk.on app #startup (appStartup app)
   void $ Gdk.on app #activate (appActivate app)
   void $ applicationRun app Nothing
+
+defaultMain :: IO ()
+defaultMain = do
+  let params =
+        defaultParams
+          { projectName = "termonad"
+          , showError = \cfg err -> cfg <> "\n" <> err
+          , realMain = \cfg -> print cfg *> start
+          }
+  wrapMain params ""

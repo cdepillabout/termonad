@@ -34,6 +34,7 @@ library
                      , classy-prelude
                      , constraints
                      , data-default
+                     , dyre
                      , gi-gdk
                      , gi-gio
                      , gi-glib
