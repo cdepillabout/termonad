@@ -3,6 +3,7 @@ module Termonad.Term where
 import Termonad.Prelude
 
 import Control.Lens
+import Data.GI.Base (new)
 import GI.Gdk
   ( EventKey
   )
@@ -18,14 +19,23 @@ import GI.Gtk
   , Box(Box)
   , CssProvider(CssProvider)
   , Dialog(Dialog)
+  , MessageDialog(MessageDialog)
+  , MessageType(MessageTypeQuestion)
   , Notebook(Notebook)
+  , ResponseType(ResponseTypeNo, ResponseTypeYes)
   , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
+  , applicationGetActiveWindow
   , applicationNew
   , applicationSetAccelsForAction
   , builderNewFromString
   , builderSetApplication
   , containerAdd
+  , dialogAddButton
+  , dialogGetContentArea
+  , dialogNew
+  , dialogRun
+  , labelNew
   , noAdjustment
   , notebookAppendPage
   , notebookDetachTab
@@ -34,10 +44,16 @@ import GI.Gtk
   , noWidget
   , onWidgetKeyPressEvent
   , scrolledWindowNew
+  , setMessageDialogMessageType
+  , setMessageDialogText
   , setWidgetHasFocus
+  , setWidgetMargin
   , styleContextAddProviderForScreen
+  , widgetDestroy
   , widgetGrabFocus
   , widgetShow
+  , windowPresent
+  , windowSetTransientFor
   )
 import GI.Vte
   ( CursorBlinkMode(CursorBlinkModeOn)
@@ -52,8 +68,9 @@ import GI.Vte
   )
 
 import Termonad.FocusList
+import Termonad.Gtk (objFromBuildUnsafe)
 import Termonad.Types
-import Termonad.Types (lensTMNotebookTabs)
+import Termonad.XML (closeTabText)
 
 import Text.Pretty.Simple
 
@@ -72,7 +89,56 @@ termExitFocused mvarTMState = do
         tmState ^. lensTMStateNotebook . lensTMNotebookTabs . to getFLFocusItem
   case maybeTab of
     Nothing -> pure ()
-    Just tab -> termExit tab mvarTMState
+    Just tab -> termExitWithConfirmation tab mvarTMState
+
+termExitWithConfirmation :: TMNotebookTab -> TMState -> IO ()
+termExitWithConfirmation tab mvarTMState = do
+  -- messageDialog <- new MessageDialog []
+  -- setMessageDialogMessageType messageDialog MessageTypeQuestion
+  -- setMessageDialogText messageDialog "Close tab?"
+  -- tmState <- readMVar mvarTMState
+  -- let app = tmState ^. lensTMStateApp
+  -- win <- applicationGetActiveWindow app
+  -- windowSetTransientFor messageDialog (Just win)
+  -- res <- dialogRun messageDialog
+  -- putStrLn $ "Result from running dialog: " <> tshow res
+
+  -- win <- #getActiveWindow app
+  -- builder <- builderNewFromString aboutText $ fromIntegral (length aboutText)
+  -- builderSetApplication builder app
+  -- aboutDialog <- objFromBuildUnsafe builder "aboutDialog" Dialog
+  -- #setTransientFor aboutDialog (Just win)
+  -- #present aboutDialog
+
+  -- tmState <- readMVar mvarTMState
+  -- let app = tmState ^. lensTMStateApp
+  -- win <- applicationGetActiveWindow app
+  -- builder <- builderNewFromString closeTabText $ fromIntegral (length closeTabText)
+  -- builderSetApplication builder app
+  -- dialog <- objFromBuildUnsafe builder "closeTabDialog" Dialog
+  -- windowSetTransientFor dialog (Just win)
+  -- -- windowPresent dialog
+  -- res <- dialogRun dialog
+  -- putStrLn $ "Result from running dialog: " <> tshow res
+
+  tmState <- readMVar mvarTMState
+  let app = tmState ^. lensTMStateApp
+  win <- applicationGetActiveWindow app
+  dialog <- dialogNew
+  box <- dialogGetContentArea dialog
+  label <- labelNew (Just "Close tab?")
+  containerAdd box label
+  widgetShow label
+  setWidgetMargin label 10
+  dialogAddButton dialog "No, do NOT close tab" (fromIntegral (fromEnum ResponseTypeNo))
+  dialogAddButton dialog "Yes, close tab" (fromIntegral (fromEnum ResponseTypeYes))
+  windowSetTransientFor dialog (Just win)
+  res <- dialogRun dialog
+  putStrLn $ "Result from running dialog: " <> tshow res
+  widgetDestroy dialog
+  case toEnum (fromIntegral res) of
+    ResponseTypeYes -> termExit tab mvarTMState
+    _ -> pure ()
 
 termExit :: TMNotebookTab -> TMState -> IO ()
 termExit tab mvarTMState = do

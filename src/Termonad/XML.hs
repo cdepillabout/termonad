@@ -208,3 +208,60 @@ aboutDoc =
 
 aboutText :: Text
 aboutText = toStrict $ renderText def aboutDoc
+
+closeTabDoc :: Document
+closeTabDoc =
+  [xmlRaw|
+    <?xml version="1.0"?>
+    <interface>
+    <!-- interface-requires gtk+ 3.8 -->
+      <object id="closeTabDialog" class="GtkDialog">
+        <property name="title" translatable="yes">Close Tab</property>
+        <property name="resizable">False</property>
+        <property name="modal">True</property>
+        <child internal-child="vbox">
+          <object class="GtkBox" id="vbox">
+            <property name="hexpand">True</property>
+            <property name="margin">10</property>
+            <property name="vexpand">True</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="hexpand">True</property>
+                <property name="label">Close tab?</property>
+                <property name="margin">10</property>
+                <property name="vexpand">True</property>
+                <property name="visible">True</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButtonBox">
+                <property name="hexpand">True</property>
+                <property name="margin">10</property>
+                <property name="vexpand">True</property>
+                <property name="visible">True</property>
+                <child>
+                  <object class="GtkButton">
+                    <property name="label">Yes, close tab</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="relief">GTK_RELIEF_NORMAL</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton">
+                    <property name="label">No, do NOT close tab</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="relief">GTK_RELIEF_NORMAL</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </interface>
+   |]
+
+closeTabText :: Text
+closeTabText = toStrict $ renderText def closeTabDoc
