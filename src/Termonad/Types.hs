@@ -62,6 +62,7 @@ $(makeLensesFor
 data TMNotebookTab = TMNotebookTab
   { tmNotebookTabTermContainer :: ScrolledWindow
   , tmNotebookTabTerm :: TMTerm
+  , tmNotebookTabLabel :: Label
   }
 
 instance Show TMNotebookTab where
@@ -74,11 +75,15 @@ instance Show TMNotebookTab where
       showString ", " .
       showString "tmNotebookTabTerm = " .
       showsPrec (d + 1) tmNotebookTabTerm .
+      showString ", " .
+      showString "tmNotebookTabLabel = " .
+      showString "(GI.GTK.Label)" .
       showString "}"
 
 $(makeLensesFor
     [ ("tmNotebookTabTermContainer", "lensTMNotebookTabTermContainer")
     , ("tmNotebookTabTerm", "lensTMNotebookTabTerm")
+    , ("tmNotebookTabLabel", "lensTMNotebookTabLabel")
     ]
     ''TMNotebookTab
  )
@@ -163,11 +168,12 @@ newTMTerm trm = do
   unq <- newUnique
   pure $ createTMTerm trm unq
 
-createTMNotebookTab :: ScrolledWindow -> TMTerm -> TMNotebookTab
-createTMNotebookTab scrollWin trm =
+createTMNotebookTab :: Label -> ScrolledWindow -> TMTerm -> TMNotebookTab
+createTMNotebookTab tabLabel scrollWin trm =
   TMNotebookTab
     { tmNotebookTabTermContainer = scrollWin
     , tmNotebookTabTerm = trm
+    , tmNotebookTabLabel = tabLabel
     }
 
 createTMNotebook :: Notebook -> FocusList TMNotebookTab -> TMNotebook

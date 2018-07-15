@@ -21,6 +21,7 @@ import GI.Gtk
   , Dialog(Dialog)
   , IconSize(IconSizeMenu)
   , IsWidget
+  , Label
   , MessageDialog(MessageDialog)
   , MessageType(MessageTypeQuestion)
   , Notebook(Notebook)
@@ -41,9 +42,11 @@ import GI.Gtk
   , dialogNew
   , dialogRun
   , labelNew
+  , labelSetLabel
   , noAdjustment
   , notebookAppendPage
   , notebookDetachTab
+  , notebookPageNum
   , notebookSetCurrentPage
   , notebookSetTabLabelText
   , noWidget
@@ -137,6 +140,11 @@ termExit tab mvarTMState = do
       pPrint newTMState
       pure (newTMState, detachTabAction)
   detachTabAction
+  relabelTabs mvarTMState
+
+-- TODO: This function needs to actually go through and relabel each tab.
+relabelTabs :: TMState -> IO ()
+relabelTabs mvarTMState = undefined
 
 createScrolledWin :: IO ScrolledWindow
 createScrolledWin = do
@@ -144,12 +152,14 @@ createScrolledWin = do
   widgetShow scrolledWin
   pure scrolledWin
 
-createNotebookTabLabel :: TMNotebookTab -> TMState -> IO Box
-createNotebookTabLabel tab mvarTMState = do
+createNotebookTabLabel :: IO (Box, Label, Button)
+createNotebookTabLabel = do
   box <- boxNew OrientationHorizontal 5
   label <- labelNew (Just "1. ")
-  button <- buttonNewFromIconName (Just "window-close") (fromIntegral (fromEnum IconSizeMenu))
-  onButtonClicked button $ termExitWithConfirmation tab mvarTMState
+  button <-
+    buttonNewFromIconName
+      (Just "window-close")
+      (fromIntegral (fromEnum IconSizeMenu))
   containerAdd box label
   containerAdd box button
   widgetSetCanFocus button False
@@ -158,7 +168,7 @@ createNotebookTabLabel tab mvarTMState = do
   widgetShow box
   widgetShow label
   widgetShow button
-  pure box
+  pure (box, label, button)
 
 createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO TMTerm
 createTerm handleKeyPress mvarTMState = do
@@ -182,8 +192,11 @@ createTerm handleKeyPress mvarTMState = do
       Nothing
       noCancellable
   tmTerm <- newTMTerm vteTerm
-  let notebookTab = createTMNotebookTab scrolledWin tmTerm
   containerAdd scrolledWin vteTerm
+  (tabLabelBox, tabLabel, tabCloseButton) <- createNotebookTabLabel
+  let notebookTab = createTMNotebookTab tabLabel scrolledWin tmTerm
+  onButtonClicked button $
+    termExitWithConfirmation notebookTab mvarTMState
   putStrLn "createTerm, created some stuff, about to go into mvar..."
   setCurrPageAction <-
     modifyMVar mvarTMState $ \tmState -> do
@@ -192,8 +205,7 @@ createTerm handleKeyPress mvarTMState = do
           note = tmNotebook notebook
           tabs = tmNotebookTabs notebook
       putStrLn "createTerm, in mvar thing, about to notebookAppendPage..."
-      tabLabel <- createNotebookTabLabel notebookTab mvarTMState
-      pageIndex <- notebookAppendPage note scrolledWin (Just tabLabel)
+      pageIndex <- notebookAppendPage note scrolledWin (Just tabLabelBox)
       let newTabs = appendFL tabs notebookTab
           newTMState =
             tmState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
@@ -207,7 +219,8 @@ createTerm handleKeyPress mvarTMState = do
     title <- terminalGetWindowTitle vteTerm
     TMState{tmStateNotebook} <- readMVar mvarTMState
     let notebook = tmNotebook tmStateNotebook
-    -- notebookSetTabLabelText notebook scrolledWin title
+    pageNum <- notebookPageNum notebook scrolledWin
+    labelSetLabel tabLabel $ tshow pageNum <> ". " <> title
     pure ()
   void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
   void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
