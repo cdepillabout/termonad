@@ -19,6 +19,7 @@ import GI.Gtk
   , Box(Box)
   , CssProvider(CssProvider)
   , Dialog(Dialog)
+  , IconSize(IconSizeMenu)
   , IsWidget
   , MessageDialog(MessageDialog)
   , MessageType(MessageTypeQuestion)
@@ -145,7 +146,7 @@ createNotebookTabLabel :: IO Box
 createNotebookTabLabel = do
   box <- boxNew OrientationHorizontal 5
   label <- labelNew (Just "1. ")
-  button <- buttonNewFromIconName (Just "open") 16
+  button <- buttonNewFromIconName (Just "window-close") (fromIntegral (fromEnum IconSizeMenu))
   containerAdd box label
   containerAdd box button
   widgetShow box
