@@ -19,17 +19,21 @@ import GI.Gtk
   , Box(Box)
   , CssProvider(CssProvider)
   , Dialog(Dialog)
+  , IsWidget
   , MessageDialog(MessageDialog)
   , MessageType(MessageTypeQuestion)
   , Notebook(Notebook)
+  , Orientation(OrientationHorizontal)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
   , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , applicationGetActiveWindow
   , applicationNew
   , applicationSetAccelsForAction
+  , boxNew
   , builderNewFromString
   , builderSetApplication
+  , buttonNewFromIconName
   , containerAdd
   , dialogAddButton
   , dialogGetContentArea
@@ -137,6 +141,18 @@ createScrolledWin = do
   widgetShow scrolledWin
   pure scrolledWin
 
+createNotebookTabLabel :: IO Box
+createNotebookTabLabel = do
+  box <- boxNew OrientationHorizontal 5
+  label <- labelNew (Just "1. ")
+  button <- buttonNewFromIconName (Just "open") 16
+  containerAdd box label
+  containerAdd box button
+  widgetShow box
+  widgetShow label
+  widgetShow button
+  pure box
+
 createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO TMTerm
 createTerm handleKeyPress mvarTMState = do
   putStrLn "createTerm, started..."
@@ -169,7 +185,8 @@ createTerm handleKeyPress mvarTMState = do
           note = tmNotebook notebook
           tabs = tmNotebookTabs notebook
       putStrLn "createTerm, in mvar thing, about to notebookAppendPage..."
-      pageIndex <- notebookAppendPage note scrolledWin noWidget
+      tabLabel <- createNotebookTabLabel
+      pageIndex <- notebookAppendPage note scrolledWin (Just tabLabel)
       let newTabs = appendFL tabs notebookTab
           newTMState =
             tmState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
@@ -183,7 +200,8 @@ createTerm handleKeyPress mvarTMState = do
     title <- terminalGetWindowTitle vteTerm
     TMState{tmStateNotebook} <- readMVar mvarTMState
     let notebook = tmNotebook tmStateNotebook
-    notebookSetTabLabelText notebook scrolledWin title
+    -- notebookSetTabLabelText notebook scrolledWin title
+    pure ()
   void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
   void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
   void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState
