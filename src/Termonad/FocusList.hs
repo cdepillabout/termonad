@@ -76,6 +76,14 @@ instance Traversable FocusList where
   traverse :: Applicative f => (a -> f b) -> FocusList a -> f (FocusList b)
   traverse f (FocusList focus len intmap) = FocusList focus len <$> traverse f intmap
 
+type instance Element (FocusList a) = a
+
+instance MonoFunctor (FocusList a)
+
+instance MonoFoldable (FocusList a)
+
+instance MonoTraversable (FocusList a)
+
 instance Arbitrary1 FocusList where
   liftArbitrary :: Gen a -> Gen (FocusList a)
   liftArbitrary genA = do
