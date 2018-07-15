@@ -47,6 +47,7 @@ import GI.Gtk
   , notebookSetCurrentPage
   , notebookSetTabLabelText
   , noWidget
+  , onButtonClicked
   , onWidgetKeyPressEvent
   , scrolledWindowNew
   , setMessageDialogMessageType
@@ -142,11 +143,12 @@ createScrolledWin = do
   widgetShow scrolledWin
   pure scrolledWin
 
-createNotebookTabLabel :: IO Box
-createNotebookTabLabel = do
+createNotebookTabLabel :: TMNotebookTab -> TMState -> IO Box
+createNotebookTabLabel tab mvarTMState = do
   box <- boxNew OrientationHorizontal 5
   label <- labelNew (Just "1. ")
   button <- buttonNewFromIconName (Just "window-close") (fromIntegral (fromEnum IconSizeMenu))
+  onButtonClicked button $ termExitWithConfirmation tab mvarTMState
   containerAdd box label
   containerAdd box button
   widgetShow box
@@ -186,7 +188,7 @@ createTerm handleKeyPress mvarTMState = do
           note = tmNotebook notebook
           tabs = tmNotebookTabs notebook
       putStrLn "createTerm, in mvar thing, about to notebookAppendPage..."
-      tabLabel <- createNotebookTabLabel
+      tabLabel <- createNotebookTabLabel notebookTab mvarTMState
       pageIndex <- notebookAppendPage note scrolledWin (Just tabLabel)
       let newTabs = appendFL tabs notebookTab
           newTMState =
