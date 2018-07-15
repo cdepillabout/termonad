@@ -57,6 +57,7 @@ import GI.Gtk
   , styleContextAddProviderForScreen
   , widgetDestroy
   , widgetGrabFocus
+  , widgetSetCanFocus
   , widgetShow
   , windowPresent
   , windowSetTransientFor
@@ -151,6 +152,9 @@ createNotebookTabLabel tab mvarTMState = do
   onButtonClicked button $ termExitWithConfirmation tab mvarTMState
   containerAdd box label
   containerAdd box button
+  widgetSetCanFocus button False
+  widgetSetCanFocus label False
+  widgetSetCanFocus box False
   widgetShow box
   widgetShow label
   widgetShow button
