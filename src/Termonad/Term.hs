@@ -17,6 +17,7 @@ import GI.Gtk
   ( Application
   , ApplicationWindow(ApplicationWindow)
   , Box(Box)
+  , Button
   , CssProvider(CssProvider)
   , Dialog(Dialog)
   , IconSize(IconSizeMenu)
@@ -68,6 +69,7 @@ import GI.Gtk
 import GI.Vte
   ( CursorBlinkMode(CursorBlinkModeOn)
   , PtyFlags(PtyFlagsDefault)
+  , Terminal
   , onTerminalChildExited
   , onTerminalWindowTitleChanged
   , terminalGetWindowTitle
@@ -144,7 +146,24 @@ termExit tab mvarTMState = do
 
 -- TODO: This function needs to actually go through and relabel each tab.
 relabelTabs :: TMState -> IO ()
-relabelTabs mvarTMState = undefined
+relabelTabs mvarTMState = do
+  TMState{tmStateNotebook} <- readMVar mvarTMState
+  let notebook = tmNotebook tmStateNotebook
+      tabFocusList = tmNotebookTabs tmStateNotebook
+  foldMap (go notebook) tabFocusList
+  where
+    go :: Notebook -> TMNotebookTab -> IO ()
+    go notebook tmNotebookTab = do
+      let label = tmNotebookTab ^. lensTMNotebookTabLabel
+          scrolledWin = tmNotebookTab ^. lensTMNotebookTabTermContainer
+          term = tmNotebookTab ^. lensTMNotebookTabTerm . lensTerm
+      relabelTab notebook label scrolledWin term
+
+relabelTab :: Notebook -> Label -> ScrolledWindow -> Terminal -> IO ()
+relabelTab notebook label scrolledWin term = do
+  pageNum <- notebookPageNum notebook scrolledWin
+  title <- terminalGetWindowTitle term
+  labelSetLabel label $ tshow (pageNum + 1) <> ". " <> title
 
 createScrolledWin :: IO ScrolledWindow
 createScrolledWin = do
@@ -155,7 +174,7 @@ createScrolledWin = do
 createNotebookTabLabel :: IO (Box, Label, Button)
 createNotebookTabLabel = do
   box <- boxNew OrientationHorizontal 5
-  label <- labelNew (Just "1. ")
+  label <- labelNew (Just "")
   button <-
     buttonNewFromIconName
       (Just "window-close")
@@ -195,7 +214,7 @@ createTerm handleKeyPress mvarTMState = do
   containerAdd scrolledWin vteTerm
   (tabLabelBox, tabLabel, tabCloseButton) <- createNotebookTabLabel
   let notebookTab = createTMNotebookTab tabLabel scrolledWin tmTerm
-  onButtonClicked button $
+  onButtonClicked tabCloseButton $
     termExitWithConfirmation notebookTab mvarTMState
   putStrLn "createTerm, created some stuff, about to go into mvar..."
   setCurrPageAction <-
@@ -216,12 +235,9 @@ createTerm handleKeyPress mvarTMState = do
   putStrLn "createTerm, in mvar thing, about to notebookSetCurrentPage..."
   setCurrPageAction
   void $ onTerminalWindowTitleChanged vteTerm $ do
-    title <- terminalGetWindowTitle vteTerm
     TMState{tmStateNotebook} <- readMVar mvarTMState
     let notebook = tmNotebook tmStateNotebook
-    pageNum <- notebookPageNum notebook scrolledWin
-    labelSetLabel tabLabel $ tshow pageNum <> ". " <> title
-    pure ()
+    relabelTab notebook tabLabel scrolledWin vteTerm
   void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
   void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
   void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState

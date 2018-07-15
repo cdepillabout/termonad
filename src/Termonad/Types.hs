@@ -12,6 +12,7 @@ import GI.Gtk
   , Box(Box)
   , CssProvider(CssProvider)
   , Dialog(Dialog)
+  , Label
   , Notebook(Notebook)
   , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
@@ -210,13 +211,14 @@ newTMStateSingleTerm ::
      Application
   -> ApplicationWindow
   -> Notebook
+  -> Label
   -> ScrolledWindow
   -> Terminal
   -> FontDescription
   -> IO TMState
-newTMStateSingleTerm app appWin note scrollWin trm fontDesc = do
+newTMStateSingleTerm app appWin note label scrollWin trm fontDesc = do
   tmTerm <- newTMTerm trm
-  let tmNoteTab = createTMNotebookTab scrollWin tmTerm
+  let tmNoteTab = createTMNotebookTab label scrollWin tmTerm
       tabs = singletonFL tmNoteTab
       tmNote = createTMNotebook note tabs
   newTMState app appWin tmNote fontDesc
