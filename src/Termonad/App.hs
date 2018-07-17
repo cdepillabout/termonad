@@ -75,17 +75,37 @@ import GI.Pango
   , fontDescriptionSetFamily
   , fontDescriptionSetSize
   )
-import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal), terminalCopyClipboard, terminalPasteClipboard)
+import GI.Vte
+  ( CursorBlinkMode(..)
+  , PtyFlags(..)
+  , Terminal(Terminal)
+  , terminalCopyClipboard
+  , terminalPasteClipboard
+  )
 import Text.XML (renderText)
 import Text.XML.QQ (Document, xmlRaw)
 
-import Termonad.Config (FontConfig(fontFamily, fontSize), TMConfig, lensFontConfig)
+import Termonad.Config
+  ( FontConfig(fontFamily, fontSize)
+  , TMConfig
+  , lensFontConfig
+  )
 import Termonad.FocusList (_Focus, focusItemGetter, updateFocusFL)
-import Termonad.Gtk
-import Termonad.Keys
-import Termonad.Term
+import Termonad.Gtk (objFromBuildUnsafe)
+import Termonad.Keys (handleKeyPress)
+import Termonad.Term (createTerm, termExitFocused)
 import Termonad.Types
-import Termonad.XML
+  ( getFocusedTermFromState
+  , lensTMNotebookTabs
+  , lensTMNotebookTabTerm
+  , lensTMStateNotebook
+  , lensTerm
+  , newEmptyTMState
+  , tmNotebook
+  , tmNotebookTabs
+  , tmStateNotebook
+  )
+import Termonad.XML (interfaceText, menuText)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
