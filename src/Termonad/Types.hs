@@ -4,7 +4,7 @@ module Termonad.Types where
 
 import Termonad.Prelude
 
-import Control.Lens
+import Control.Lens (firstOf, makeLensesFor)
 import Data.Unique (Unique, hashUnique, newUnique)
 import GI.Gtk
   ( Application
@@ -34,6 +34,7 @@ import GI.Vte (Terminal(Terminal))
 import Text.Pretty.Simple (pPrint)
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
+import Termonad.Config (TMConfig)
 import Termonad.FocusList (FocusList, emptyFL, focusItemGetter, singletonFL)
 
 data TMTerm = TMTerm
@@ -118,6 +119,7 @@ data TMState' = TMState
   , tmStateAppWin :: !ApplicationWindow
   , tmStateNotebook :: !TMNotebook
   , tmStateFontDesc :: !FontDescription
+  , tmStateConfig :: !TMConfig
   }
 
 instance Show TMState' where
@@ -136,6 +138,9 @@ instance Show TMState' where
       showString ", " .
       showString "tmStateFontDesc = " .
       showString "(GI.Pango.FontDescription)" .
+      showString ", " .
+      showString "tmStateConfig = " .
+      showsPrec (d + 1) tmStateConfig .
       showString "}"
 
 $(makeLensesFor
@@ -143,6 +148,7 @@ $(makeLensesFor
     , ("tmStateAppWin", "lensTMStateAppWin")
     , ("tmStateNotebook", "lensTMStateNotebook")
     , ("tmStateFontDesc", "lensTMStateFontDesc")
+    , ("tmStateConfig", "lensTMStateConfig")
     ]
     ''TMState'
  )
@@ -187,28 +193,31 @@ createTMNotebook note tabs =
 createEmptyTMNotebook :: Notebook -> TMNotebook
 createEmptyTMNotebook notebook = createTMNotebook notebook emptyFL
 
-newTMState :: Application -> ApplicationWindow -> TMNotebook -> FontDescription -> IO TMState
-newTMState app appWin note fontDesc =
+newTMState :: TMConfig -> Application -> ApplicationWindow -> TMNotebook -> FontDescription -> IO TMState
+newTMState tmConfig app appWin note fontDesc =
   newMVar $
     TMState
       { tmStateApp = app
       , tmStateAppWin = appWin
       , tmStateNotebook = note
       , tmStateFontDesc = fontDesc
+      , tmStateConfig = tmConfig
       }
 
-newEmptyTMState :: Application -> ApplicationWindow -> Notebook -> FontDescription -> IO TMState
-newEmptyTMState app appWin note fontDesc =
+newEmptyTMState :: TMConfig -> Application -> ApplicationWindow -> Notebook -> FontDescription -> IO TMState
+newEmptyTMState tmConfig app appWin note fontDesc =
   newMVar $
     TMState
       { tmStateApp = app
       , tmStateAppWin = appWin
       , tmStateNotebook = createEmptyTMNotebook note
       , tmStateFontDesc = fontDesc
+      , tmStateConfig = tmConfig
       }
 
 newTMStateSingleTerm ::
-     Application
+     TMConfig
+  -> Application
   -> ApplicationWindow
   -> Notebook
   -> Label
@@ -216,12 +225,12 @@ newTMStateSingleTerm ::
   -> Terminal
   -> FontDescription
   -> IO TMState
-newTMStateSingleTerm app appWin note label scrollWin trm fontDesc = do
+newTMStateSingleTerm tmConfig app appWin note label scrollWin trm fontDesc = do
   tmTerm <- newTMTerm trm
   let tmNoteTab = createTMNotebookTab label scrollWin tmTerm
       tabs = singletonFL tmNoteTab
       tmNote = createTMNotebook note tabs
-  newTMState app appWin tmNote fontDesc
+  newTMState tmConfig app appWin tmNote fontDesc
 
 traceShowMTMState :: TMState -> IO ()
 traceShowMTMState mvarTMState = do

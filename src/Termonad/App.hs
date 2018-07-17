@@ -79,6 +79,7 @@ import GI.Vte (CursorBlinkMode(..), PtyFlags(..), Terminal(Terminal), terminalCo
 import Text.XML (renderText)
 import Text.XML.QQ (Document, xmlRaw)
 
+import Termonad.Config (FontConfig(fontFamily, fontSize), TMConfig, lensFontConfig)
 import Termonad.FocusList (_Focus, focusItemGetter, updateFocusFL)
 import Termonad.Gtk
 import Termonad.Keys
@@ -126,20 +127,20 @@ setupScreenStyle = do
         cssProvider
         (fromIntegral STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-createFontDesc :: IO FontDescription
-createFontDesc = do
+createFontDesc :: TMConfig -> IO FontDescription
+createFontDesc tmConfig = do
   fontDesc <- fontDescriptionNew
-  fontDescriptionSetFamily fontDesc "DejaVu Sans Mono"
-  -- fontDescriptionSetFamily font "Source Code Pro"
-  fontDescriptionSetSize fontDesc (16 * SCALE)
+  let fontConf = tmConfig ^. lensFontConfig
+  fontDescriptionSetFamily fontDesc (fontFamily fontConf)
+  fontDescriptionSetSize fontDesc (fromIntegral (fontSize fontConf) * SCALE)
   pure fontDesc
 
-setupTermonad :: Application -> ApplicationWindow -> Gtk.Builder -> IO ()
-setupTermonad app win builder = do
+setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
+setupTermonad tmConfig app win builder = do
   void $ Gdk.on win #destroy (#quit app)
   setupScreenStyle
   box <- objFromBuildUnsafe builder "content_box" Box
-  fontDesc <- createFontDesc
+  fontDesc <- createFontDesc tmConfig
   note <- new Notebook [#canFocus := False]
   #packStart box note True True 0
 
@@ -147,7 +148,7 @@ setupTermonad app win builder = do
     pages <- #getNPages note
     when (pages == 0) (#quit app)
 
-  mvarTMState <- newEmptyTMState app win note fontDesc
+  mvarTMState <- newEmptyTMState tmConfig app win note fontDesc
   terminal <- createTerm handleKeyPress mvarTMState
 
   void $ onNotebookSwitchPage note $ \_ pageNum -> do
@@ -218,51 +219,41 @@ setupTermonad app win builder = do
   widgetShowAll win
   widgetGrabFocus $ terminal ^. lensTerm
 
-appActivate :: Application -> IO ()
-appActivate app = do
+appActivate :: TMConfig -> Application -> IO ()
+appActivate tmConfig app = do
   putStrLn "called appActivate"
   uiBuilder <-
     builderNewFromString interfaceText $ fromIntegral (length interfaceText)
   builderSetApplication uiBuilder app
   appWin <- objFromBuildUnsafe uiBuilder "appWin" ApplicationWindow
   applicationAddWindow app appWin
-  setupTermonad app appWin uiBuilder
+  setupTermonad tmConfig app appWin uiBuilder
   windowPresent appWin
 
--- | TODO: I should probably be using the actual Gtk.AboutDialog class.
 showAboutDialog :: Application -> IO ()
 showAboutDialog app = do
   win <- applicationGetActiveWindow app
   aboutDialog <- aboutDialogNew
   windowSetTransientFor aboutDialog (Just win)
-  -- widgetShowAll aboutDialog
-  -- windowPresent aboutDialog
-  res <- dialogRun aboutDialog
-  putStrLn $ "Result from running dialog: " <> tshow res
+  void $ dialogRun aboutDialog
   widgetDestroy aboutDialog
-  -- win <- #getActiveWindow app
-  -- builder <- builderNewFromString aboutText $ fromIntegral (length aboutText)
-  -- builderSetApplication builder app
-  -- aboutDialog <- objFromBuildUnsafe builder "aboutDialog" Dialog
-  -- #setTransientFor aboutDialog (Just win)
-  -- #present aboutDialog
 
 appStartup :: Application -> IO ()
-appStartup _app = putStrLn "called appStartup"
+appStartup _app = pure ()
 
-start :: IO ()
-start = do
+start :: TMConfig -> IO ()
+start tmConfig = do
   app <- applicationNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
   void $ Gdk.on app #startup (appStartup app)
-  void $ Gdk.on app #activate (appActivate app)
+  void $ Gdk.on app #activate (appActivate tmConfig app)
   void $ applicationRun app Nothing
 
-defaultMain :: IO ()
-defaultMain = do
+defaultMain :: TMConfig -> IO ()
+defaultMain tmConfig = do
   let params =
         defaultParams
           { projectName = "termonad"
-          , showError = \cfg err -> cfg <> "\n" <> err
-          , realMain = \cfg -> print cfg *> start
+          , showError = \(cfg, oldErrs) newErr -> (cfg, oldErrs <> "\n" <> newErr)
+          , realMain = \(cfg, errs) -> putStrLn (pack errs) *> start cfg
           }
-  wrapMain params ""
+  wrapMain params (tmConfig, "")
