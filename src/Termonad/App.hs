@@ -172,16 +172,12 @@ setupTermonad tmConfig app win builder = do
   terminal <- createTerm handleKeyPress mvarTMState
 
   void $ onNotebookSwitchPage note $ \_ pageNum -> do
-    putStrLn "In callback for onNotebookSwitchPage, about to modify state..."
     maybeRes <- tryTakeMVar mvarTMState
     case maybeRes of
-      Nothing -> do
-        putStrLn "In callback for onNotebookSwitchPage, mvar was empty. probably not able to proceed."
+      Nothing -> pure ()
       Just val -> do
-        putStrLn "In callback for onNotebookSwitchPage, mvar was full...?"
         putMVar mvarTMState val
     modifyMVar_ mvarTMState $ \tmState -> do
-      putStrLn "In callback for onNotebookSwitchPage, got into the mvar."
       let notebook = tmStateNotebook tmState
           note = tmNotebook notebook
           tabs = tmNotebookTabs notebook
@@ -189,12 +185,10 @@ setupTermonad tmConfig app win builder = do
       case maybeNewTabs of
         Nothing -> pure tmState
         Just (tab, newTabs) -> do
-          putStrLn $ "In callback for onNotebookSwitchPage, trying to focus on " <> tshow tab
           widgetGrabFocus $ tab ^. lensTMNotebookTabTerm . lensTerm
           pure $
             tmState &
               lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
-    putStrLn "In callback for onNotebookSwitchPage, finished modifing state."
 
 
   newTabAction <- simpleActionNew "newtab" Nothing
@@ -241,7 +235,6 @@ setupTermonad tmConfig app win builder = do
 
 appActivate :: TMConfig -> Application -> IO ()
 appActivate tmConfig app = do
-  putStrLn "called appActivate"
   uiBuilder <-
     builderNewFromString interfaceText $ fromIntegral (length interfaceText)
   builderSetApplication uiBuilder app
