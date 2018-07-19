@@ -225,10 +225,13 @@ appStartup _app = pure ()
 
 start :: TMConfig -> IO ()
 start tmConfig = do
-  app <- applicationNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
-  void $ Gdk.on app #startup (appStartup app)
-  void $ Gdk.on app #activate (appActivate tmConfig app)
-  void $ applicationRun app Nothing
+  maybeApp <- applicationNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
+  case maybeApp of
+    Nothing -> error "Could not create application for some reason!"
+    Just app -> do
+      void $ Gdk.on app #startup (appStartup app)
+      void $ Gdk.on app #activate (appActivate tmConfig app)
+      void $ applicationRun app Nothing
 
 defaultMain :: TMConfig -> IO ()
 defaultMain tmConfig = do
