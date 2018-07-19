@@ -29,46 +29,8 @@ interfaceDoc =
             <property name="visible">True</property>
             <property name="orientation">vertical</property>
             <child>
-              <object class="GtkHeaderBar" id="header">
-                <property name="visible">True</property>
-                <child type="title">
-                  <object class="GtkStackSwitcher" id="tabs">
-                    <property name="visible">True</property>
-                    <property name="stack">stack</property>
-                    <style>
-                      <class name="my-special-stackswitcher-class"/>
-                      <class name="dark-stackswitcher"/>
-                    </style>
-                  </object>
-                </child>
-              </object>
-            </child>
-            <child>
               <object class="GtkStack" id="stack">
                 <property name="visible">True</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkImage" id="image1">
-                <property name="visible">True</property>
-                <property name="stock">gtk-apply</property>
-                <property name="icon_size">4</property>
-                <property name="xalign">0.5</property>
-                <property name="yalign">0.5</property>
-                <property name="xpad">0</property>
-                <property name="ypad">0</property>
-              </object>
-              <packing>
-                <property name="padding">0</property>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="button1">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="relief">GTK_RELIEF_NORMAL</property>
               </object>
             </child>
           </object>
