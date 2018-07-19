@@ -2,7 +2,7 @@ module Termonad.Term where
 
 import Termonad.Prelude
 
-import Control.Lens
+import Control.Lens ((^.), (&), (.~), set, to)
 import Data.GI.Base (new)
 import GI.Gdk
   ( EventKey
@@ -29,6 +29,7 @@ import GI.Gtk
   , MessageType(MessageTypeQuestion)
   , Notebook(Notebook)
   , Orientation(OrientationHorizontal)
+  , PolicyType(PolicyTypeAlways, PolicyTypeAutomatic, PolicyTypeNever)
   , ReliefStyle(ReliefStyleNone)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
   , ScrolledWindow(ScrolledWindow)
@@ -61,6 +62,7 @@ import GI.Gtk
   , onButtonClicked
   , onWidgetKeyPressEvent
   , scrolledWindowNew
+  , scrolledWindowSetPolicy
   , setMessageDialogMessageType
   , setMessageDialogText
   , setWidgetHasFocus
@@ -90,9 +92,28 @@ import GI.Vte
   , terminalSpawnSync
   )
 
-import Termonad.FocusList
+import Termonad.Config (ShowScrollbar(..), lensShowScrollbar)
+import Termonad.FocusList (appendFL, deleteFL, getFLFocusItem)
 import Termonad.Gtk (objFromBuildUnsafe)
 import Termonad.Types
+  ( TMNotebookTab
+  , TMState
+  , TMState'(TMState, tmStateFontDesc, tmStateNotebook)
+  , TMTerm
+  , createTMNotebookTab
+  , lensTerm
+  , lensTMNotebookTabLabel
+  , lensTMNotebookTabs
+  , lensTMNotebookTabTerm
+  , lensTMNotebookTabTermContainer
+  , lensTMStateApp
+  , lensTMStateConfig
+  , lensTMStateNotebook
+  , newTMTerm
+  , tmNotebook
+  , tmNotebookTabs
+  , tmNotebookTabTermContainer
+  )
 import Termonad.XML (closeTabText)
 
 import Text.Pretty.Simple
@@ -171,10 +192,19 @@ relabelTab notebook label scrolledWin term = do
   title <- terminalGetWindowTitle term
   labelSetLabel label $ tshow (pageNum + 1) <> ". " <> title
 
-createScrolledWin :: IO ScrolledWindow
-createScrolledWin = do
+showScrollbarToPolicy :: ShowScrollbar -> PolicyType
+showScrollbarToPolicy ShowScrollbarNever = PolicyTypeNever
+showScrollbarToPolicy ShowScrollbarIfNeeded = PolicyTypeAutomatic
+showScrollbarToPolicy ShowScrollbarAlways = PolicyTypeAlways
+
+createScrolledWin :: TMState -> IO ScrolledWindow
+createScrolledWin mvarTMState = do
+  tmState <- readMVar mvarTMState
+  let showScrollbarVal = tmState ^. lensTMStateConfig . lensShowScrollbar
+      vScrollbarPolicy = showScrollbarToPolicy showScrollbarVal
   scrolledWin <- scrolledWindowNew noAdjustment noAdjustment
   widgetShow scrolledWin
+  scrolledWindowSetPolicy scrolledWin PolicyTypeAutomatic vScrollbarPolicy
   pure scrolledWin
 
 createNotebookTabLabel :: IO (Box, Label, Button)
@@ -202,7 +232,7 @@ createNotebookTabLabel = do
 
 createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO TMTerm
 createTerm handleKeyPress mvarTMState = do
-  scrolledWin <- createScrolledWin
+  scrolledWin <- createScrolledWin mvarTMState
   TMState{tmStateFontDesc} <- readMVar mvarTMState
   vteTerm <- terminalNew
   terminalSetFont vteTerm (Just tmStateFontDesc)

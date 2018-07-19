@@ -115,13 +115,14 @@ setupScreenStyle = do
     Just screen -> do
       cssProvider <- new CssProvider []
       let (textLines :: [Text]) =
-            [ "scrollbar {" :: Text
-            , "  -GtkRange-slider-width: 200px;"
-            , "  -GtkRange-stepper-size: 200px;"
-            , "  border-width: 200px;"
-            , "  background-color: #ff0000;"
-            , "  color: #ff0000;"
-            , "  min-width: 50px;"
+            [
+              "scrollbar {"
+            -- , "  -GtkRange-slider-width: 200px;"
+            -- , "  -GtkRange-stepper-size: 200px;"
+            -- , "  border-width: 200px;"
+            , "  background-color: #aaaaaa;"
+            -- , "  color: #ff0000;"
+            , "  min-width: 4px;"
             , "}"
             -- , "scrollbar trough {"
             -- , "  -GtkRange-slider-width: 200px;"

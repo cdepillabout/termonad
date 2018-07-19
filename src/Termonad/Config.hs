@@ -25,12 +25,20 @@ defaultFontConfig =
     , fontSize = 12
     }
 
+data ShowScrollbar
+  = ShowScrollbarNever
+  | ShowScrollbarAlways
+  | ShowScrollbarIfNeeded
+  deriving (Eq, Show)
+
 data TMConfig = TMConfig
   { fontConfig :: !FontConfig
+  , showScrollbar :: !ShowScrollbar
   } deriving (Eq, Show)
 
 $(makeLensesFor
     [ ("fontConfig", "lensFontConfig")
+    , ("showScrollbar", "lensShowScrollbar")
     ]
     ''TMConfig
  )
@@ -39,4 +47,5 @@ defaultTMConfig :: TMConfig
 defaultTMConfig =
   TMConfig
     { fontConfig = defaultFontConfig
+    , showScrollbar = ShowScrollbarIfNeeded
     }
