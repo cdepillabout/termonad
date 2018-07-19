@@ -4,49 +4,23 @@ module Termonad.App where
 import Termonad.Prelude
 
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
-import Control.Lens ((&), (^.), (.~), firstOf, imap, mapped)
-import Data.Default (def)
-import Data.Unique (Unique, newUnique)
+import Control.Lens ((&), (^.), (.~))
 import qualified GI.Gdk as Gdk
-import GI.Gdk
-  ( AttrOp((:=))
-  , EventKey
-  , GObject
-  , pattern KEY_1
-  , pattern KEY_2
-  , pattern KEY_3
-  , pattern KEY_4
-  , pattern KEY_5
-  , pattern KEY_6
-  , pattern KEY_7
-  , pattern KEY_8
-  , pattern KEY_9
-  , pattern KEY_T
-  , ManagedPtr
-  , ModifierType(..)
-  , castTo
-  , get
-  , new
-  , screenGetDefault
-  )
+import GI.Gdk (AttrOp((:=)), new, screenGetDefault)
 import GI.Gio
   ( ApplicationFlags(ApplicationFlagsFlagsNone)
   , MenuModel(MenuModel)
   , actionMapAddAction
   , applicationRun
-  , noCancellable
   , onSimpleActionActivate
   , simpleActionNew
   )
-import GI.GLib.Flags (SpawnFlags(..))
 import GI.Gtk
   ( Application
   , ApplicationWindow(ApplicationWindow)
   , Box(Box)
   , CssProvider(CssProvider)
-  , Dialog(Dialog)
   , Notebook(Notebook)
-  , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , aboutDialogNew
   , applicationAddWindow
@@ -57,9 +31,7 @@ import GI.Gtk
   , builderNewFromString
   , builderSetApplication
   , dialogRun
-  , noWidget
   , onNotebookSwitchPage
-  , setWidgetHasFocus
   , styleContextAddProviderForScreen
   , widgetDestroy
   , widgetGrabFocus
@@ -76,21 +48,16 @@ import GI.Pango
   , fontDescriptionSetSize
   )
 import GI.Vte
-  ( CursorBlinkMode(..)
-  , PtyFlags(..)
-  , Terminal(Terminal)
-  , terminalCopyClipboard
+  ( terminalCopyClipboard
   , terminalPasteClipboard
   )
-import Text.XML (renderText)
-import Text.XML.QQ (Document, xmlRaw)
 
 import Termonad.Config
   ( FontConfig(fontFamily, fontSize)
   , TMConfig
   , lensFontConfig
   )
-import Termonad.FocusList (_Focus, focusItemGetter, updateFocusFL)
+import Termonad.FocusList (updateFocusFL)
 import Termonad.Gtk (objFromBuildUnsafe)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Term (createTerm, termExitFocused)
@@ -101,7 +68,6 @@ import Termonad.Types
   , lensTMStateNotebook
   , lensTerm
   , newEmptyTMState
-  , tmNotebook
   , tmNotebookTabs
   , tmStateNotebook
   )
@@ -183,7 +149,6 @@ setupTermonad tmConfig app win builder = do
         putMVar mvarTMState val
     modifyMVar_ mvarTMState $ \tmState -> do
       let notebook = tmStateNotebook tmState
-          note = tmNotebook notebook
           tabs = tmNotebookTabs notebook
           maybeNewTabs = updateFocusFL (fromIntegral pageNum) tabs
       case maybeNewTabs of
