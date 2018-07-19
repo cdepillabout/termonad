@@ -14,7 +14,8 @@ import GI.GLib
   ( SpawnFlags(SpawnFlagsDefault)
   )
 import GI.Gtk
-  ( Application
+  ( Align(AlignFill)
+  , Application
   , ApplicationWindow(ApplicationWindow)
   , Box(Box)
   , Button
@@ -22,11 +23,13 @@ import GI.Gtk
   , Dialog(Dialog)
   , IconSize(IconSizeMenu)
   , IsWidget
+  , Justification(JustificationCenter)
   , Label
   , MessageDialog(MessageDialog)
   , MessageType(MessageTypeQuestion)
   , Notebook(Notebook)
   , Orientation(OrientationHorizontal)
+  , ReliefStyle(ReliefStyleNone)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
   , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
@@ -37,13 +40,17 @@ import GI.Gtk
   , builderNewFromString
   , builderSetApplication
   , buttonNewFromIconName
+  , buttonSetRelief
   , containerAdd
   , dialogAddButton
   , dialogGetContentArea
   , dialogNew
   , dialogRun
   , labelNew
+  , labelSetEllipsize
+  , labelSetJustify
   , labelSetLabel
+  , labelSetMaxWidthChars
   , noAdjustment
   , notebookAppendPage
   , notebookDetachTab
@@ -62,10 +69,14 @@ import GI.Gtk
   , widgetDestroy
   , widgetGrabFocus
   , widgetSetCanFocus
+  , widgetSetHalign
+  , widgetSetHexpand
+  , widgetSetSizeRequest
   , widgetShow
   , windowPresent
   , windowSetTransientFor
   )
+import GI.Pango (EllipsizeMode(EllipsizeModeMiddle))
 import GI.Vte
   ( CursorBlinkMode(CursorBlinkModeOn)
   , PtyFlags(PtyFlagsDefault)
@@ -170,10 +181,15 @@ createNotebookTabLabel :: IO (Box, Label, Button)
 createNotebookTabLabel = do
   box <- boxNew OrientationHorizontal 5
   label <- labelNew (Just "")
+  labelSetEllipsize label EllipsizeModeMiddle
+  labelSetMaxWidthChars label 10
+  widgetSetHexpand label True
+  widgetSetHalign label AlignFill
   button <-
     buttonNewFromIconName
       (Just "window-close")
       (fromIntegral (fromEnum IconSizeMenu))
+  buttonSetRelief button ReliefStyleNone
   containerAdd box label
   containerAdd box button
   widgetSetCanFocus button False

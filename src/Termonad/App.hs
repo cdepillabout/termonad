@@ -139,6 +139,9 @@ setupScreenStyle = do
             -- , "  color: #0000ff;"
             -- , "  min-width: 50px;"
             -- , "}"
+            , "tab {"
+            , "  background-color: transparent;"
+            , "}"
             ]
       let styleData = encodeUtf8 (unlines textLines :: Text)
       #loadFromData cssProvider styleData
