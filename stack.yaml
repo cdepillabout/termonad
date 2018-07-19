@@ -36,17 +36,6 @@ extra-package-dbs: []
 # compiler-check: newer-minor
 
 nix:
-    packages:
-        # Some of these are probably not actually needed...
-        - cairo
-        - gcc
-        - glib
-        - gnome2.gtk
-        - gnome2.pango
-        - gnome2.vte
-        - gnome3.gtk
-        - gnome3.vte
-        - gobjectIntrospection
-        - gtk3
-        - pkgconfig
-        - zlib
+    packages: []
+    pure: true
+    shell-file: shell.nix
