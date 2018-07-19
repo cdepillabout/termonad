@@ -3,7 +3,6 @@ module Termonad.Term where
 import Termonad.Prelude
 
 import Control.Lens ((^.), (&), (.~), set, to)
-import Data.GI.Base (new)
 import GI.Gdk
   ( EventKey
   )
@@ -15,31 +14,18 @@ import GI.GLib
   )
 import GI.Gtk
   ( Align(AlignFill)
-  , Application
-  , ApplicationWindow(ApplicationWindow)
-  , Box(Box)
+  , Box
   , Button
-  , CssProvider(CssProvider)
-  , Dialog(Dialog)
   , IconSize(IconSizeMenu)
-  , IsWidget
-  , Justification(JustificationCenter)
   , Label
-  , MessageDialog(MessageDialog)
-  , MessageType(MessageTypeQuestion)
-  , Notebook(Notebook)
+  , Notebook
   , Orientation(OrientationHorizontal)
   , PolicyType(PolicyTypeAlways, PolicyTypeAutomatic, PolicyTypeNever)
   , ReliefStyle(ReliefStyleNone)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
-  , ScrolledWindow(ScrolledWindow)
-  , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
+  , ScrolledWindow
   , applicationGetActiveWindow
-  , applicationNew
-  , applicationSetAccelsForAction
   , boxNew
-  , builderNewFromString
-  , builderSetApplication
   , buttonNewFromIconName
   , buttonSetRelief
   , containerAdd
@@ -49,7 +35,6 @@ import GI.Gtk
   , dialogRun
   , labelNew
   , labelSetEllipsize
-  , labelSetJustify
   , labelSetLabel
   , labelSetMaxWidthChars
   , noAdjustment
@@ -57,25 +42,17 @@ import GI.Gtk
   , notebookDetachTab
   , notebookPageNum
   , notebookSetCurrentPage
-  , notebookSetTabLabelText
-  , noWidget
   , onButtonClicked
   , onWidgetKeyPressEvent
   , scrolledWindowNew
   , scrolledWindowSetPolicy
-  , setMessageDialogMessageType
-  , setMessageDialogText
-  , setWidgetHasFocus
   , setWidgetMargin
-  , styleContextAddProviderForScreen
   , widgetDestroy
   , widgetGrabFocus
   , widgetSetCanFocus
   , widgetSetHalign
   , widgetSetHexpand
-  , widgetSetSizeRequest
   , widgetShow
-  , windowPresent
   , windowSetTransientFor
   )
 import GI.Pango (EllipsizeMode(EllipsizeModeMiddle))
@@ -94,7 +71,6 @@ import GI.Vte
 
 import Termonad.Config (ShowScrollbar(..), lensShowScrollbar)
 import Termonad.FocusList (appendFL, deleteFL, getFLFocusItem)
-import Termonad.Gtk (objFromBuildUnsafe)
 import Termonad.Types
   ( TMNotebookTab
   , TMState
@@ -114,9 +90,6 @@ import Termonad.Types
   , tmNotebookTabs
   , tmNotebookTabTermContainer
   )
-import Termonad.XML (closeTabText)
-
-import Text.Pretty.Simple
 
 focusTerm :: Int -> TMState -> IO ()
 focusTerm i mvarTMState = do
@@ -146,8 +119,16 @@ termExitWithConfirmation tab mvarTMState = do
   containerAdd box label
   widgetShow label
   setWidgetMargin label 10
-  dialogAddButton dialog "No, do NOT close tab" (fromIntegral (fromEnum ResponseTypeNo))
-  dialogAddButton dialog "Yes, close tab" (fromIntegral (fromEnum ResponseTypeYes))
+  void $
+    dialogAddButton
+      dialog
+      "No, do NOT close tab"
+      (fromIntegral (fromEnum ResponseTypeNo))
+  void $
+    dialogAddButton
+      dialog
+      "Yes, close tab"
+      (fromIntegral (fromEnum ResponseTypeYes))
   windowSetTransientFor dialog (Just win)
   res <- dialogRun dialog
   widgetDestroy dialog
@@ -253,8 +234,9 @@ createTerm handleKeyPress mvarTMState = do
   containerAdd scrolledWin vteTerm
   (tabLabelBox, tabLabel, tabCloseButton) <- createNotebookTabLabel
   let notebookTab = createTMNotebookTab tabLabel scrolledWin tmTerm
-  onButtonClicked tabCloseButton $
-    termExitWithConfirmation notebookTab mvarTMState
+  void $
+    onButtonClicked tabCloseButton $
+      termExitWithConfirmation notebookTab mvarTMState
   setCurrPageAction <-
     modifyMVar mvarTMState $ \tmState -> do
       let notebook = tmStateNotebook tmState
