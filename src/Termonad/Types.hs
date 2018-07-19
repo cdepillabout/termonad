@@ -8,29 +8,13 @@ import Control.Lens (firstOf, makeLensesFor)
 import Data.Unique (Unique, hashUnique, newUnique)
 import GI.Gtk
   ( Application
-  , ApplicationWindow(ApplicationWindow)
-  , Box(Box)
-  , CssProvider(CssProvider)
-  , Dialog(Dialog)
+  , ApplicationWindow
   , Label
-  , Notebook(Notebook)
-  , ScrolledWindow(ScrolledWindow)
-  , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
-  , applicationNew
-  , applicationSetAccelsForAction
-  , builderNewFromString
-  , builderSetApplication
-  , noWidget
-  , styleContextAddProviderForScreen
+  , Notebook
+  , ScrolledWindow
   )
-import GI.Pango
-  ( FontDescription
-  , pattern SCALE
-  , fontDescriptionNew
-  , fontDescriptionSetFamily
-  , fontDescriptionSetSize
-  )
-import GI.Vte (Terminal(Terminal))
+import GI.Pango (FontDescription)
+import GI.Vte (Terminal)
 import Text.Pretty.Simple (pPrint)
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
