@@ -28,8 +28,10 @@ import GI.Gtk
   , applicationNew
   , applicationSetAccelsForAction
   , applicationSetMenubar
+  , boxPackStart
   , builderNewFromString
   , builderSetApplication
+  , cssProviderLoadFromData
   , dialogRun
   , onNotebookSwitchPage
   , styleContextAddProviderForScreen
@@ -111,7 +113,7 @@ setupScreenStyle = do
             , "}"
             ]
       let styleData = encodeUtf8 (unlines textLines :: Text)
-      #loadFromData cssProvider styleData
+      cssProviderLoadFromData cssProvider styleData
       styleContextAddProviderForScreen
         screen
         cssProvider
@@ -132,7 +134,7 @@ setupTermonad tmConfig app win builder = do
   box <- objFromBuildUnsafe builder "content_box" Box
   fontDesc <- createFontDesc tmConfig
   note <- new Notebook [#canFocus := False]
-  #packStart box note True True 0
+  boxPackStart box note True True 0
 
   void $ Gdk.on note #pageRemoved $ \_ _ -> do
     pages <- #getNPages note
