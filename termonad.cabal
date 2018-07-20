@@ -44,8 +44,6 @@ library
                      , gi-pango
                      , gi-vte
                      , haskell-gi-base
-                     , haskell-gi-overloading >= 1.0
-                     , haskell-gi-overloading >= 1.0
                      , lens
                      , pretty-simple
                      , QuickCheck
