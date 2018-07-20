@@ -8,13 +8,14 @@ import GI.Gdk
   , ManagedPtr
   , castTo
   )
+import GI.Gtk (builderGetObject)
 import qualified GI.Gtk as Gtk
 
 
 objFromBuildUnsafe ::
      GObject o => Gtk.Builder -> Text -> (ManagedPtr o -> o) -> IO o
 objFromBuildUnsafe builder name constructor = do
-  maybePlainObj <- #getObject builder name
+  maybePlainObj <- builderGetObject builder name
   case maybePlainObj of
     Nothing -> error $ "Couldn't get " <> unpack name <> " from builder!"
     Just plainObj -> do
