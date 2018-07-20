@@ -5,6 +5,10 @@ let
     sha256 = "0r3c00m96ldb9z81ay7vj8gnpk4bf8gjcdiad7mgxvwxr9ndskjx";
   };
   nixpkgs = import nixpkgsTarball { };
+
+  fixed-stack-repo = import ./.nix-helpers/fixed-stack.nix { inherit nixpkgs; };
+
+  myStack = fixed-stack-repo.working.stack;
 in
 
 with nixpkgs;
@@ -33,4 +37,5 @@ haskell.lib.buildStackProject {
     # zlib
   ];
   ghc = haskell.compiler.ghc843;
+  stack = myStack;
 }
