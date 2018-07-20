@@ -37,11 +37,14 @@ data TMConfig = TMConfig
   { fontConfig :: !FontConfig
   , showScrollbar :: !ShowScrollbar
   , cursorColor :: !(Colour Double)
+  , scrollbackLen :: !Integer
   } deriving (Eq, Show)
 
 $(makeLensesFor
     [ ("fontConfig", "lensFontConfig")
     , ("showScrollbar", "lensShowScrollbar")
+    , ("cursorColor", "lensCursorColor")
+    , ("scrollbackLen", "lensScrollbackLen")
     ]
     ''TMConfig
  )
@@ -52,4 +55,5 @@ defaultTMConfig =
     { fontConfig = defaultFontConfig
     , showScrollbar = ShowScrollbarIfNeeded
     , cursorColor = lightgrey
+    , scrollbackLen = 10000
     }

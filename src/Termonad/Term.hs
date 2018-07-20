@@ -73,10 +73,11 @@ import GI.Vte
   , terminalSetCursorBlinkMode
   , terminalSetColorCursor
   , terminalSetFont
+  , terminalSetScrollbackLines
   , terminalSpawnSync
   )
 
-import Termonad.Config (ShowScrollbar(..), TMConfig(cursorColor), lensShowScrollbar)
+import Termonad.Config (ShowScrollbar(..), TMConfig(cursorColor, scrollbackLen), lensShowScrollbar)
 import Termonad.FocusList (appendFL, deleteFL, getFLFocusItem)
 import Termonad.Types
   ( TMNotebookTab
@@ -234,6 +235,7 @@ createTerm handleKeyPress mvarTMState = do
   TMState{tmStateFontDesc, tmStateConfig} <- readMVar mvarTMState
   vteTerm <- terminalNew
   terminalSetFont vteTerm (Just tmStateFontDesc)
+  terminalSetScrollbackLines vteTerm (fromIntegral (scrollbackLen tmStateConfig))
   cursorColor <- getCursorColor tmStateConfig
   terminalSetColorCursor vteTerm (Just cursorColor)
   terminalSetCursorBlinkMode vteTerm CursorBlinkModeOn
