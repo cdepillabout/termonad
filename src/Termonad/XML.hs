@@ -50,7 +50,7 @@ menuDoc =
       <!-- interface-requires gtk+ 3.0 -->
       <menu id="menubar">
         <submenu>
-          <attribute name="label" translatable="yes">_File</attribute>
+          <attribute name="label" translatable="yes">File</attribute>
           <section>
             <item>
               <attribute name="label" translatable="yes">New _Tab</attribute>
@@ -69,7 +69,7 @@ menuDoc =
           </section>
         </submenu>
         <submenu>
-          <attribute name="label" translatable="yes">_Edit</attribute>
+          <attribute name="label" translatable="yes">Edit</attribute>
           <item>
             <attribute name="label" translatable="yes">_Copy</attribute>
             <attribute name="action">app.copy</attribute>
@@ -80,7 +80,7 @@ menuDoc =
           </item>
         </submenu>
         <submenu>
-          <attribute name="label" translatable="yes">_Help</attribute>
+          <attribute name="label" translatable="yes">Help</attribute>
           <item>
             <attribute name="label" translatable="yes">_About</attribute>
             <attribute name="action">app.about</attribute>
