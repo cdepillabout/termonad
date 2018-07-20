@@ -5,12 +5,12 @@ import Termonad.Prelude
 
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
 import Control.Lens ((&), (^.), (.~))
-import qualified GI.Gdk as Gdk
-import GI.Gdk (AttrOp((:=)), new, screenGetDefault)
+import GI.Gdk (screenGetDefault)
 import GI.Gio
   ( ApplicationFlags(ApplicationFlagsFlagsNone)
   , MenuModel(MenuModel)
   , actionMapAddAction
+  , applicationQuit
   , applicationRun
   , onApplicationActivate
   , onApplicationStartup
@@ -21,8 +21,6 @@ import GI.Gtk
   ( Application
   , ApplicationWindow(ApplicationWindow)
   , Box(Box)
-  , CssProvider(CssProvider)
-  , Notebook(Notebook)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , aboutDialogNew
   , applicationAddWindow
@@ -34,12 +32,17 @@ import GI.Gtk
   , builderNewFromString
   , builderSetApplication
   , cssProviderLoadFromData
+  , cssProviderNew
   , dialogRun
   , notebookGetNPages
+  , notebookNew
+  , onNotebookPageRemoved
   , onNotebookSwitchPage
+  , onWidgetDestroy
   , styleContextAddProviderForScreen
   , widgetDestroy
   , widgetGrabFocus
+  , widgetSetCanFocus
   , widgetShowAll
   , windowPresent
   , windowSetTransientFor
@@ -84,7 +87,7 @@ setupScreenStyle = do
   case maybeScreen of
     Nothing -> pure ()
     Just screen -> do
-      cssProvider <- new CssProvider []
+      cssProvider <- cssProviderNew
       let (textLines :: [Text]) =
             [
               "scrollbar {"
@@ -132,16 +135,17 @@ createFontDesc tmConfig = do
 
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
-  void $ Gdk.on win #destroy (#quit app)
+  void $ onWidgetDestroy win (applicationQuit app)
   setupScreenStyle
   box <- objFromBuildUnsafe builder "content_box" Box
   fontDesc <- createFontDesc tmConfig
-  note <- new Notebook [#canFocus := False]
+  note <- notebookNew
+  widgetSetCanFocus note False
   boxPackStart box note True True 0
 
-  void $ Gdk.on note #pageRemoved $ \_ _ -> do
+  void $ onNotebookPageRemoved note $ \_ _ -> do
     pages <- notebookGetNPages note
-    when (pages == 0) (#quit app)
+    when (pages == 0) (applicationQuit app)
 
   mvarTMState <- newEmptyTMState tmConfig app win note fontDesc
   terminal <- createTerm handleKeyPress mvarTMState
