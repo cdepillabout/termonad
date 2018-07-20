@@ -16,34 +16,35 @@ import GI.Gdk
   , pattern KEY_8
   , pattern KEY_9
   , ModifierType(..)
-  , get
+  , getEventKeyKeyval
+  , getEventKeyState
   )
 
 import Termonad.Term (altNumSwitchTerm)
 import Termonad.Types (TMState)
 
 
-showKeys :: EventKey -> IO Bool
-showKeys eventKey = do
-  eventType <- get eventKey #type
-  maybeString <- get eventKey #string
-  modifiers <- get eventKey #state
-  len <- get eventKey #length
-  keyval <- get eventKey #keyval
-  isMod <- get eventKey #isModifier
-  keycode <- get eventKey #hardwareKeycode
+-- showKeys :: EventKey -> IO Bool
+-- showKeys eventKey = do
+--   eventType <- get eventKey #type
+--   maybeString <- get eventKey #string
+--   modifiers <- get eventKey #state
+--   len <- get eventKey #length
+--   keyval <- get eventKey #keyval
+--   isMod <- get eventKey #isModifier
+--   keycode <- get eventKey #hardwareKeycode
 
-  putStrLn "key press event:"
-  putStrLn $ "  type = " <> tshow eventType
-  putStrLn $ "  str = " <> tshow maybeString
-  putStrLn $ "  mods = " <> tshow modifiers
-  putStrLn $ "  isMod = " <> tshow isMod
-  putStrLn $ "  len = " <> tshow len
-  putStrLn $ "  keyval = " <> tshow keyval
-  putStrLn $ "  keycode = " <> tshow keycode
-  putStrLn ""
+--   putStrLn "key press event:"
+--   putStrLn $ "  type = " <> tshow eventType
+--   putStrLn $ "  str = " <> tshow maybeString
+--   putStrLn $ "  mods = " <> tshow modifiers
+--   putStrLn $ "  isMod = " <> tshow isMod
+--   putStrLn $ "  len = " <> tshow len
+--   putStrLn $ "  keyval = " <> tshow keyval
+--   putStrLn $ "  keycode = " <> tshow keycode
+--   putStrLn ""
 
-  pure True
+--   pure True
 
 data Key = Key
   { keyVal :: Word32
@@ -85,8 +86,9 @@ stopProp callback terState = callback terState $> True
 
 handleKeyPress :: TMState -> EventKey -> IO Bool
 handleKeyPress terState eventKey = do
-  keyval <- get eventKey #keyval
-  modifiers <- get eventKey #state
+  -- keyval <- get eventKey #keyval
+  keyval <- getEventKeyKeyval eventKey
+  modifiers <- getEventKeyState eventKey
   let key = toKey keyval (setFromList modifiers)
       maybeAction = lookup key keyMap
   case maybeAction of
