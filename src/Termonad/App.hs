@@ -12,6 +12,8 @@ import GI.Gio
   , MenuModel(MenuModel)
   , actionMapAddAction
   , applicationRun
+  , onApplicationActivate
+  , onApplicationStartup
   , onSimpleActionActivate
   , simpleActionNew
   )
@@ -33,6 +35,7 @@ import GI.Gtk
   , builderSetApplication
   , cssProviderLoadFromData
   , dialogRun
+  , notebookGetNPages
   , onNotebookSwitchPage
   , styleContextAddProviderForScreen
   , widgetDestroy
@@ -137,7 +140,7 @@ setupTermonad tmConfig app win builder = do
   boxPackStart box note True True 0
 
   void $ Gdk.on note #pageRemoved $ \_ _ -> do
-    pages <- #getNPages note
+    pages <- notebookGetNPages note
     when (pages == 0) (#quit app)
 
   mvarTMState <- newEmptyTMState tmConfig app win note fontDesc
@@ -231,8 +234,8 @@ start tmConfig = do
   case maybeApp of
     Nothing -> error "Could not create application for some reason!"
     Just app -> do
-      void $ Gdk.on app #startup (appStartup app)
-      void $ Gdk.on app #activate (appActivate tmConfig app)
+      void $ onApplicationStartup app (appStartup app)
+      void $ onApplicationActivate app (appActivate tmConfig app)
       void $ applicationRun app Nothing
 
 defaultMain :: TMConfig -> IO ()
