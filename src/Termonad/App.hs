@@ -226,7 +226,7 @@ showAboutDialog :: Application -> IO ()
 showAboutDialog app = do
   win <- applicationGetActiveWindow app
   aboutDialog <- aboutDialogNew
-  windowSetTransientFor aboutDialog win
+  windowSetTransientFor aboutDialog (Just win)
   void $ dialogRun aboutDialog
   widgetDestroy aboutDialog
 

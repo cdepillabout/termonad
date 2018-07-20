@@ -137,7 +137,7 @@ termExitWithConfirmation tab mvarTMState = do
       dialog
       "Yes, close tab"
       (fromIntegral (fromEnum ResponseTypeYes))
-  windowSetTransientFor dialog win
+  windowSetTransientFor dialog (Just win)
   res <- dialogRun dialog
   widgetDestroy dialog
   case toEnum (fromIntegral res) of
