@@ -5,6 +5,8 @@ module Termonad.Config where
 import Termonad.Prelude
 
 import Control.Lens (makeLensesFor)
+import Data.Colour (Colour)
+import Data.Colour.Names -- (grey)
 
 data FontConfig = FontConfig
   { fontFamily :: !Text
@@ -34,6 +36,7 @@ data ShowScrollbar
 data TMConfig = TMConfig
   { fontConfig :: !FontConfig
   , showScrollbar :: !ShowScrollbar
+  , cursorColor :: !(Colour Double)
   } deriving (Eq, Show)
 
 $(makeLensesFor
@@ -48,4 +51,5 @@ defaultTMConfig =
   TMConfig
     { fontConfig = defaultFontConfig
     , showScrollbar = ShowScrollbarIfNeeded
+    , cursorColor = lightgrey
     }

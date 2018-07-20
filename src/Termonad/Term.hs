@@ -3,8 +3,14 @@ module Termonad.Term where
 import Termonad.Prelude
 
 import Control.Lens ((^.), (&), (.~), set, to)
+import Data.Colour.SRGB (RGB(RGB), toSRGB)
 import GI.Gdk
   ( EventKey
+  , RGBA
+  , newZeroRGBA
+  , setRGBABlue
+  , setRGBAGreen
+  , setRGBARed
   )
 import GI.Gio
   ( noCancellable
@@ -65,16 +71,17 @@ import GI.Vte
   , terminalGetWindowTitle
   , terminalNew
   , terminalSetCursorBlinkMode
+  , terminalSetColorCursor
   , terminalSetFont
   , terminalSpawnSync
   )
 
-import Termonad.Config (ShowScrollbar(..), lensShowScrollbar)
+import Termonad.Config (ShowScrollbar(..), TMConfig(cursorColor), lensShowScrollbar)
 import Termonad.FocusList (appendFL, deleteFL, getFLFocusItem)
 import Termonad.Types
   ( TMNotebookTab
   , TMState
-  , TMState'(TMState, tmStateFontDesc, tmStateNotebook)
+  , TMState'(TMState, tmStateConfig, tmStateFontDesc, tmStateNotebook)
   , TMTerm
   , createTMNotebookTab
   , lensTerm
@@ -211,12 +218,24 @@ createNotebookTabLabel = do
   widgetShow button
   pure (box, label, button)
 
+getCursorColor :: TMConfig -> IO RGBA
+getCursorColor tmConfig = do
+  let color = cursorColor tmConfig
+      RGB red green blue = toSRGB color
+  rgba <- newZeroRGBA
+  setRGBARed rgba red
+  setRGBAGreen rgba green
+  setRGBABlue rgba blue
+  pure rgba
+
 createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO TMTerm
 createTerm handleKeyPress mvarTMState = do
   scrolledWin <- createScrolledWin mvarTMState
-  TMState{tmStateFontDesc} <- readMVar mvarTMState
+  TMState{tmStateFontDesc, tmStateConfig} <- readMVar mvarTMState
   vteTerm <- terminalNew
   terminalSetFont vteTerm (Just tmStateFontDesc)
+  cursorColor <- getCursorColor tmStateConfig
+  terminalSetColorCursor vteTerm (Just cursorColor)
   terminalSetCursorBlinkMode vteTerm CursorBlinkModeOn
   widgetShow vteTerm
   widgetGrabFocus $ vteTerm
