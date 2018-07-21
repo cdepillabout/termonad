@@ -769,3 +769,62 @@ findFL f fl =
   let intmap = fl ^. lensFocusList
       vals = sortOn fst $ mapToList intmap
   in find (\(i, a) -> f i a) vals
+
+
+-- | Move an existing item in a 'FocusList' to a new index.
+--
+-- The 'Focus' gets updated appropriately when moving items.
+--
+-- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "parrot"]
+-- >>> moveFromToFL 0 1 fl
+-- Just (FocusList (Focus 0) ["bye","hello","parrot"])
+--
+-- The 'Focus' may not get updated if it is not involved.
+--
+-- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "parrot"]
+-- >>> moveFromToFL 1 2 fl
+-- Just (FocusList (Focus 0) ["hello","parrot","bye"])
+--
+-- If the element with the 'Focus' is moved, then the 'Focus' will be updated appropriately.
+--
+-- >>> let Just fl = flFromList (Focus 2) ["hello", "bye", "parrot"]
+-- >>> moveFromToFL 2 0 fl
+-- Just (FocusList (Focus 0) ["parrot","hello","bye"])
+--
+-- If the index of the item to move is out bounds, then 'Nothing' will be returned.
+--
+-- >>> let Just fl = flFromList (Focus 2) ["hello", "bye", "parrot"]
+-- >>> moveFromToFL 3 0 fl
+-- Nothing
+--
+-- If the new index is out of bounds, then 'Nothing' wil be returned.
+--
+-- >>> let Just fl = flFromList (Focus 2) ["hello", "bye", "parrot"]
+-- >>> moveFromToFL 1 (-1) fl
+-- Nothing
+moveFromToFL
+  :: Show a => Int  -- ^ Index of the item to move.
+  -> Int  -- ^ New index for the item.
+  -> FocusList a
+  -> Maybe (FocusList a)
+moveFromToFL oldPos newPos fl
+  | oldPos < 0 || oldPos >= length fl = Nothing
+  | newPos < 0 || newPos >= length fl = Nothing
+  | otherwise =
+    let oldFocus = fl ^. lensFocusListFocus
+    in
+    case lookupFL oldPos fl of
+      Nothing -> error "moveFromToFL should have been able to lookup the item"
+      Just item ->
+        case removeFL oldPos fl of
+          Nothing -> error "moveFromToFL should have been able to remove old position"
+          Just flAfterRemove ->
+            case insertFL newPos item flAfterRemove of
+              Nothing -> error "moveFromToFL should have been able to reinsert the item"
+              Just flAfterInsert ->
+                if Focus oldPos == oldFocus
+                  then
+                    case setFocusFL newPos flAfterInsert of
+                      Nothing -> error "moveFromToFL should have been able to reset the focus"
+                      Just flWithUpdatedFocus -> Just flWithUpdatedFocus
+                  else Just flAfterInsert
