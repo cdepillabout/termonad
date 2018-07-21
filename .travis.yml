@@ -112,6 +112,8 @@ before_install:
 
 - apt-cache search introspection | sort
 - dpkg -l | grep -i introspection
+- pkg-config --list-all | sort
+- pkg-config --modversion gobject-introspection-1.0
 
 # We want to always allow newer versions of packages when building on GHC HEAD
 - CABALARGS=""
