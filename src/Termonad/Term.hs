@@ -161,7 +161,6 @@ termExit tab mvarTMState = do
   detachTabAction
   relabelTabs mvarTMState
 
--- TODO: This function needs to actually go through and relabel each tab.
 relabelTabs :: TMState -> IO ()
 relabelTabs mvarTMState = do
   TMState{tmStateNotebook} <- readMVar mvarTMState

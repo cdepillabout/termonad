@@ -71,7 +71,7 @@ import Termonad.Config
 import Termonad.FocusList (findFL, moveFromToFL, updateFocusFL)
 import Termonad.Gtk (objFromBuildUnsafe)
 import Termonad.Keys (handleKeyPress)
-import Termonad.Term (createTerm, termExitFocused)
+import Termonad.Term (createTerm, relabelTabs, termExitFocused)
 import Termonad.Types
   ( TMNotebookTab
   , TMState
@@ -209,7 +209,9 @@ setupTermonad tmConfig app win builder = do
         let maybeOldPosition = findFL (compareScrolledWinAndTab scrollWin) fl
         case maybeOldPosition of
           Nothing -> print "no old position???"
-          Just (oldPos, _) -> updateFLTabPos mvarTMState oldPos (fromIntegral pageNum)
+          Just (oldPos, _) -> do
+            updateFLTabPos mvarTMState oldPos (fromIntegral pageNum)
+            relabelTabs mvarTMState
 
   newTabAction <- simpleActionNew "newtab" Nothing
   void $ onSimpleActionActivate newTabAction $ \_ -> void $ createTerm handleKeyPress mvarTMState
