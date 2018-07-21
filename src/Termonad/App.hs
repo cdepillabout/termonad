@@ -6,7 +6,7 @@ import Termonad.Prelude
 
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
 import Control.Lens ((&), (^.), (.~))
-import GI.Gdk (screenGetDefault)
+import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
 import GI.Gio
   ( ApplicationFlags(ApplicationFlagsFlagsNone)
   , MenuModel(MenuModel)
@@ -22,6 +22,7 @@ import GI.Gtk
   ( Application
   , ApplicationWindow(ApplicationWindow)
   , Box(Box)
+  , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , aboutDialogNew
   , applicationAddWindow
@@ -38,6 +39,7 @@ import GI.Gtk
   , notebookGetNPages
   , notebookNew
   , onNotebookPageRemoved
+  , onNotebookPageReordered
   , onNotebookSwitchPage
   , onWidgetDestroy
   , styleContextAddProviderForScreen
@@ -66,17 +68,20 @@ import Termonad.Config
   , TMConfig
   , lensFontConfig
   )
-import Termonad.FocusList (updateFocusFL)
+import Termonad.FocusList (findFL, updateFocusFL)
 import Termonad.Gtk (objFromBuildUnsafe)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Term (createTerm, termExitFocused)
 import Termonad.Types
-  ( getFocusedTermFromState
+  ( TMNotebookTab
+  , TMState'(TMState)
+  , getFocusedTermFromState
   , lensTMNotebookTabs
   , lensTMNotebookTabTerm
   , lensTMStateNotebook
   , lensTerm
   , newEmptyTMState
+  , tmNotebookTabTermContainer
   , tmNotebookTabs
   , tmStateNotebook
   )
@@ -134,6 +139,14 @@ createFontDesc tmConfig = do
   fontDescriptionSetSize fontDesc (fromIntegral (fontSize fontConf) * SCALE)
   pure fontDesc
 
+compareScrolledWinAndTab :: ScrolledWindow -> a -> TMNotebookTab -> Bool
+compareScrolledWinAndTab scrollWin _ flTab =
+  let ScrolledWindow managedPtrFLTab = tmNotebookTabTermContainer flTab
+      foreignPtrFLTab = managedForeignPtr managedPtrFLTab
+      ScrolledWindow managedPtrScrollWin = scrollWin
+      foreignPtrScrollWin = managedForeignPtr managedPtrScrollWin
+  in foreignPtrFLTab == foreignPtrScrollWin
+
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
   void $ onWidgetDestroy win (applicationQuit app)
@@ -169,6 +182,19 @@ setupTermonad tmConfig app win builder = do
             tmState &
               lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
 
+  void $ onNotebookPageReordered note $ \childWidg pageNum -> do
+    maybeScrollWin <- castTo ScrolledWindow childWidg
+    case maybeScrollWin of
+      Nothing -> print "not a scrolled win???"
+      Just scrollWin -> do
+        TMState{tmStateNotebook} <- readMVar mvarTMState
+        let fl = tmStateNotebook ^. lensTMNotebookTabs
+        let maybeOldPosition = findFL (compareScrolledWinAndTab scrollWin) fl
+        case maybeOldPosition of
+          Nothing -> print "no old position???"
+          Just (oldPos, _) -> do
+            print $ "new pos: " <> tshow pageNum
+            print $ "old pos: " <> tshow oldPos
 
   newTabAction <- simpleActionNew "newtab" Nothing
   void $ onSimpleActionActivate newTabAction $ \_ -> void $ createTerm handleKeyPress mvarTMState

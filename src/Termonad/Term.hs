@@ -48,6 +48,7 @@ import GI.Gtk
   , notebookDetachTab
   , notebookPageNum
   , notebookSetCurrentPage
+  , notebookSetTabReorderable
   , onButtonClicked
   , onWidgetKeyPressEvent
   , scrolledWindowNew
@@ -264,6 +265,7 @@ createTerm handleKeyPress mvarTMState = do
           note = tmNotebook notebook
           tabs = tmNotebookTabs notebook
       pageIndex <- notebookAppendPage note scrolledWin (Just tabLabelBox)
+      notebookSetTabReorderable note scrolledWin True
       let newTabs = appendFL tabs notebookTab
           newTMState =
             tmState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
