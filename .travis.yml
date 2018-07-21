@@ -86,7 +86,7 @@ matrix:
                 # Ubuntu 14.04 only has the libvte-2.90-dev system library.
                 # However, the gi-vte Haskell package needs the libvte-2.91-dev
                 # system package.
-                - libvte-2.91-dev
+                # - libvte-2.91-dev
 
   # Nightly builds are allowed to fail
   # - env: BUILD=stack ARGS="--resolver nightly"
