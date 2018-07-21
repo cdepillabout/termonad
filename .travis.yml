@@ -71,7 +71,7 @@ matrix:
 
   - env: BUILD=stack ARGS="--stack-yaml stack-lts-12.yaml"
     compiler: ": #stack 8.4.3"
-    addons: {apt: {packages: [libgmp-dev]}}
+    addons: {apt: {packages: [libgmp-dev, libvte-dev]}}
 
   # Nightly builds are allowed to fail
   # - env: BUILD=stack ARGS="--resolver nightly"
