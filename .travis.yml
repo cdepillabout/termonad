@@ -73,7 +73,7 @@ matrix:
 
   - env: BUILD=stack ARGS="--stack-yaml stack-lts-12.yaml"
     compiler: ": #stack 8.4.3"
-    addons: {apt: {packages: [gobject-introspection, libgirepository1.0-dev, libgmp-dev, libgtk-3-dev, libvte-dev]}}
+    addons: {apt: {packages: [gobject-introspection, libgirepository1.0-dev, libgmp-dev, libgtk-3-dev, libvte-2.90-dev]}}
 
   # Nightly builds are allowed to fail
   # - env: BUILD=stack ARGS="--resolver nightly"
