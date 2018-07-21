@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 
 module Termonad.App where
 
@@ -234,10 +235,14 @@ appStartup _app = pure ()
 
 start :: TMConfig -> IO ()
 start tmConfig = do
+#if MIN_VERSION_gi_gtk(3,0,22)
   maybeApp <- applicationNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
   case maybeApp of
     Nothing -> error "Could not create application for some reason!"
     Just app -> do
+#else
+      app <- applicationNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
+#endif
       void $ onApplicationStartup app (appStartup app)
       void $ onApplicationActivate app (appActivate tmConfig app)
       void $ applicationRun app Nothing
