@@ -108,6 +108,8 @@ before_install:
 # Using compiler above sets CC to an invalid value, so unset it
 - unset CC
 
+- apt-cache search vte | sort
+
 # We want to always allow newer versions of packages when building on GHC HEAD
 - CABALARGS=""
 - if [ "x$GHCVER" = "xhead" ]; then CABALARGS=--allow-newer; fi
