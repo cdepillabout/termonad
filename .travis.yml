@@ -22,7 +22,6 @@ cache:
   - $HOME/.stack
   - $TRAVIS_BUILD_DIR/.stack-work
 
-dist: xenial
 
 # The different configurations we want to test. We have BUILD=cabal which uses
 # cabal-install, and BUILD=stack which uses Stack. More documentation on each
@@ -75,6 +74,7 @@ matrix:
 
   - env: BUILD=stack ARGS="--stack-yaml stack-lts-12.yaml"
     compiler: ": #stack 8.4.3"
+    dist: xenial
     addons:
         apt:
             packages:
