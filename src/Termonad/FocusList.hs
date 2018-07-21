@@ -746,3 +746,26 @@ updateFocusFL i fl
       else
         let newFL = fl & lensFocusListFocus . _Focus .~ i
         in Just (unsafeGetFLFocusItem newFL, newFL)
+
+-- | Find a value in a 'FocusList'.  Similar to @Data.List.'Data.List.find'@.
+--
+-- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "tree"]
+-- >>> findFL (\_ a -> a == "hello") fl
+-- Just (0,"hello")
+--
+-- This will only find the first value.
+--
+-- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "bye"]
+-- >>> findFL (\_ a -> a == "bye") fl
+-- Just (1,"bye")
+--
+-- If no values match the comparison, this will return 'Nothing'.
+--
+-- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "parrot"]
+-- >>> findFL (\_ a -> a == "ball") fl
+-- Nothing
+findFL :: (Int -> a -> Bool) -> FocusList a -> Maybe (Int, a)
+findFL f fl =
+  let intmap = fl ^. lensFocusList
+      vals = sortOn fst $ mapToList intmap
+  in find (\(i, a) -> f i a) vals
