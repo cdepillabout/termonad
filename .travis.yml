@@ -110,8 +110,9 @@ before_install:
 # Using compiler above sets CC to an invalid value, so unset it
 - unset CC
 
-- apt-cache search libgtk | sort
-- dpkg -l | grep -i libgtk
+- apt-cache search libvte | sort
+- dpkg -l | grep -i libvte
+- ls -l /usr/share/gir-1.0
 # - pkg-config --list-all | sort
 # - pkg-config --modversion gobject-introspection-1.0
 
