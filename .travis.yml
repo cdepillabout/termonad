@@ -111,6 +111,7 @@ before_install:
 - unset CC
 
 - apt-cache search introspection | sort
+- dpkg -l | grep -i introspection
 
 # We want to always allow newer versions of packages when building on GHC HEAD
 - CABALARGS=""
