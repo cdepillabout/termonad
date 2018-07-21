@@ -68,12 +68,13 @@ import Termonad.Config
   , TMConfig
   , lensFontConfig
   )
-import Termonad.FocusList (findFL, updateFocusFL)
+import Termonad.FocusList (findFL, moveFromToFL, updateFocusFL)
 import Termonad.Gtk (objFromBuildUnsafe)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Term (createTerm, termExitFocused)
 import Termonad.Types
   ( TMNotebookTab
+  , TMState
   , TMState'(TMState)
   , getFocusedTermFromState
   , lensTMNotebookTabs
@@ -147,6 +148,22 @@ compareScrolledWinAndTab scrollWin _ flTab =
       foreignPtrScrollWin = managedForeignPtr managedPtrScrollWin
   in foreignPtrFLTab == foreignPtrScrollWin
 
+updateFLTabPos :: TMState -> Int -> Int -> IO ()
+updateFLTabPos mvarTMState oldPos newPos =
+  modifyMVar_ mvarTMState $ \tmState -> do
+    print $ "old pos: " <> tshow oldPos
+    print $ "new pos: " <> tshow newPos
+    let tabs = tmState ^. lensTMStateNotebook . lensTMNotebookTabs
+        maybeNewTabs = moveFromToFL oldPos newPos tabs
+    case maybeNewTabs of
+      Nothing -> do
+        print "couldn't move tabs for some reason?"
+        pure tmState
+      Just newTabs ->
+        pure $
+          tmState &
+            lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
   void $ onWidgetDestroy win (applicationQuit app)
@@ -192,9 +209,7 @@ setupTermonad tmConfig app win builder = do
         let maybeOldPosition = findFL (compareScrolledWinAndTab scrollWin) fl
         case maybeOldPosition of
           Nothing -> print "no old position???"
-          Just (oldPos, _) -> do
-            print $ "new pos: " <> tshow pageNum
-            print $ "old pos: " <> tshow oldPos
+          Just (oldPos, _) -> updateFLTabPos mvarTMState oldPos (fromIntegral pageNum)
 
   newTabAction <- simpleActionNew "newtab" Nothing
   void $ onSimpleActionActivate newTabAction $ \_ -> void $ createTerm handleKeyPress mvarTMState
