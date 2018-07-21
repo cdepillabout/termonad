@@ -33,6 +33,9 @@ cache:
 # matrix, you can use a line such as:
 #     addons: {apt: {packages: [libfcgi-dev,libgmp-dev]}}
 matrix:
+  # Make the build finish as soon as all of the non-"allowed_failures" builds
+  # are finished building.  Don't wait for the "allowed_failures" to finish.
+  fast-finish: true
   include:
   # We grab the appropriate GHC and cabal-install versions from hvr's PPA. See:
   # https://github.com/hvr/multi-ghc-travis
@@ -48,9 +51,9 @@ matrix:
 
   # Build with the newest GHC and cabal-install. This is an accepted failure,
   # see below.
-  - env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: ": #GHC HEAD"
-    addons: {apt: {packages: [cabal-install-head,ghc-head,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+  # - env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
+  #   compiler: ": #GHC HEAD"
+  #   addons: {apt: {packages: [cabal-install-head,ghc-head,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
 
   # The Stack builds. We can pass in arbitrary Stack arguments via the ARGS
   # variable, such as using --stack-yaml to point to a different file.
@@ -76,21 +79,21 @@ matrix:
   #   addons: {apt: {packages: [libgmp-dev]}}
 
   # Build on macOS in addition to Linux
-  - env: BUILD=stack ARGS=""
-    compiler: ": #stack default osx"
-    os: osx
+  # - env: BUILD=stack ARGS=""
+  #   compiler: ": #stack default osx"
+  #   os: osx
 
-  - env: BUILD=stack ARGS="--stack-yaml stack-lts-9.yaml"
-    compiler: ": #stack 8.0.2 osx"
-    os: osx
+  # - env: BUILD=stack ARGS="--stack-yaml stack-lts-9.yaml"
+  #   compiler: ": #stack 8.0.2 osx"
+  #   os: osx
 
-  - env: BUILD=stack ARGS="--stack-yaml stack-lts-11.yaml"
-    compiler: ": #stack 8.2.2 osx"
-    os: osx
+  # - env: BUILD=stack ARGS="--stack-yaml stack-lts-11.yaml"
+  #   compiler: ": #stack 8.2.2 osx"
+  #   os: osx
 
-  - env: BUILD=stack ARGS="--stack-yaml stack-lts-12.yaml"
-    compiler: ": #stack 8.4.3 osx"
-    os: osx
+  # - env: BUILD=stack ARGS="--stack-yaml stack-lts-12.yaml"
+  #   compiler: ": #stack 8.4.3 osx"
+  #   os: osx
 
   # - env: BUILD=stack ARGS="--resolver nightly"
   #   compiler: ": #stack nightly osx"
