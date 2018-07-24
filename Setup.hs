@@ -8,15 +8,19 @@
 {-# OPTIONS_GHC -Wall #-}
 module Main (main) where
 
+import Distribution.Simple (UserHooks, defaultMainWithHooks, simpleUserHooks)
+
 #ifndef MIN_VERSION_cabal_doctest
 #define MIN_VERSION_cabal_doctest(x,y,z) 0
 #endif
 
 #if MIN_VERSION_cabal_doctest(1,0,0)
 
-import Distribution.Extra.Doctest ( defaultMainWithDoctests )
+import Distribution.Extra.Doctest (addDoctestsUserHook)
 main :: IO ()
-main = defaultMainWithDoctests "doctests"
+main =
+  defaultMainWithHooks . addPkgConfigGtkUserHook $
+    addDoctestsUserHook "doctests" simpleUserHooks
 
 #else
 
@@ -31,9 +35,10 @@ main = defaultMainWithDoctests "doctests"
          To fix this, install cabal-doctest before configuring.
 #endif
 
-import Distribution.Simple
-
 main :: IO ()
-main = defaultMain
+main = defaultMainWithHooks $ addPkgConfigGtkUserHook simpleUserHooks
 
 #endif
+
+addPkgConfigGtkUserHook :: UserHooks -> UserHooks
+addPkgConfigGtkUserHook = id
