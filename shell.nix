@@ -14,10 +14,6 @@ let
     #sha256 = "0szbxfrzmlmxrgkqz5wnfgmsjp82vaddgz7mhdz7jj0jhd0hza4i";
   };
   nixpkgs = import nixpkgsTarball { };
-
-  # fixed-stack-repo = import ./.nix-helpers/fixed-stack.nix { inherit nixpkgs; };
-
-  # myStack = fixed-stack-repo.working.stack;
 in
 
 with nixpkgs;
@@ -37,5 +33,4 @@ haskell.lib.buildStackProject {
   extraArgs = [
     "--stack-yaml stack-lts-9.yaml"
   ];
-  # stack = myStack;
 }
