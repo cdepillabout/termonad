@@ -278,7 +278,7 @@ appStartup _app = pure ()
 
 start :: TMConfig -> IO ()
 start tmConfig = do
-#if MIN_VERSION_gi_gtk(3,0,22)
+#ifdef GTK_VERSION_GEQ_3_22_20
   maybeApp <- applicationNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
   case maybeApp of
     Nothing -> error "Could not create application for some reason!"

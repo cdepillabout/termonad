@@ -5,8 +5,17 @@
 -- are compiled with.
 
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# OPTIONS_GHC -Wall #-}
 module Main (main) where
+
+import Data.Maybe (catMaybes)
+import Distribution.PackageDescription (HookedBuildInfo, cppOptions, emptyBuildInfo)
+import Distribution.Simple (Args, UserHooks, Version, defaultMainWithHooks, preBuild, simpleUserHooks)
+import Distribution.Simple.Program (configureProgram, defaultProgramConfiguration, getDbProgramOutput, pkgConfigProgram)
+import Distribution.Simple.Setup (BuildFlags)
+import Distribution.Text (simpleParse)
+import Distribution.Verbosity (verbose)
 
 #ifndef MIN_VERSION_cabal_doctest
 #define MIN_VERSION_cabal_doctest(x,y,z) 0
@@ -14,9 +23,11 @@ module Main (main) where
 
 #if MIN_VERSION_cabal_doctest(1,0,0)
 
-import Distribution.Extra.Doctest ( defaultMainWithDoctests )
+import Distribution.Extra.Doctest (addDoctestsUserHook)
 main :: IO ()
-main = defaultMainWithDoctests "doctests"
+main =
+  defaultMainWithHooks . addPkgConfigGtkUserHook $
+    addDoctestsUserHook "doctests" simpleUserHooks
 
 #else
 
@@ -31,9 +42,63 @@ main = defaultMainWithDoctests "doctests"
          To fix this, install cabal-doctest before configuring.
 #endif
 
-import Distribution.Simple
-
 main :: IO ()
-main = defaultMain
+main = defaultMainWithHooks $ addPkgConfigGtkUserHook simpleUserHooks
 
 #endif
+
+-- | Add CPP macros representing the version of the GTK system library.
+addPkgConfigGtkUserHook :: UserHooks -> UserHooks
+addPkgConfigGtkUserHook oldUserHooks =
+  oldUserHooks
+    { preBuild = pkgConfigGtkPreBuildHook $ preBuild oldUserHooks
+    }
+
+pkgConfigGtkPreBuildHook :: (Args -> BuildFlags -> IO HookedBuildInfo) -> Args -> BuildFlags -> IO HookedBuildInfo
+pkgConfigGtkPreBuildHook oldFunc args buildFlags = do
+  (maybeOldLibBuildInfo, oldExesBuildInfo) <- oldFunc args buildFlags
+  case maybeOldLibBuildInfo of
+    Just oldLibBuildInfo -> do
+      putStrLn "In Setup.hs, in pkgConfigGtkPreBuildHook, oldLibBuildInfo is not Nothing:"
+      print oldLibBuildInfo
+      putStrLn "\nDon't know how to proceed."
+      error "Build info not Nothing."
+    Nothing -> do
+      pkgDb <-
+        configureProgram verbose pkgConfigProgram defaultProgramConfiguration
+      pkgConfigOutput <-
+        getDbProgramOutput
+          verbose
+          pkgConfigProgram
+          pkgDb
+          ["--modversion", "gtk+-3.0"]
+      -- Drop the newline on the end of the pkgConfigOutput.
+      -- This should give us a version number like @3.22.11@.
+      let rawGtkVersion = reverse $ drop 1 $ reverse pkgConfigOutput
+      let maybeGtkVersion = simpleParse rawGtkVersion
+      case maybeGtkVersion of
+        Nothing -> do
+          putStrLn "In Setup.hs, in pkgConfigGtkPreBuildHook, could not parse gtk version:"
+          print pkgConfigOutput
+          putStrLn "\nDon't know how to proceed."
+          error "Can't parse pkg-config output."
+        Just gtkVersion -> do
+          let newLibBuildInfo =
+                emptyBuildInfo
+                  { cppOptions = createGtkVersionCPPOpts gtkVersion
+                  }
+          pure (Just newLibBuildInfo, oldExesBuildInfo)
+
+-- | Based on the version of the GTK3 library as reported by @pkg-config@, return
+-- a list of CPP macros that contain the GTK version.  These can be used in the
+-- Haskell code to work around differences in the gi-gtk library Haskell
+-- library when compiled against different versions of the GTK system library.
+--
+-- This list may need to be added too.
+createGtkVersionCPPOpts
+  :: Version  -- ^ 'Version' of the GTK3 library as reported by @pkg-config@.
+  -> [String] -- ^ A list of CPP macros to show the GTK version.
+createGtkVersionCPPOpts gtkVersion =
+  catMaybes $
+    [ if gtkVersion >= [3,22,20] then Just "-DGTK_VERSION_GEQ_3_22_20" else Nothing
+    ]
