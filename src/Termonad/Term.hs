@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Termonad.Term where
 
 import Termonad.Prelude
@@ -30,6 +32,7 @@ import GI.Gtk
   , ReliefStyle(ReliefStyleNone)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
   , ScrolledWindow
+  , Window
   , applicationGetActiveWindow
   , boxNew
   , buttonNewFromIconName
@@ -80,6 +83,7 @@ import GI.Vte
 
 import Termonad.Config (ShowScrollbar(..), TMConfig(cursorColor, scrollbackLen), lensShowScrollbar)
 import Termonad.FocusList (appendFL, deleteFL, getFLFocusItem)
+import Termonad.Gtk (appGetActiveWindow)
 import Termonad.Types
   ( TMNotebookTab
   , TMState
@@ -121,7 +125,7 @@ termExitWithConfirmation :: TMNotebookTab -> TMState -> IO ()
 termExitWithConfirmation tab mvarTMState = do
   tmState <- readMVar mvarTMState
   let app = tmState ^. lensTMStateApp
-  win <- applicationGetActiveWindow app
+  win <- appGetActiveWindow app
   dialog <- dialogNew
   box <- dialogGetContentArea dialog
   label <- labelNew (Just "Close tab?")
@@ -138,7 +142,7 @@ termExitWithConfirmation tab mvarTMState = do
       dialog
       "Yes, close tab"
       (fromIntegral (fromEnum ResponseTypeYes))
-  windowSetTransientFor dialog (Just win)
+  windowSetTransientFor dialog win
   res <- dialogRun dialog
   widgetDestroy dialog
   case toEnum (fromIntegral res) of

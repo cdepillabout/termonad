@@ -83,9 +83,10 @@ pkgConfigGtkPreBuildHook oldFunc args buildFlags = do
           putStrLn "\nDon't know how to proceed."
           error "Can't parse pkg-config output."
         Just gtkVersion -> do
+          let cppOpts = createGtkVersionCPPOpts gtkVersion
           let newLibBuildInfo =
                 emptyBuildInfo
-                  { cppOptions = createGtkVersionCPPOpts gtkVersion
+                  { cppOptions = cppOpts
                   }
           pure (Just newLibBuildInfo, oldExesBuildInfo)
 

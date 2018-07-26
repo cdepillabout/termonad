@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 
 module Termonad.App where
 
@@ -69,7 +68,7 @@ import Termonad.Config
   , lensFontConfig
   )
 import Termonad.FocusList (findFL, moveFromToFL, updateFocusFL)
-import Termonad.Gtk (objFromBuildUnsafe)
+import Termonad.Gtk (appGetActiveWindow, appNew, objFromBuildUnsafe)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Term (createTerm, relabelTabs, termExitFocused)
 import Termonad.Types
@@ -267,9 +266,9 @@ appActivate tmConfig app = do
 
 showAboutDialog :: Application -> IO ()
 showAboutDialog app = do
-  win <- applicationGetActiveWindow app
+  win <- appGetActiveWindow app
   aboutDialog <- aboutDialogNew
-  windowSetTransientFor aboutDialog (Just win)
+  windowSetTransientFor aboutDialog win
   void $ dialogRun aboutDialog
   widgetDestroy aboutDialog
 
@@ -278,17 +277,10 @@ appStartup _app = pure ()
 
 start :: TMConfig -> IO ()
 start tmConfig = do
-#ifdef GTK_VERSION_GEQ_3_22_20
-  maybeApp <- applicationNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
-  case maybeApp of
-    Nothing -> error "Could not create application for some reason!"
-    Just app -> do
-#else
-      app <- applicationNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
-#endif
-      void $ onApplicationStartup app (appStartup app)
-      void $ onApplicationActivate app (appActivate tmConfig app)
-      void $ applicationRun app Nothing
+  app <- appNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
+  void $ onApplicationStartup app (appStartup app)
+  void $ onApplicationActivate app (appActivate tmConfig app)
+  void $ applicationRun app Nothing
 
 defaultMain :: TMConfig -> IO ()
 defaultMain tmConfig = do
