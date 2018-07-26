@@ -25,8 +25,6 @@ import GI.Gtk
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , aboutDialogNew
   , applicationAddWindow
-  , applicationGetActiveWindow
-  , applicationNew
   , applicationSetAccelsForAction
   , applicationSetMenubar
   , boxPackStart

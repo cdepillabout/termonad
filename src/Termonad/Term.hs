@@ -32,8 +32,6 @@ import GI.Gtk
   , ReliefStyle(ReliefStyleNone)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
   , ScrolledWindow
-  , Window
-  , applicationGetActiveWindow
   , boxNew
   , buttonNewFromIconName
   , buttonSetRelief

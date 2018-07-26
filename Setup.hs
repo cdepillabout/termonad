@@ -10,8 +10,9 @@
 module Main (main) where
 
 import Data.Maybe (catMaybes)
+import Data.Version (Version)
 import Distribution.PackageDescription (HookedBuildInfo, cppOptions, emptyBuildInfo)
-import Distribution.Simple (Args, UserHooks, Version, defaultMainWithHooks, preBuild, simpleUserHooks)
+import Distribution.Simple (Args, UserHooks, defaultMainWithHooks, preBuild, simpleUserHooks)
 import Distribution.Simple.Program (configureProgram, defaultProgramConfiguration, getDbProgramOutput, pkgConfigProgram)
 import Distribution.Simple.Setup (BuildFlags)
 import Distribution.Text (simpleParse)
