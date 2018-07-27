@@ -148,13 +148,17 @@ compareScrolledWinAndTab scrollWin _ flTab =
 updateFLTabPos :: TMState -> Int -> Int -> IO ()
 updateFLTabPos mvarTMState oldPos newPos =
   modifyMVar_ mvarTMState $ \tmState -> do
-    print $ "old pos: " <> tshow oldPos
-    print $ "new pos: " <> tshow newPos
     let tabs = tmState ^. lensTMStateNotebook . lensTMNotebookTabs
         maybeNewTabs = moveFromToFL oldPos newPos tabs
     case maybeNewTabs of
       Nothing -> do
-        print "couldn't move tabs for some reason?"
+        putStrLn $
+          "in updateFLTabPos, Strange error: couldn't move tabs.\n" <>
+          "old pos: " <> tshow oldPos <> "\n" <>
+          "new pos: " <> tshow newPos <> "\n" <>
+          "tabs: " <> tshow tabs <> "\n" <>
+          "maybeNewTabs: " <> tshow maybeNewTabs <> "\n" <>
+          "tmState: " <> tshow tmState
         pure tmState
       Just newTabs ->
         pure $
@@ -202,13 +206,18 @@ setupTermonad tmConfig app win builder = do
       Nothing ->
         fail $
           "In setupTermonad, in callback for onNotebookPageReordered, " <>
-          "child widget is not a ScrolledWindow. Don't know how to continue."
+          "child widget is not a ScrolledWindow.\n" <>
+          "Don't know how to continue.\n"
       Just scrollWin -> do
         TMState{tmStateNotebook} <- readMVar mvarTMState
         let fl = tmStateNotebook ^. lensTMNotebookTabs
         let maybeOldPosition = findFL (compareScrolledWinAndTab scrollWin) fl
         case maybeOldPosition of
-          Nothing -> print "no old position???"
+          Nothing ->
+            fail $
+              "In setupTermonad, in callback for onNotebookPageReordered, " <>
+              "the ScrolledWindow is not already in the FocusList.\n" <>
+              "Don't know how to continue.\n"
           Just (oldPos, _) -> do
             updateFLTabPos mvarTMState oldPos (fromIntegral pageNum)
             relabelTabs mvarTMState
