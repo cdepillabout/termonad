@@ -10,6 +10,7 @@
 module Main (main) where
 
 import Data.Maybe (catMaybes)
+import Data.Monoid ((<>))
 import Data.Version (Version)
 import Distribution.PackageDescription (HookedBuildInfo, cppOptions, emptyBuildInfo)
 import Distribution.Simple (UserHooks, defaultMainWithHooks, preBuild, preRepl, simpleUserHooks)
