@@ -199,7 +199,10 @@ setupTermonad tmConfig app win builder = do
   void $ onNotebookPageReordered note $ \childWidg pageNum -> do
     maybeScrollWin <- castTo ScrolledWindow childWidg
     case maybeScrollWin of
-      Nothing -> print "not a scrolled win???"
+      Nothing ->
+        fail $
+          "In setupTermonad, in callback for onNotebookPageReordered, " <>
+          "child widget is not a ScrolledWindow. Don't know how to continue."
       Just scrollWin -> do
         TMState{tmStateNotebook} <- readMVar mvarTMState
         let fl = tmStateNotebook ^. lensTMNotebookTabs
