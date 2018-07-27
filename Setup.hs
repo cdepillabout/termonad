@@ -56,9 +56,7 @@ addPkgConfigGtkUserHook :: [String] -> UserHooks -> UserHooks
 addPkgConfigGtkUserHook cppOpts oldUserHooks = do
   oldUserHooks
     { preBuild = pkgConfigGtkHook cppOpts $ preBuild oldUserHooks
-    , preRepl = \args flags -> do
-        print "RUNNING PRE REPL HOOOOOOKKKKKKKK"
-        pkgConfigGtkHook cppOpts (preRepl oldUserHooks) args flags
+    , preRepl = pkgConfigGtkHook cppOpts (preRepl oldUserHooks)
     }
 
 pkgConfigGtkHook :: [String] -> (args -> flags -> IO HookedBuildInfo) -> args -> flags -> IO HookedBuildInfo
