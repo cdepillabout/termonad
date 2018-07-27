@@ -12,9 +12,8 @@ module Main (main) where
 import Data.Maybe (catMaybes)
 import Data.Version (Version)
 import Distribution.PackageDescription (HookedBuildInfo, cppOptions, emptyBuildInfo)
-import Distribution.Simple (Args, UserHooks, defaultMainWithHooks, preBuild, simpleUserHooks)
+import Distribution.Simple (UserHooks, defaultMainWithHooks, preBuild, preRepl, simpleUserHooks)
 import Distribution.Simple.Program (configureProgram, defaultProgramConfiguration, getDbProgramOutput, pkgConfigProgram)
-import Distribution.Simple.Setup (BuildFlags)
 import Distribution.Text (simpleParse)
 import Distribution.Verbosity (verbose)
 
@@ -26,8 +25,9 @@ import Distribution.Verbosity (verbose)
 
 import Distribution.Extra.Doctest (addDoctestsUserHook)
 main :: IO ()
-main =
-  defaultMainWithHooks . addPkgConfigGtkUserHook $
+main = do
+  cppOpts <- getGtkVersionCPPOpts
+  defaultMainWithHooks . addPkgConfigGtkUserHook cppOpts $
     addDoctestsUserHook "doctests" simpleUserHooks
 
 #else
@@ -44,52 +44,59 @@ main =
 #endif
 
 main :: IO ()
-main = defaultMainWithHooks $ addPkgConfigGtkUserHook simpleUserHooks
+main = do
+  cppOpts <- getGtkVersionCPPOpts
+  defaultMainWithHooks $ addPkgConfigGtkUserHook cppOpts simpleUserHooks
 
 #endif
 
 -- | Add CPP macros representing the version of the GTK system library.
-addPkgConfigGtkUserHook :: UserHooks -> UserHooks
-addPkgConfigGtkUserHook oldUserHooks =
+addPkgConfigGtkUserHook :: [String] -> UserHooks -> UserHooks
+addPkgConfigGtkUserHook cppOpts oldUserHooks = do
   oldUserHooks
-    { preBuild = pkgConfigGtkPreBuildHook $ preBuild oldUserHooks
+    { preBuild = pkgConfigGtkHook cppOpts $ preBuild oldUserHooks
+    , preRepl = pkgConfigGtkHook cppOpts $ preRepl oldUserHooks
     }
 
-pkgConfigGtkPreBuildHook :: (Args -> BuildFlags -> IO HookedBuildInfo) -> Args -> BuildFlags -> IO HookedBuildInfo
-pkgConfigGtkPreBuildHook oldFunc args buildFlags = do
-  (maybeOldLibBuildInfo, oldExesBuildInfo) <- oldFunc args buildFlags
-  case maybeOldLibBuildInfo of
-    Just oldLibBuildInfo -> do
-      putStrLn "In Setup.hs, in pkgConfigGtkPreBuildHook, oldLibBuildInfo is not Nothing:"
-      print oldLibBuildInfo
-      putStrLn "\nDon't know how to proceed."
-      error "Build info not Nothing."
+pkgConfigGtkHook :: [String] -> (args -> flags -> IO HookedBuildInfo) -> args -> flags -> IO HookedBuildInfo
+pkgConfigGtkHook cppOpts oldFunc args flags = do
+  (maybeOldLibHookedInfo, oldExesHookedInfo) <- oldFunc args flags
+  case maybeOldLibHookedInfo of
+    Just oldLibHookedInfo -> do
+      let newLibHookedInfo =
+            oldLibHookedInfo
+              { cppOptions = cppOptions oldLibHookedInfo <> cppOpts
+              }
+      pure (Just newLibHookedInfo, oldExesHookedInfo)
     Nothing -> do
-      pkgDb <-
-        configureProgram verbose pkgConfigProgram defaultProgramConfiguration
-      pkgConfigOutput <-
-        getDbProgramOutput
-          verbose
-          pkgConfigProgram
-          pkgDb
-          ["--modversion", "gtk+-3.0"]
-      -- Drop the newline on the end of the pkgConfigOutput.
-      -- This should give us a version number like @3.22.11@.
-      let rawGtkVersion = reverse $ drop 1 $ reverse pkgConfigOutput
-      let maybeGtkVersion = simpleParse rawGtkVersion
-      case maybeGtkVersion of
-        Nothing -> do
-          putStrLn "In Setup.hs, in pkgConfigGtkPreBuildHook, could not parse gtk version:"
-          print pkgConfigOutput
-          putStrLn "\nDon't know how to proceed."
-          error "Can't parse pkg-config output."
-        Just gtkVersion -> do
-          let cppOpts = createGtkVersionCPPOpts gtkVersion
-          let newLibBuildInfo =
-                emptyBuildInfo
-                  { cppOptions = cppOpts
-                  }
-          pure (Just newLibBuildInfo, oldExesBuildInfo)
+      let newLibHookedInfo =
+            emptyBuildInfo
+              { cppOptions = cppOpts
+              }
+      pure (Just newLibHookedInfo, oldExesHookedInfo)
+
+getGtkVersionCPPOpts :: IO [String]
+getGtkVersionCPPOpts = do
+  pkgDb <- configureProgram verbose pkgConfigProgram defaultProgramConfiguration
+  pkgConfigOutput <-
+    getDbProgramOutput
+      verbose
+      pkgConfigProgram
+      pkgDb
+      ["--modversion", "gtk+-3.0"]
+  -- Drop the newline on the end of the pkgConfigOutput.
+  -- This should give us a version number like @3.22.11@.
+  let rawGtkVersion = reverse $ drop 1 $ reverse pkgConfigOutput
+  let maybeGtkVersion = simpleParse rawGtkVersion
+  case maybeGtkVersion of
+    Nothing -> do
+      putStrLn "In Setup.hs, in getGtkVersionCPPOpts, could not parse gtk version:"
+      print pkgConfigOutput
+      putStrLn "\nDon't know how to proceed."
+      fail "Can't parse pkg-config output."
+    Just gtkVersion -> do
+      let cppOpts = createGtkVersionCPPOpts gtkVersion
+      pure cppOpts
 
 -- | Based on the version of the GTK3 library as reported by @pkg-config@, return
 -- a list of CPP macros that contain the GTK version.  These can be used in the
