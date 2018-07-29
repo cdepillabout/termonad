@@ -12,7 +12,7 @@ extra-deps:
     - gi-gdk-3.0.16
     - gi-gdkpixbuf-2.0.16
     - gi-gio-2.0.18
-    - gi-gtk-3.0.23
+    - gi-gtk-3.0.24
     - gi-pango-1.0.16
     - gi-vte-2.91.17
 

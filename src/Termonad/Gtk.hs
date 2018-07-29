@@ -39,20 +39,11 @@ objFromBuildUnsafe builder name constructor = do
         Just obj -> pure obj
 
 appGetActiveWindow :: (HasCallStack, MonadIO m, IsApplication a) => a -> m (Maybe Window)
-appGetActiveWindow app =
-#ifdef GTK_VERSION_GEQ_3_22_20
-  applicationGetActiveWindow app
-#else
-  Just <$> applicationGetActiveWindow app
-#endif
+appGetActiveWindow app = applicationGetActiveWindow app
 
 appNew :: (HasCallStack, MonadIO m) => Maybe Text -> [ApplicationFlags] -> m Application
 appNew appName appFlags = do
-#ifdef GTK_VERSION_GEQ_3_22_20
-  applicationNew appName appFlags
-#else
   maybeApp <- applicationNew appName appFlags
   case maybeApp of
     Nothing -> fail "Could not create application for some reason!"
     Just app -> pure app
-#endif

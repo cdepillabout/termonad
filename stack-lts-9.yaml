@@ -9,11 +9,10 @@ packages:
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
-    # - gi-gdk-3.0.16
-    # - gi-gdkpixbuf-2.0.16
-    # - gi-gio-2.0.18
-    # - gi-gtk-3.0.23
-    # - gi-pango-1.0.16
+    - gi-cairo-1.0.17
+    - gi-gdk-3.0.16
+    - gi-gio-2.0.18
+    - gi-gtk-3.0.24
     - gi-vte-2.91.17
     - haskell-gi-0.21.3
     - haskell-gi-base-0.21.1
