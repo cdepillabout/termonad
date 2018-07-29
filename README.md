@@ -10,20 +10,6 @@ Termonad
 
 TODO
 
-<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-generate-toc again -->
+<!-- markdown-toc start - Run M-x markdown-toc-generate-toc again or edit manually. -->
 **Table of Contents**
-
-- [Highlight](#highlight)
-    - [Uses](#uses)
-        - [`highlight`](#highlight)
-        - [highlight output from `grep`](#highlight-output-from-grep)
-        - [`hrep`](#hrep)
-    - [Installation](#installation)
-    - [Other ways to highlight parts of files](#other-ways-to-highlight-parts-of-files)
-    - [Contributions](#contributions)
-        - [Additional flags](#additional-flags)
-    - [Development](#development)
-        - [Build](#build)
-        - [Test](#test)
-
 <!-- markdown-toc end -->
