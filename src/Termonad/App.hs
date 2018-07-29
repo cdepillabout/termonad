@@ -26,6 +26,7 @@ import GI.Gtk
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , aboutDialogNew
   , applicationAddWindow
+  , applicationGetActiveWindow
   , applicationSetAccelsForAction
   , applicationSetMenubar
   , boxPackStart
@@ -74,7 +75,7 @@ import Termonad.Config
   , lensFontConfig
   )
 import Termonad.FocusList (findFL, moveFromToFL, updateFocusFL)
-import Termonad.Gtk (appGetActiveWindow, appNew, objFromBuildUnsafe)
+import Termonad.Gtk (appNew, objFromBuildUnsafe)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Term (createTerm, relabelTabs, termExitFocused)
 import Termonad.Types
@@ -178,7 +179,7 @@ exitWithConfirmation :: TMState -> IO ()
 exitWithConfirmation mvarTMState = do
   tmState <- readMVar mvarTMState
   let app = tmState ^. lensTMStateApp
-  win <- appGetActiveWindow app
+  win <- applicationGetActiveWindow app
   dialog <- dialogNew
   box <- dialogGetContentArea dialog
   label <- labelNew (Just "There are still terminals running.  Are you sure you want to exit?")
@@ -313,7 +314,7 @@ appActivate tmConfig app = do
 
 showAboutDialog :: Application -> IO ()
 showAboutDialog app = do
-  win <- appGetActiveWindow app
+  win <- applicationGetActiveWindow app
   aboutDialog <- aboutDialogNew
   windowSetTransientFor aboutDialog win
   void $ dialogRun aboutDialog

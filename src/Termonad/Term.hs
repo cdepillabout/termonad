@@ -32,6 +32,7 @@ import GI.Gtk
   , ReliefStyle(ReliefStyleNone)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
   , ScrolledWindow
+  , applicationGetActiveWindow
   , boxNew
   , buttonNewFromIconName
   , buttonSetRelief
@@ -81,7 +82,6 @@ import GI.Vte
 
 import Termonad.Config (ShowScrollbar(..), TMConfig(cursorColor, scrollbackLen), lensShowScrollbar)
 import Termonad.FocusList (appendFL, deleteFL, getFLFocusItem)
-import Termonad.Gtk (appGetActiveWindow)
 import Termonad.Types
   ( TMNotebookTab
   , TMState
@@ -123,7 +123,7 @@ termExitWithConfirmation :: TMNotebookTab -> TMState -> IO ()
 termExitWithConfirmation tab mvarTMState = do
   tmState <- readMVar mvarTMState
   let app = tmState ^. lensTMStateApp
-  win <- appGetActiveWindow app
+  win <- applicationGetActiveWindow app
   dialog <- dialogNew
   box <- dialogGetContentArea dialog
   label <- labelNew (Just "Close tab?")
