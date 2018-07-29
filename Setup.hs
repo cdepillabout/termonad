@@ -16,7 +16,7 @@ import Distribution.PackageDescription (HookedBuildInfo, cppOptions, emptyBuildI
 import Distribution.Simple (UserHooks, defaultMainWithHooks, preBuild, preRepl, simpleUserHooks)
 import Distribution.Simple.Program (configureProgram, defaultProgramConfiguration, getDbProgramOutput, pkgConfigProgram)
 import Distribution.Text (simpleParse)
-import Distribution.Verbosity (verbose)
+import Distribution.Verbosity (normal)
 
 #ifndef MIN_VERSION_cabal_doctest
 #define MIN_VERSION_cabal_doctest(x,y,z) 0
@@ -78,13 +78,9 @@ pkgConfigGtkHook cppOpts oldFunc args flags = do
 
 getGtkVersionCPPOpts :: IO [String]
 getGtkVersionCPPOpts = do
-  pkgDb <- configureProgram verbose pkgConfigProgram defaultProgramConfiguration
+  pkgDb <- configureProgram normal pkgConfigProgram defaultProgramConfiguration
   pkgConfigOutput <-
-    getDbProgramOutput
-      verbose
-      pkgConfigProgram
-      pkgDb
-      ["--modversion", "gtk+-3.0"]
+    getDbProgramOutput normal pkgConfigProgram pkgDb ["--modversion", "gtk+-3.0"]
   -- Drop the newline on the end of the pkgConfigOutput.
   -- This should give us a version number like @3.22.11@.
   let rawGtkVersion = reverse $ drop 1 $ reverse pkgConfigOutput
