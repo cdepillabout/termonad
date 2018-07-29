@@ -89,8 +89,9 @@ getGtkVersionCPPOpts = do
     Nothing -> do
       putStrLn "In Setup.hs, in getGtkVersionCPPOpts, could not parse gtk version:"
       print pkgConfigOutput
-      putStrLn "\nDon't know how to proceed."
-      fail "Can't parse pkg-config output."
+      putStrLn "\nNot defining any CPP macros based on the version of the system GTK library."
+      putStrLn "\nCompilation of termonad may fail."
+      pure []
     Just gtkVersion -> do
       let cppOpts = createGtkVersionCPPOpts gtkVersion
       pure cppOpts
@@ -100,11 +101,11 @@ getGtkVersionCPPOpts = do
 -- Haskell code to work around differences in the gi-gtk library Haskell
 -- library when compiled against different versions of the GTK system library.
 --
--- This list may need to be added too.
+-- This list may need to be added to.
 createGtkVersionCPPOpts
   :: Version  -- ^ 'Version' of the GTK3 library as reported by @pkg-config@.
   -> [String] -- ^ A list of CPP macros to show the GTK version.
 createGtkVersionCPPOpts gtkVersion =
   catMaybes $
-    [ if gtkVersion >= [3,22,20] then Just "-DGTK_VERSION_GEQ_3_22_20" else Nothing
+    [ if gtkVersion >= [3,22] then Just "-DGTK_VERSION_GEQ_3_22" else Nothing
     ]
