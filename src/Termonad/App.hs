@@ -53,6 +53,7 @@ import GI.Gtk
   , widgetSetCanFocus
   , widgetShow
   , widgetShowAll
+  , windowClose
   , windowPresent
   , windowSetTransientFor
   )
@@ -200,12 +201,20 @@ exitWithConfirmation mvarTMState = do
   res <- dialogRun dialog
   widgetDestroy dialog
   case toEnum (fromIntegral res) of
-    ResponseTypeYes -> applicationQuit app
+    ResponseTypeYes -> quit mvarTMState
     _ -> pure ()
+
+quit :: TMState -> IO ()
+quit mvarTMState = do
+  tmState <- readMVar mvarTMState
+  let app = tmState ^. lensTMStateApp
+  maybeWin <- applicationGetActiveWindow app
+  case maybeWin of
+    Nothing -> applicationQuit app
+    Just win -> windowClose win
 
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
-  void $ onWidgetDestroy win (applicationQuit app)
   setupScreenStyle
   box <- objFromBuildUnsafe builder "content_box" Box
   fontDesc <- createFontDesc tmConfig
@@ -213,12 +222,12 @@ setupTermonad tmConfig app win builder = do
   widgetSetCanFocus note False
   boxPackStart box note True True 0
 
-  void $ onNotebookPageRemoved note $ \_ _ -> do
-    pages <- notebookGetNPages note
-    when (pages == 0) (applicationQuit app)
-
   mvarTMState <- newEmptyTMState tmConfig app win note fontDesc
   terminal <- createTerm handleKeyPress mvarTMState
+
+  void $ onNotebookPageRemoved note $ \_ _ -> do
+    pages <- notebookGetNPages note
+    when (pages == 0) $ quit mvarTMState
 
   void $ onNotebookSwitchPage note $ \_ pageNum -> do
     maybeRes <- tryTakeMVar mvarTMState
@@ -298,6 +307,8 @@ setupTermonad tmConfig app win builder = do
   menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
   menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
   applicationSetMenubar app (Just menuModel)
+
+  void $ onWidgetDestroy win $ quit mvarTMState
 
   widgetShowAll win
   widgetGrabFocus $ terminal ^. lensTerm
