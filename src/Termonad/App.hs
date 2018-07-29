@@ -336,7 +336,9 @@ appStartup _app = pure ()
 
 start :: TMConfig -> IO ()
 start tmConfig = do
-  app <- appNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
+  -- app <- appNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
+  -- Make sure the application is not unique, so we can open multiple copies of it.
+  app <- appNew Nothing [ApplicationFlagsFlagsNone]
   void $ onApplicationStartup app (appStartup app)
   void $ onApplicationActivate app (appActivate tmConfig app)
   void $ applicationRun app Nothing
