@@ -1,6 +1,6 @@
 name:                termonad
 version:             0.1.0.0
-synopsis:            Terminal emulator.
+synopsis:            Terminal emulator configurable in Haskell
 description:         Please see <https://github.com/cdepillabout/termonad#readme README.md>.
 homepage:            https://github.com/cdepillabout/termonad
 license:             BSD3
