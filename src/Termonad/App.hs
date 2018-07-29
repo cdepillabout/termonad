@@ -21,6 +21,7 @@ import GI.Gtk
   ( Application
   , ApplicationWindow(ApplicationWindow)
   , Box(Box)
+  , ResponseType(ResponseTypeNo, ResponseTypeYes)
   , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , aboutDialogNew
@@ -30,19 +31,26 @@ import GI.Gtk
   , boxPackStart
   , builderNewFromString
   , builderSetApplication
+  , containerAdd
   , cssProviderLoadFromData
   , cssProviderNew
+  , dialogAddButton
+  , dialogGetContentArea
+  , dialogNew
   , dialogRun
+  , labelNew
   , notebookGetNPages
   , notebookNew
   , onNotebookPageRemoved
   , onNotebookPageReordered
   , onNotebookSwitchPage
   , onWidgetDestroy
+  , setWidgetMargin
   , styleContextAddProviderForScreen
   , widgetDestroy
   , widgetGrabFocus
   , widgetSetCanFocus
+  , widgetShow
   , widgetShowAll
   , windowPresent
   , windowSetTransientFor
@@ -76,6 +84,7 @@ import Termonad.Types
   , getFocusedTermFromState
   , lensTMNotebookTabs
   , lensTMNotebookTabTerm
+  , lensTMStateApp
   , lensTMStateNotebook
   , lensTerm
   , newEmptyTMState
@@ -165,6 +174,34 @@ updateFLTabPos mvarTMState oldPos newPos =
           tmState &
             lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
 
+exitWithConfirmation :: TMState -> IO ()
+exitWithConfirmation mvarTMState = do
+  tmState <- readMVar mvarTMState
+  let app = tmState ^. lensTMStateApp
+  win <- appGetActiveWindow app
+  dialog <- dialogNew
+  box <- dialogGetContentArea dialog
+  label <- labelNew (Just "There are still terminals running.  Are you sure you want to exit?")
+  containerAdd box label
+  widgetShow label
+  setWidgetMargin label 10
+  void $
+    dialogAddButton
+      dialog
+      "No, do NOT exit"
+      (fromIntegral (fromEnum ResponseTypeNo))
+  void $
+    dialogAddButton
+      dialog
+      "Yes, exit"
+      (fromIntegral (fromEnum ResponseTypeYes))
+  windowSetTransientFor dialog win
+  res <- dialogRun dialog
+  widgetDestroy dialog
+  case toEnum (fromIntegral res) of
+    ResponseTypeYes -> applicationQuit app
+    _ -> pure ()
+
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
   void $ onWidgetDestroy win (applicationQuit app)
@@ -228,14 +265,14 @@ setupTermonad tmConfig app win builder = do
   applicationSetAccelsForAction app "app.newtab" ["<Shift><Ctrl>T"]
 
   closeTabAction <- simpleActionNew "closetab" Nothing
-  void $ onSimpleActionActivate closeTabAction $ \_ -> termExitFocused mvarTMState
+  void $ onSimpleActionActivate closeTabAction $ \_ ->
+    termExitFocused mvarTMState
   actionMapAddAction app closeTabAction
   applicationSetAccelsForAction app "app.closetab" ["<Shift><Ctrl>W"]
 
   quitAction <- simpleActionNew "quit" Nothing
-  void $ onSimpleActionActivate quitAction $ \_ -> do
-    putStrLn "got quit!"
-    withMVar mvarTMState (\tmState -> putStrLn $ "tmState: " <> tshow tmState)
+  void $ onSimpleActionActivate quitAction $ \_ ->
+    exitWithConfirmation mvarTMState
   actionMapAddAction app quitAction
   applicationSetAccelsForAction app "app.quit" ["<Shift><Ctrl>Q"]
 
