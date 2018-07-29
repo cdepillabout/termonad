@@ -70,6 +70,7 @@ import GI.Vte
   , terminalPasteClipboard
   )
 
+import Paths_termonad (getDataFileName)
 import Termonad.Config
   ( FontConfig(fontFamily, fontSize)
   , TMConfig
@@ -215,6 +216,10 @@ quit mvarTMState = do
 
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
+
+  termondIconPath <- getDataFileName "img/termonad-lambda.png"
+  windowSetDefaultIconFromFile termonadIconPath
+
   setupScreenStyle
   box <- objFromBuildUnsafe builder "content_box" Box
   fontDesc <- createFontDesc tmConfig

@@ -10,10 +10,10 @@ maintainer:          cdep.illabout@gmail.com
 copyright:           2017 Dennis Gosnell
 category:            Text
 build-type:          Custom
+cabal-version:       >=1.12
 extra-source-files:  README.md
                    , CHANGELOG.md
-cabal-version:       >=1.12
-
+data-files:          img/termonad-lambda.png
 custom-setup
   setup-depends:     base
                    , Cabal
@@ -31,6 +31,7 @@ library
                      , Termonad.Term
                      , Termonad.Types
                      , Termonad.XML
+  other-modules:       Paths_termonad
   build-depends:       base >= 4.7 && < 5
                      , classy-prelude
                      , colour
