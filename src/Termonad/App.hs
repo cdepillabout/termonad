@@ -55,6 +55,7 @@ import GI.Gtk
   , widgetShowAll
   , windowClose
   , windowPresent
+  , windowSetDefaultIconFromFile
   , windowSetTransientFor
   )
 import qualified GI.Gtk as Gtk
@@ -216,8 +217,7 @@ quit mvarTMState = do
 
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
-
-  termondIconPath <- getDataFileName "img/termonad-lambda.png"
+  termonadIconPath <- getDataFileName "img/termonad-lambda.png"
   windowSetDefaultIconFromFile termonadIconPath
 
   setupScreenStyle
