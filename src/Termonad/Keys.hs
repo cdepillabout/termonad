@@ -107,19 +107,12 @@ removeStrangeModifiers Key{keyVal, keyMods} =
 
 handleKeyPress :: TMState -> EventKey -> IO Bool
 handleKeyPress terState eventKey = do
-  putStrLn "in handleKeyPress, starting"
-  void $ showKeys eventKey
-  putStrLn "in handleKeyPress, about to call getEventKeyval"
+  -- void $ showKeys eventKey
   keyval <- getEventKeyKeyval eventKey
-  putStrLn "in handleKeyPress, about to call getEventKeyState"
   modifiers <- getEventKeyState eventKey
   let oldKey = toKey keyval (setFromList modifiers)
       newKey = removeStrangeModifiers oldKey
       maybeAction = lookup newKey keyMap
   case maybeAction of
-    Just action -> do
-      putStrLn "in handleKeyPress, found action to call"
-      action terState
-    Nothing -> do
-      putStrLn "in handleKeyPress, did NOT find action to call"
-      pure False
+    Just action -> action terState
+    Nothing -> pure False
