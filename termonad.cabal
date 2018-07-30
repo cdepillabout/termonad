@@ -71,6 +71,7 @@ library
                      , TypeFamilies
                      , TypeOperators
   other-extensions:    TemplateHaskell
+  pkgconfig-depends:   gtk+-3.0
 
 executable termonad
   main-is:             Main.hs
