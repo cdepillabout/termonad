@@ -8,14 +8,16 @@ let
   };
   nixpkgs = import nixpkgsTarball { };
 
+  vte = nixpkgs.gnome3.vte;
+
+  gtk3 = nixpkgs.gnome3.gtk;
+
   gi-vte = nixpkgs.pkgs.haskell.packages.${compiler}.callPackage .nix-helpers/gi-vte.nix {
-    gtk3 = nixpkgs.gnome3.gtk;
-    vte = nixpkgs.gnome3.vte;
+    inherit gtk3 vte;
   };
 in
 
 nixpkgs.pkgs.haskell.packages.${compiler}.callPackage .nix-helpers/termonad.nix {
-  inherit gi-vte;
-  gtk3 = nixpkgs.gnome3.gtk;
+  inherit gi-vte gtk3;
 }
 

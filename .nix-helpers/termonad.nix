@@ -8,7 +8,6 @@ mkDerivation {
   pname = "termonad";
   version = "0.1.0.0";
   src = builtins.filterSource (path: type:
-    type != "unknown" &&
     baseNameOf path != ".git" &&
     baseNameOf path != "result" &&
     baseNameOf path != ".stack-work" &&
