@@ -356,4 +356,16 @@ defaultMain tmConfig = do
           , showError = \(cfg, oldErrs) newErr -> (cfg, oldErrs <> "\n" <> newErr)
           , realMain = \(cfg, errs) -> putStrLn (pack errs) *> start cfg
           }
-  wrapMain params (tmConfig, "")
+  eitherRes <- tryIOError $ wrapMain params (tmConfig, "")
+  case eitherRes of
+    Left ioErr
+      | ioeGetErrorType ioErr == doesNotExistErrorType && ioeGetFileName ioErr == Just "ghc" -> do
+          putStrLn $
+            "Could not find ghc on your PATH.  Ignoring your termonad.hs " <>
+            "configuration file and running termonad with default settings."
+          start tmConfig
+      | otherwise -> do
+          putStrLn $ "IO error occurred when trying to run termonad:"
+          print ioErr
+          putStrLn "Don't know how to recover.  Exiting."
+    Right _ -> pure ()
