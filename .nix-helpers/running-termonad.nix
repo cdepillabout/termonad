@@ -7,10 +7,14 @@ let
   };
   nixpkgs = import nixpkgsTarball { };
 
+  termonad = nixpkgs.callPackage ../. { };
+
   ghcStuff = nixpkgs.pkgs.haskell.packages.ghc843.ghcWithPackages (pkgs: [
-    (nixpkgs.callPackage ../. { })
+    pkgs.colour
+    pkgs.lens
+    termonad
   ]);
 
 in
 
-nixpkgs.runCommand "dummy" { buildInputs = [ ghcStuff ]; } ""
+nixpkgs.runCommand "dummy" { buildInputs = [ ghcStuff termonad ]; } ""

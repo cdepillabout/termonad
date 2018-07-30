@@ -16,35 +16,40 @@ import GI.Gdk
   , pattern KEY_8
   , pattern KEY_9
   , ModifierType(..)
+  , getEventKeyHardwareKeycode
+  , getEventKeyIsModifier
   , getEventKeyKeyval
+  , getEventKeyLength
   , getEventKeyState
+  , getEventKeyString
+  , getEventKeyType
   )
 
 import Termonad.Term (altNumSwitchTerm)
 import Termonad.Types (TMState)
 
 
--- showKeys :: EventKey -> IO Bool
--- showKeys eventKey = do
---   eventType <- get eventKey #type
---   maybeString <- get eventKey #string
---   modifiers <- get eventKey #state
---   len <- get eventKey #length
---   keyval <- get eventKey #keyval
---   isMod <- get eventKey #isModifier
---   keycode <- get eventKey #hardwareKeycode
+showKeys :: EventKey -> IO Bool
+showKeys eventKey = do
+  eventType <- getEventKeyType eventKey
+  maybeString <- getEventKeyString eventKey
+  modifiers <- getEventKeyState eventKey
+  len <- getEventKeyLength eventKey
+  keyval <- getEventKeyKeyval eventKey
+  isMod <- getEventKeyIsModifier eventKey
+  keycode <- getEventKeyHardwareKeycode eventKey
 
---   putStrLn "key press event:"
---   putStrLn $ "  type = " <> tshow eventType
---   putStrLn $ "  str = " <> tshow maybeString
---   putStrLn $ "  mods = " <> tshow modifiers
---   putStrLn $ "  isMod = " <> tshow isMod
---   putStrLn $ "  len = " <> tshow len
---   putStrLn $ "  keyval = " <> tshow keyval
---   putStrLn $ "  keycode = " <> tshow keycode
---   putStrLn ""
+  putStrLn "key press event:"
+  putStrLn $ "  type = " <> tshow eventType
+  putStrLn $ "  str = " <> tshow maybeString
+  putStrLn $ "  mods = " <> tshow modifiers
+  putStrLn $ "  isMod = " <> tshow isMod
+  putStrLn $ "  len = " <> tshow len
+  putStrLn $ "  keyval = " <> tshow keyval
+  putStrLn $ "  keycode = " <> tshow keycode
+  putStrLn ""
 
---   pure True
+  pure True
 
 data Key = Key
   { keyVal :: Word32
@@ -74,23 +79,47 @@ keyMap =
           )
           numKeys
   in
-  mapFromList $
-    -- [ ( toKey KEY_T [ModifierTypeControlMask, ModifierTypeShiftMask]
-    --   , stopProp createTerm
-    --   )
-    -- ] <>
-    altNumKeys
+  mapFromList altNumKeys
 
 stopProp :: (TMState -> IO a) -> TMState -> IO Bool
 stopProp callback terState = callback terState $> True
 
+removeStrangeModifiers :: Key -> Key
+removeStrangeModifiers Key{keyVal, keyMods} =
+  let reservedModifiers =
+        [ ModifierTypeModifierReserved13Mask
+        , ModifierTypeModifierReserved14Mask
+        , ModifierTypeModifierReserved15Mask
+        , ModifierTypeModifierReserved16Mask
+        , ModifierTypeModifierReserved17Mask
+        , ModifierTypeModifierReserved18Mask
+        , ModifierTypeModifierReserved19Mask
+        , ModifierTypeModifierReserved20Mask
+        , ModifierTypeModifierReserved21Mask
+        , ModifierTypeModifierReserved22Mask
+        , ModifierTypeModifierReserved23Mask
+        , ModifierTypeModifierReserved24Mask
+        , ModifierTypeModifierReserved25Mask
+        , ModifierTypeModifierReserved29Mask
+        ]
+  in Key keyVal (difference keyMods reservedModifiers)
+
+
 handleKeyPress :: TMState -> EventKey -> IO Bool
 handleKeyPress terState eventKey = do
-  -- keyval <- get eventKey #keyval
+  putStrLn "in handleKeyPress, starting"
+  void $ showKeys eventKey
+  putStrLn "in handleKeyPress, about to call getEventKeyval"
   keyval <- getEventKeyKeyval eventKey
+  putStrLn "in handleKeyPress, about to call getEventKeyState"
   modifiers <- getEventKeyState eventKey
-  let key = toKey keyval (setFromList modifiers)
-      maybeAction = lookup key keyMap
+  let oldKey = toKey keyval (setFromList modifiers)
+      newKey = removeStrangeModifiers oldKey
+      maybeAction = lookup newKey keyMap
   case maybeAction of
-    Just action -> action terState
-    Nothing -> pure False
+    Just action -> do
+      putStrLn "in handleKeyPress, found action to call"
+      action terState
+    Nothing -> do
+      putStrLn "in handleKeyPress, did NOT find action to call"
+      pure False
