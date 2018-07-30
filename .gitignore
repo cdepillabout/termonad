@@ -17,7 +17,5 @@ cabal.sandbox.config
 *.eventlog
 .stack-work/
 
-# Unreadable file that gets created during testing.
-# It should get cleaned-up by the tests after getting created, but just in case
-# it is listed here as well.
-test/golden/test-files/dir2/unreadable-file
+# Nix results
+result
