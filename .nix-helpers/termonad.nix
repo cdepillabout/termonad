@@ -1,6 +1,6 @@
 { mkDerivation, base, Cabal, cabal-doctest, classy-prelude, colour
 , constraints, data-default, doctest, dyre, gi-gdk, gi-gio, gi-glib
-, gi-gtk, gi-pango, gi-vte, haskell-gi-base, hedgehog, lens
+, gi-gtk, gi-pango, gi-vte, gtk3, haskell-gi-base, hedgehog, lens
 , pretty-simple, QuickCheck, stdenv, tasty, tasty-hedgehog
 , template-haskell, xml-conduit, xml-html-qq
 }:
@@ -15,6 +15,7 @@ mkDerivation {
     baseNameOf path != "dist") ./..;
   isLibrary = true;
   isExecutable = true;
+  doCheck = false;
   enableSeparateDataOutput = true;
   setupHaskellDepends = [ base Cabal cabal-doctest ];
   libraryHaskellDepends = [
@@ -22,6 +23,7 @@ mkDerivation {
     gi-gio gi-glib gi-gtk gi-pango gi-vte haskell-gi-base lens
     pretty-simple QuickCheck xml-conduit xml-html-qq
   ];
+  libraryPkgconfigDepends = [ gtk3 ];
   executableHaskellDepends = [ base ];
   testHaskellDepends = [
     base doctest hedgehog lens QuickCheck tasty tasty-hedgehog
