@@ -70,6 +70,29 @@ $ cd termonad/
 $ stack install
 ```
 
+### NixOS
+
+There are two methods to build Termonad on NixOS.
+
+The first is using `stack`.  The following commands install `stack` for your
+user, clone this repository, and install the `termonad` binary to `~/.local/bin/`:
+
+```sh
+$ nix-env -i stack
+$ git clone https://github.com/cdepillabout/termonad
+$ cd termonad/
+$ stack install
+```
+
+The second is using the normal `nix-build` machinery.  The following commands
+clone this repository and build the `termonad` binary at `./result/bin/`:
+
+```sh
+$ git clone https://github.com/cdepillabout/termonad
+$ cd termonad/
+$ nix-build
+```
+
 ## Maintainers
 
 - [Dennis Gosnell](https://github.com/cdepillabout)
