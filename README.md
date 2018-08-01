@@ -12,8 +12,18 @@ Termonad is a terminal emulator configurable in Haskell.  It is extremely
 customizable and provides hooks to modify the default behavior.  It can be
 thought of as the "XMonad" of terminal emulators.
 
-<!-- markdown-toc start - Run M-x markdown-toc-generate-toc again or edit manually. -->
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
+
+- [Termonad](#termonad)
+    - [Installation](#installation)
+        - [Arch Linux](#arch-linux)
+        - [Ubuntu / Debian](#ubuntu--debian)
+        - [NixOS](#nixos)
+    - [How to use Termonad](#how-to-use-termonad)
+    - [Goals](#goals)
+    - [Maintainers](#maintainers)
+
 <!-- markdown-toc end -->
 
 ## Installation
@@ -33,7 +43,7 @@ If `cabal` doesn't work for you, please open an issue or send a pull request.
 First, you must install the required GTK system libraries:
 
 ```sh
-$ pacman -S 
+$ pacman -S vte3
 ```
 
 You must have `stack` to be able to build Termonad.  Steps for
@@ -81,7 +91,7 @@ user, clone this repository, and install the `termonad` binary to `~/.local/bin/
 $ nix-env -i stack
 $ git clone https://github.com/cdepillabout/termonad
 $ cd termonad/
-$ stack install
+$ stack --nix install
 ```
 
 The second is using the normal `nix-build` machinery.  The following commands
@@ -92,6 +102,51 @@ $ git clone https://github.com/cdepillabout/termonad
 $ cd termonad/
 $ nix-build
 ```
+
+## How to use Termonad
+
+Termonad is similar to XMonad. The above steps will install a `termonad` binary
+somewhere on your system. If you have installed Termonad using `stack`, the
+`termonad` binary will be in `~/.local/bin/`. This binary is a version of
+Termonad configured with default settings. You can try running it to get an idea
+of what Termonad is like:
+
+```sh
+$ ~/.local/bin/termonad
+```
+
+If you would like to configure termonad with your own settings, first you will
+need to create a Haskell file called `~/.config/termonad/termonad.hs`. The
+next section gives an example configuration file.
+
+If this file exists, when the `~/.local/bin/termonad` binary launches, it will
+try to compile it. If it succeeds, it will create a separate binary file called
+something like `~/.cache/termonad/termonad-linux-x86_64`. This binary file can
+be thought of as your own personal Termonad, configured with all your own
+settings.
+
+When you run `~/.local/bin/termonad`, it will re-exec
+`~/.cache/termonad/termonad-linux-x86_64` if it exists.
+
+However, there is one difficulty with this setup. In order for the
+`~/.local/bin/termonad` binary to be able to compile your
+`~/.config/termonad/termonad.hs` file, it needs to know where GHC is, as well as
+where all your Haskell packages live. This presents some difficulties that will
+be discussed in a following section.
+
+### Configuring Termonad
+
+The following is an example Termonad configuration file. You should save this to
+`~/.config/termonad/termonad.hs`. You can find more information on the available
+configuration options within the
+[`Termonad.Config`](https://hackage.haskell.org/package/termonad/docs/Termonad-Config.html)
+module.
+
+```haskell
+```
+```
+
+## Goals
 
 ## Maintainers
 
