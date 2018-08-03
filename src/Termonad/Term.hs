@@ -71,6 +71,7 @@ import GI.Vte
   , Terminal
   , onTerminalChildExited
   , onTerminalWindowTitleChanged
+  , terminalGetCurrentDirectoryUri
   , terminalGetWindowTitle
   , terminalNew
   , terminalSetCursorBlinkMode
@@ -97,8 +98,10 @@ import Termonad.Types
   , lensTMStateConfig
   , lensTMStateNotebook
   , newTMTerm
+  , term
   , tmNotebook
   , tmNotebookTabs
+  , tmNotebookTabTerm
   , tmNotebookTabTermContainer
   )
 
@@ -174,13 +177,13 @@ relabelTabs mvarTMState = do
     go notebook tmNotebookTab = do
       let label = tmNotebookTab ^. lensTMNotebookTabLabel
           scrolledWin = tmNotebookTab ^. lensTMNotebookTabTermContainer
-          term = tmNotebookTab ^. lensTMNotebookTabTerm . lensTerm
-      relabelTab notebook label scrolledWin term
+          term' = tmNotebookTab ^. lensTMNotebookTabTerm . lensTerm
+      relabelTab notebook label scrolledWin term'
 
 relabelTab :: Notebook -> Label -> ScrolledWindow -> Terminal -> IO ()
-relabelTab notebook label scrolledWin term = do
+relabelTab notebook label scrolledWin term' = do
   pageNum <- notebookPageNum notebook scrolledWin
-  title <- terminalGetWindowTitle term
+  title <- terminalGetWindowTitle term'
   labelSetLabel label $ tshow (pageNum + 1) <> ". " <> title
 
 showScrollbarToPolicy :: ShowScrollbar -> PolicyType
