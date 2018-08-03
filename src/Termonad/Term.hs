@@ -234,7 +234,9 @@ getCursorColor tmConfig = do
 createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO TMTerm
 createTerm handleKeyPress mvarTMState = do
   scrolledWin <- createScrolledWin mvarTMState
-  TMState{tmStateFontDesc, tmStateConfig} <- readMVar mvarTMState
+  TMState{tmStateFontDesc, tmStateConfig, tmStateNotebook=currNote} <- readMVar mvarTMState
+  let maybeCurrFocusedTab = term . tmNotebookTabTerm <$> getFLFocusItem (tmNotebookTabs currNote)
+  maybeCurrDir <- traverse terminalGetCurrentDirectoryUri maybeCurrFocusedTab
   vteTerm <- terminalNew
   terminalSetFont vteTerm (Just tmStateFontDesc)
   terminalSetScrollbackLines vteTerm (fromIntegral (scrollbackLen tmStateConfig))
@@ -247,7 +249,7 @@ createTerm handleKeyPress mvarTMState = do
     terminalSpawnSync
       vteTerm
       [PtyFlagsDefault]
-      Nothing
+      maybeCurrDir
       ["/usr/bin/env", "bash"]
       Nothing
       ([SpawnFlagsDefault] :: [SpawnFlags])
