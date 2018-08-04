@@ -143,7 +143,42 @@ configuration options within the
 module.
 
 ```haskell
-```
+{-# LANGUAGE OverloadedStrings #-}
+
+module Main where
+
+import Data.Colour.SRGB (Colour, sRGB24)
+import Termonad.App (defaultMain)
+import Termonad.Config
+  ( FontConfig, ShowScrollbar(ShowScrollbarAlways), cursorColor
+  , defaultFontConfig, defaultTMConfig, fontConfig, fontFamily
+  , fontSize, showScrollbar
+  )
+
+-- | This sets the color of the cursor in the terminal.
+--
+-- This uses the "Data.Colour" module to define a dark-red color.
+-- There are many default colors defined in "Data.Colour.Names".
+cursColor :: Colour Double
+cursColor = sRGB24 204 0 0
+
+-- | This defines the font for the terminal.
+fontConf :: FontConfig
+fontConf =
+  defaultFontConfig
+    { fontFamily = "DejaVu Sans Mono"
+    , fontSize = 13
+    }
+
+main :: IO ()
+main = do
+  let termonadConf =
+        defaultTMConfig
+          { cursorColor = cursColor
+          , fontConfig = fontConf
+          , showScrollbar = ShowScrollbarAlways
+          }
+  defaultMain termonadConf
 ```
 
 ## Goals
