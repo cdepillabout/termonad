@@ -4,7 +4,7 @@ module Termonad.Types where
 
 import Termonad.Prelude
 
-import Control.Lens ((&), (.~), firstOf, makeLensesFor)
+import Control.Lens ((&), (.~), (^.), firstOf, makeLensesFor)
 import Data.Unique (Unique, hashUnique, newUnique)
 import GI.Gtk
   ( Application
@@ -260,3 +260,8 @@ setUserRequestedExit :: TMState -> IO ()
 setUserRequestedExit mvarTMState = do
   modifyMVar_ mvarTMState $ \tmState -> do
     pure $ tmState & lensTMStateUserReqExit .~ UserRequestedExit
+
+getUserRequestedExit :: TMState -> IO UserRequestedExit
+getUserRequestedExit mvarTMState = do
+  tmState <- readMVar mvarTMState
+  pure $ tmState ^. lensTMStateUserReqExit

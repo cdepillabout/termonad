@@ -239,7 +239,9 @@ createTerm handleKeyPress mvarTMState = do
   scrolledWin <- createScrolledWin mvarTMState
   TMState{tmStateFontDesc, tmStateConfig, tmStateNotebook=currNote} <- readMVar mvarTMState
   let maybeCurrFocusedTab = term . tmNotebookTabTerm <$> getFLFocusItem (tmNotebookTabs currNote)
-  maybeCurrDir <- traverse terminalGetCurrentDirectoryUri maybeCurrFocusedTab
+  maybeCurrDir <- maybe (pure Nothing) terminalGetCurrentDirectoryUri maybeCurrFocusedTab
+  print $ "in createTerm, maybeCurrFocusedTab: " <> tshow (maybe "(nothing)" (const "(just)") maybeCurrFocusedTab)
+  print $ "in createTerm, maybeCurrDir: " <> tshow maybeCurrDir
   vteTerm <- terminalNew
   terminalSetFont vteTerm (Just tmStateFontDesc)
   terminalSetScrollbackLines vteTerm (fromIntegral (scrollbackLen tmStateConfig))

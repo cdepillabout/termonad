@@ -86,13 +86,16 @@ import Termonad.Types
   ( TMNotebookTab
   , TMState
   , TMState'(TMState)
+  , UserRequestedExit(UserRequestedExit, UserDidNotRequestExit)
   , getFocusedTermFromState
+  , getUserRequestedExit
   , lensTMNotebookTabs
   , lensTMNotebookTabTerm
   , lensTMStateApp
   , lensTMStateNotebook
   , lensTerm
   , newEmptyTMState
+  , setUserRequestedExit
   , tmNotebookTabTermContainer
   , tmNotebookTabs
   , tmStateNotebook
@@ -183,7 +186,9 @@ exitWithConfirmation :: TMState -> IO ()
 exitWithConfirmation mvarTMState = do
   respType <- exitWithConfirmationDialog mvarTMState
   case respType of
-    ResponseTypeYes -> quit mvarTMState
+    ResponseTypeYes -> do
+      setUserRequestedExit mvarTMState
+      quit mvarTMState
     _ -> pure ()
 
 exitWithConfirmationDialog :: TMState -> IO ResponseType
@@ -238,7 +243,9 @@ setupTermonad tmConfig app win builder = do
 
   void $ onNotebookPageRemoved note $ \_ _ -> do
     pages <- notebookGetNPages note
-    when (pages == 0) $ quit mvarTMState
+    when (pages == 0) $ do
+      setUserRequestedExit mvarTMState
+      quit mvarTMState
 
   void $ onNotebookSwitchPage note $ \_ pageNum -> do
     maybeRes <- tryTakeMVar mvarTMState
@@ -319,13 +326,18 @@ setupTermonad tmConfig app win builder = do
   menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
   applicationSetMenubar app (Just menuModel)
 
-  void $ onWidgetDeleteEvent win $ \e -> do
-    respType <- exitWithConfirmationDialog mvarTMState
-    let stopOtherHandlers =
-          case respType of
-            ResponseTypeYes -> False
-            _ -> True
-    pure stopOtherHandlers
+  void $ onWidgetDeleteEvent win $ \_ -> do
+    userRequestedExit <- getUserRequestedExit mvarTMState
+    print userRequestedExit
+    case userRequestedExit of
+      UserRequestedExit -> pure False
+      UserDidNotRequestExit -> do
+        respType <- exitWithConfirmationDialog mvarTMState
+        let stopOtherHandlers =
+              case respType of
+                ResponseTypeYes -> False
+                _ -> True
+        pure stopOtherHandlers
   void $ onWidgetDestroy win $ quit mvarTMState
 
   widgetShowAll win
