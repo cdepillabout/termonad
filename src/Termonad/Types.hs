@@ -4,7 +4,7 @@ module Termonad.Types where
 
 import Termonad.Prelude
 
-import Control.Lens (firstOf, makeLensesFor)
+import Control.Lens ((&), (.~), firstOf, makeLensesFor)
 import Data.Unique (Unique, hashUnique, newUnique)
 import GI.Gtk
   ( Application
@@ -98,12 +98,21 @@ $(makeLensesFor
     ''TMNotebook
  )
 
+data UserRequestedExit = UserRequestedExit | UserDidNotRequestExit deriving (Eq, Show)
+
 data TMState' = TMState
   { tmStateApp :: !Application
   , tmStateAppWin :: !ApplicationWindow
   , tmStateNotebook :: !TMNotebook
   , tmStateFontDesc :: !FontDescription
   , tmStateConfig :: !TMConfig
+  , tmStateUserReqExit :: !UserRequestedExit
+    -- ^ This signifies whether or not the user has requested that Termonad
+    -- exit by either closing all terminals or clicking the exit button.  If so,
+    -- 'tmStateUserReqExit' should have a value of 'UserRequestedExit'.  However,
+    -- if the window manager requested Termonad to exit (probably through the user
+    -- trying to close Termonad through their window manager), then this will be
+    -- set to 'UserDidNotRequestExit'.
   }
 
 instance Show TMState' where
@@ -125,6 +134,9 @@ instance Show TMState' where
       showString ", " .
       showString "tmStateConfig = " .
       showsPrec (d + 1) tmStateConfig .
+      showString ", " .
+      showString "tmStateUserReqExit = " .
+      showsPrec (d + 1) tmStateUserReqExit .
       showString "}"
 
 $(makeLensesFor
@@ -133,6 +145,7 @@ $(makeLensesFor
     , ("tmStateNotebook", "lensTMStateNotebook")
     , ("tmStateFontDesc", "lensTMStateFontDesc")
     , ("tmStateConfig", "lensTMStateConfig")
+    , ("tmStateUserReqExit", "lensTMStateUserReqExit")
     ]
     ''TMState'
  )
@@ -186,6 +199,7 @@ newTMState tmConfig app appWin note fontDesc =
       , tmStateNotebook = note
       , tmStateFontDesc = fontDesc
       , tmStateConfig = tmConfig
+      , tmStateUserReqExit = UserDidNotRequestExit
       }
 
 newEmptyTMState :: TMConfig -> Application -> ApplicationWindow -> Notebook -> FontDescription -> IO TMState
@@ -197,6 +211,7 @@ newEmptyTMState tmConfig app appWin note fontDesc =
       , tmStateNotebook = createEmptyTMNotebook note
       , tmStateFontDesc = fontDesc
       , tmStateConfig = tmConfig
+      , tmStateUserReqExit = UserDidNotRequestExit
       }
 
 newTMStateSingleTerm ::
@@ -240,3 +255,8 @@ getFocusedTermFromState mvarTMState = do
           lensTerm
         )
     )
+
+setUserRequestedExit :: TMState -> IO ()
+setUserRequestedExit mvarTMState = do
+  modifyMVar_ mvarTMState $ \tmState -> do
+    pure $ tmState & lensTMStateUserReqExit .~ UserRequestedExit
