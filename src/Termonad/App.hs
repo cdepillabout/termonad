@@ -45,6 +45,7 @@ import GI.Gtk
   , onNotebookPageRemoved
   , onNotebookPageReordered
   , onNotebookSwitchPage
+  , onWidgetDeleteEvent
   , onWidgetDestroy
   , setWidgetMargin
   , styleContextAddProviderForScreen
@@ -180,6 +181,13 @@ updateFLTabPos mvarTMState oldPos newPos =
 
 exitWithConfirmation :: TMState -> IO ()
 exitWithConfirmation mvarTMState = do
+  respType <- exitWithConfirmationDialog mvarTMState
+  case respType of
+    ResponseTypeYes -> quit mvarTMState
+    _ -> pure ()
+
+exitWithConfirmationDialog :: TMState -> IO ResponseType
+exitWithConfirmationDialog mvarTMState = do
   tmState <- readMVar mvarTMState
   let app = tmState ^. lensTMStateApp
   win <- applicationGetActiveWindow app
@@ -202,9 +210,7 @@ exitWithConfirmation mvarTMState = do
   windowSetTransientFor dialog win
   res <- dialogRun dialog
   widgetDestroy dialog
-  case toEnum (fromIntegral res) of
-    ResponseTypeYes -> quit mvarTMState
-    _ -> pure ()
+  pure $ toEnum (fromIntegral res)
 
 quit :: TMState -> IO ()
 quit mvarTMState = do
@@ -313,6 +319,13 @@ setupTermonad tmConfig app win builder = do
   menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
   applicationSetMenubar app (Just menuModel)
 
+  void $ onWidgetDeleteEvent win $ \e -> do
+    respType <- exitWithConfirmationDialog mvarTMState
+    let stopOtherHandlers =
+          case respType of
+            ResponseTypeYes -> False
+            _ -> True
+    pure stopOtherHandlers
   void $ onWidgetDestroy win $ quit mvarTMState
 
   widgetShowAll win
