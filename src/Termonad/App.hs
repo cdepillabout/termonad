@@ -328,7 +328,6 @@ setupTermonad tmConfig app win builder = do
 
   void $ onWidgetDeleteEvent win $ \_ -> do
     userRequestedExit <- getUserRequestedExit mvarTMState
-    print userRequestedExit
     case userRequestedExit of
       UserRequestedExit -> pure False
       UserDidNotRequestExit -> do
