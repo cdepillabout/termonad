@@ -13,7 +13,7 @@ extra-deps:
     - gi-gdk-3.0.16
     - gi-gio-2.0.18
     - gi-gtk-3.0.24
-    - gi-vte-2.91.17
+    - gi-vte-2.91.18
     - haskell-gi-0.21.3
     - haskell-gi-base-0.21.1
     - QuickCheck-2.10.1

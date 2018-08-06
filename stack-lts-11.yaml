@@ -15,7 +15,7 @@ extra-deps:
     - gi-gio-2.0.18
     - gi-gtk-3.0.24
     - gi-pango-1.0.16
-    - gi-vte-2.91.17
+    - gi-vte-2.91.18
     - QuickCheck-2.10.1
 
 # Override default flag values for local packages and extra-deps
