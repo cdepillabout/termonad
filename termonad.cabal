@@ -37,7 +37,9 @@ library
                      , colour
                      , constraints
                      , data-default
+                     , directory
                      , dyre
+                     , filepath
                      , gi-gdk
                      , gi-gio
                      , gi-glib

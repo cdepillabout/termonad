@@ -22,8 +22,9 @@ import Termonad.Config (TMConfig)
 import Termonad.FocusList (FocusList, emptyFL, focusItemGetter, singletonFL)
 
 data TMTerm = TMTerm
-  { term :: Terminal
-  , unique :: Unique
+  { term :: !Terminal
+  , pid :: !Int
+  , unique :: !Unique
   }
 
 instance Show TMTerm where
@@ -34,21 +35,25 @@ instance Show TMTerm where
       showString "term = " .
       showString "(GI.GTK.Terminal)" .
       showString ", " .
+      showString "pid = " .
+      showsPrec (d + 1) pid .
+      showString ", " .
       showString "unique = " .
       showsPrec (d + 1) (hashUnique unique) .
       showString "}"
 
 $(makeLensesFor
     [ ("term", "lensTerm")
+    , ("pid", "lensPid")
     , ("unique", "lensUnique")
     ]
     ''TMTerm
  )
 
 data TMNotebookTab = TMNotebookTab
-  { tmNotebookTabTermContainer :: ScrolledWindow
-  , tmNotebookTabTerm :: TMTerm
-  , tmNotebookTabLabel :: Label
+  { tmNotebookTabTermContainer :: !ScrolledWindow
+  , tmNotebookTabTerm :: !TMTerm
+  , tmNotebookTabLabel :: !Label
   }
 
 instance Show TMNotebookTab where
@@ -160,17 +165,18 @@ instance Eq TMNotebookTab where
   (==) :: TMNotebookTab -> TMNotebookTab -> Bool
   (==) = (==) `on` tmNotebookTabTerm
 
-createTMTerm :: Terminal -> Unique -> TMTerm
-createTMTerm trm unq =
+createTMTerm :: Terminal -> Int -> Unique -> TMTerm
+createTMTerm trm pd unq =
   TMTerm
     { term = trm
+    , pid = pd
     , unique = unq
     }
 
-newTMTerm :: Terminal -> IO TMTerm
-newTMTerm trm = do
+newTMTerm :: Terminal -> Int -> IO TMTerm
+newTMTerm trm pd = do
   unq <- newUnique
-  pure $ createTMTerm trm unq
+  pure $ createTMTerm trm pd unq
 
 createTMNotebookTab :: Label -> ScrolledWindow -> TMTerm -> TMNotebookTab
 createTMNotebookTab tabLabel scrollWin trm =
@@ -222,10 +228,11 @@ newTMStateSingleTerm ::
   -> Label
   -> ScrolledWindow
   -> Terminal
+  -> Int
   -> FontDescription
   -> IO TMState
-newTMStateSingleTerm tmConfig app appWin note label scrollWin trm fontDesc = do
-  tmTerm <- newTMTerm trm
+newTMStateSingleTerm tmConfig app appWin note label scrollWin trm pd fontDesc = do
+  tmTerm <- newTMTerm trm pd
   let tmNoteTab = createTMNotebookTab label scrollWin tmTerm
       tabs = singletonFL tmNoteTab
       tmNote = createTMNotebook note tabs

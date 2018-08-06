@@ -69,6 +69,7 @@ import GI.Vte
   ( CursorBlinkMode(CursorBlinkModeOn)
   , PtyFlags(PtyFlagsDefault)
   , Terminal
+  , getTerminalCurrentDirectoryUri
   , onTerminalChildExited
   , onTerminalWindowTitleChanged
   , terminalGetCurrentDirectoryUri
@@ -80,6 +81,8 @@ import GI.Vte
   , terminalSetScrollbackLines
   , terminalSpawnSync
   )
+import System.FilePath ((</>))
+import System.Directory (getSymbolicLinkTarget)
 
 import Termonad.Config (ShowScrollbar(..), TMConfig(cursorColor, scrollbackLen), lensShowScrollbar)
 import Termonad.FocusList (appendFL, deleteFL, getFLFocusItem)
@@ -98,6 +101,7 @@ import Termonad.Types
   , lensTMStateConfig
   , lensTMStateNotebook
   , newTMTerm
+  , pid
   , term
   , tmNotebook
   , tmNotebookTabs
@@ -234,13 +238,34 @@ getCursorColor tmConfig = do
   setRGBABlue rgba blue
   pure rgba
 
+-- | TODO: This should probably be implemented in an external package,
+-- since it is a generally useful utility.
+--
+-- It should also be implemented for windows and osx.
+cwdOfPid :: Int -> IO (Maybe Text)
+cwdOfPid pd = do
+#ifdef mingw32_HOST_OS
+  pure Nothing
+#else
+#ifdef darwin_HOST_OS
+  pure Nothing
+#else
+  let pidPath = "/proc" </> show pd </> "cwd"
+  eitherLinkTarget <- try $ getSymbolicLinkTarget pidPath
+  case eitherLinkTarget of
+    Left (_ :: IOException) -> pure Nothing
+    Right linkTarget -> pure $ Just $ pack linkTarget
+#endif
+#endif
+
+
 createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO TMTerm
 createTerm handleKeyPress mvarTMState = do
   scrolledWin <- createScrolledWin mvarTMState
   TMState{tmStateFontDesc, tmStateConfig, tmStateNotebook=currNote} <- readMVar mvarTMState
-  let maybeCurrFocusedTab = term . tmNotebookTabTerm <$> getFLFocusItem (tmNotebookTabs currNote)
-  maybeCurrDir <- maybe (pure Nothing) terminalGetCurrentDirectoryUri maybeCurrFocusedTab
-  print $ "in createTerm, maybeCurrFocusedTab: " <> tshow (maybe "(nothing)" (const "(just)") maybeCurrFocusedTab)
+  let maybeCurrFocusedTabPid = pid . tmNotebookTabTerm <$> getFLFocusItem (tmNotebookTabs currNote)
+  maybeCurrDir <- maybe (pure Nothing) cwdOfPid maybeCurrFocusedTabPid
+  print $ "in createTerm, maybeCurrFocusedTab: " <> tshow (maybe "(nothing)" (const "(just)") maybeCurrFocusedTabPid)
   print $ "in createTerm, maybeCurrDir: " <> tshow maybeCurrDir
   vteTerm <- terminalNew
   terminalSetFont vteTerm (Just tmStateFontDesc)
@@ -250,7 +275,7 @@ createTerm handleKeyPress mvarTMState = do
   terminalSetCursorBlinkMode vteTerm CursorBlinkModeOn
   widgetShow vteTerm
   widgetGrabFocus $ vteTerm
-  _termResVal <-
+  terminalProcPid <-
     terminalSpawnSync
       vteTerm
       [PtyFlagsDefault]
@@ -260,7 +285,8 @@ createTerm handleKeyPress mvarTMState = do
       ([SpawnFlagsDefault] :: [SpawnFlags])
       Nothing
       noCancellable
-  tmTerm <- newTMTerm vteTerm
+  putStrLn $ "term process pid: " <> tshow terminalProcPid
+  tmTerm <- newTMTerm vteTerm (fromIntegral terminalProcPid)
   containerAdd scrolledWin vteTerm
   (tabLabelBox, tabLabel, tabCloseButton) <- createNotebookTabLabel
   let notebookTab = createTMNotebookTab tabLabel scrolledWin tmTerm
