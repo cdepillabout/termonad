@@ -69,10 +69,8 @@ import GI.Vte
   ( CursorBlinkMode(CursorBlinkModeOn)
   , PtyFlags(PtyFlagsDefault)
   , Terminal
-  , getTerminalCurrentDirectoryUri
   , onTerminalChildExited
   , onTerminalWindowTitleChanged
-  , terminalGetCurrentDirectoryUri
   , terminalGetWindowTitle
   , terminalNew
   , terminalSetCursorBlinkMode
@@ -102,7 +100,6 @@ import Termonad.Types
   , lensTMStateNotebook
   , newTMTerm
   , pid
-  , term
   , tmNotebook
   , tmNotebookTabs
   , tmNotebookTabTerm
@@ -265,8 +262,6 @@ createTerm handleKeyPress mvarTMState = do
   TMState{tmStateFontDesc, tmStateConfig, tmStateNotebook=currNote} <- readMVar mvarTMState
   let maybeCurrFocusedTabPid = pid . tmNotebookTabTerm <$> getFLFocusItem (tmNotebookTabs currNote)
   maybeCurrDir <- maybe (pure Nothing) cwdOfPid maybeCurrFocusedTabPid
-  print $ "in createTerm, maybeCurrFocusedTab: " <> tshow (maybe "(nothing)" (const "(just)") maybeCurrFocusedTabPid)
-  print $ "in createTerm, maybeCurrDir: " <> tshow maybeCurrDir
   vteTerm <- terminalNew
   terminalSetFont vteTerm (Just tmStateFontDesc)
   terminalSetScrollbackLines vteTerm (fromIntegral (scrollbackLen tmStateConfig))
@@ -285,7 +280,6 @@ createTerm handleKeyPress mvarTMState = do
       ([SpawnFlagsDefault] :: [SpawnFlags])
       Nothing
       noCancellable
-  putStrLn $ "term process pid: " <> tshow terminalProcPid
   tmTerm <- newTMTerm vteTerm (fromIntegral terminalProcPid)
   containerAdd scrolledWin vteTerm
   (tabLabelBox, tabLabel, tabCloseButton) <- createNotebookTabLabel
