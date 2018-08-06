@@ -9,6 +9,7 @@ packages:
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
+    - directory-1.3.3.0
     - gi-cairo-1.0.17
     - gi-gdk-3.0.16
     - gi-gio-2.0.18
