@@ -6,7 +6,7 @@
 }:
 mkDerivation {
   pname = "termonad";
-  version = "0.1.0.0";
+  version = "0.2.0.0";
   src = builtins.filterSource (path: type:
     baseNameOf path != ".git" &&
     baseNameOf path != "result" &&
