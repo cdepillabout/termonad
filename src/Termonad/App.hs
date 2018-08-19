@@ -57,6 +57,7 @@ import GI.Gtk
   , windowClose
   , windowPresent
   , windowSetDefaultIconFromFile
+  , windowSetTitle
   , windowSetTransientFor
   )
 import qualified GI.Gtk as Gtk
@@ -325,6 +326,8 @@ setupTermonad tmConfig app win builder = do
   menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
   menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
   applicationSetMenubar app (Just menuModel)
+
+  windowSetTitle win "Termonad"
 
   void $ onWidgetDeleteEvent win $ \_ -> do
     userRequestedExit <- getUserRequestedExit mvarTMState
