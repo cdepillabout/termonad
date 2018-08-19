@@ -1,3 +1,8 @@
+
+## next
+
+* Make sure the window title is set to "Termonad".
+
 ## 0.2.0.0
 
 * Open dialog asking if you want to quit when you try to use your WM to quit.
