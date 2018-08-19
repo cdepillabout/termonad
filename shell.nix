@@ -1,14 +1,16 @@
+# This is a file that allows you to jump into an environment to be able to build termonad.
+# You can jump into this environment by running the command `nix-shell`.
+#
+# This also installs cabal, so you should be able to build termonad by running `cabal new-build`.
+#
+# In general, if you prefer to use `stack`, you probably won't use this file.
+
 { compiler ? "ghc843" }:
 
 let
-  nixpkgsTarball = builtins.fetchTarball {
-    # recent version of nixpkgs as of 2018-07-29
-    url = "https://github.com/NixOS/nixpkgs/archive/a2c6dbe370160ffea5537f64dda04489184c5ce1.tar.gz";
-    sha256 = "1x993g9343yv5wyp29i6vskdcc3rl42xipv79nwmmrj8ay2yhh3b";
-  };
-  nixpkgs = import nixpkgsTarball { };
+  nixpkgs = import .nix-helpers/nixpkgs.nix;
 in
 
-nixpkgs.lib.overrideDerivation ((import ./default.nix { inherit compiler; }).env) (old: {
-  nativeBuildInputs = old.nativeBuildInputs ++ [ nixpkgs.pkgs.haskell.packages.${compiler}.cabal-install ];
+(import ./default.nix { inherit compiler; }).env.overrideAttrs (oldAttrs: rec {
+  nativeBuildInputs = oldAttrs.nativeBuildInputs ++ [ nixpkgs.pkgs.haskell.packages.${compiler}.cabal-install ];
 })

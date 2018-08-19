@@ -1,12 +1,12 @@
+# This is the main nix file for termonad.  It will just build the termonad binary.
+# It can be built with the command `nix-build` in the main top directory.
+#
+# The termonad binary will be created at `result/bin/termonad`.
+
 { compiler ? "ghc843" }:
 
 let
-  nixpkgsTarball = builtins.fetchTarball {
-    # recent version of nixpkgs as of 2018-07-29
-    url = "https://github.com/NixOS/nixpkgs/archive/a2c6dbe370160ffea5537f64dda04489184c5ce1.tar.gz";
-    sha256 = "1x993g9343yv5wyp29i6vskdcc3rl42xipv79nwmmrj8ay2yhh3b";
-  };
-  nixpkgs = import nixpkgsTarball { };
+  nixpkgs = import ./.nix-helpers/nixpkgs.nix;
 
   set-gi-vte-version = _: {
     version = "2.91.18";
