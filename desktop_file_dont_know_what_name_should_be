@@ -1,7 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Termonad
-Icon=exampleapp
-StartupNotify=true
-# Note that @bindir@ needs to be replaced with the actual path to the app.
-Exec=@bindir@/termonad
