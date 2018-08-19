@@ -1,3 +1,5 @@
+# This is the shell file specified in the stack.yaml file.
+# This forces stack to use ghc-8.0.2 and stack-lts-9.yaml to compile termonad.
 
 let
   nixpkgsTarball = builtins.fetchTarball {
@@ -18,8 +20,6 @@ in
 
 with nixpkgs;
 
-# let R = pkgs.R.override { enableStrictBarrier = true; };
-# in
 haskell.lib.buildStackProject {
   name = "termonad";
   buildInputs = [
