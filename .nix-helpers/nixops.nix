@@ -50,11 +50,11 @@
               acpi aspell aspellDicts.en autojump bash bash-completion bc
               chromium curl dmenu emacs evince file firefoxWrapper gcc geeqie
               gimp gitAndTools.gitFull gitAndTools.hub gnumake gnupg hexchat
-              htop jq k2pdfopt ltrace manpages ncurses nix-bash-completions
-              nixops p7zip pkgconfig psmisc python3 redshift roxterm screen
-              strace tree unzip usbutils vimHugeX wget wirelesstools
-              xfce.terminal xorg.xbacklight xorg.xmodmap xscreensaver xterm
-              zlib
+              htop imagemagick jq k2pdfopt ltrace manpages ncurses
+              nix-bash-completions nixops p7zip pkgconfig psmisc python3
+              redshift roxterm screen strace tree unzip usbutils vimHugeX wget
+              wirelesstools xfce.terminal xorg.xbacklight xorg.xmodmap
+              xscreensaver xterm zlib
             ];
             termonad = import ../default.nix { };
           in [ termonad ] ++ pkgList;
