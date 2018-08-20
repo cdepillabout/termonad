@@ -1,3 +1,29 @@
+# This file can be used with `nixops` to create a virtual machine that has
+# Termonad installed.
+#
+# I use this to test out Termonad in a desktop environment with a menubar.
+#
+# On my development machine, I use XMonad as a Window Manager, so there are
+# no Window decorations for any X application.  This file creates a VM
+# with Termonad installed in Gnome 3.  This should let you see what Termonad
+# looks like when it has Window decorations, a title bar, etc.
+#
+# A virtual machine can be created based on this file with the following
+# commands:
+#
+# $ nixops create --deployment termonad-test .nix-helpers/nixops.nix
+# $ nixops deploy --deployment termonad-test
+#
+# This should open up a VirtualBox machine and start installing Gnome 3,
+# Termonad, etc.
+#
+# You should be able to login with the username "myuser" and password "foobar".
+#
+# When you are done you can destroy the machine and delete the deployment:
+#
+# $ nixops destroy --deployment termonad-test
+# $ nixops delete --deployment termonad-test
+#
 
 {
   network.description = "Gnome With Termonad";
@@ -10,6 +36,7 @@
       deployment = {
         targetEnv = "virtualbox";
         virtualbox = {
+          disks.disk1.size = 20480;
           headless = false;
           memorySize = 2024;
           vcpu = 1;
