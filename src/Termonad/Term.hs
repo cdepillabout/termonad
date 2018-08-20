@@ -184,7 +184,8 @@ relabelTabs mvarTMState = do
 relabelTab :: Notebook -> Label -> ScrolledWindow -> Terminal -> IO ()
 relabelTab notebook label scrolledWin term' = do
   pageNum <- notebookPageNum notebook scrolledWin
-  title <- terminalGetWindowTitle term'
+  maybeTitle <- terminalGetWindowTitle term'
+  let title = fromMaybe "bash" maybeTitle
   labelSetLabel label $ tshow (pageNum + 1) <> ". " <> title
 
 showScrollbarToPolicy :: ShowScrollbar -> PolicyType
