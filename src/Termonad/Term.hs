@@ -302,6 +302,7 @@ createTerm handleKeyPress mvarTMState = do
             notebookSetCurrentPage note pageIndex
       pure (newTMState, setCurrPageAction)
   setCurrPageAction
+  relabelTab (tmNotebook currNote) tabLabel scrolledWin vteTerm
   void $ onTerminalWindowTitleChanged vteTerm $ do
     TMState{tmStateNotebook} <- readMVar mvarTMState
     let notebook = tmNotebook tmStateNotebook
