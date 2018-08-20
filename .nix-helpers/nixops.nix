@@ -5,7 +5,7 @@
 #
 # On my development machine, I use XMonad as a Window Manager, so there are
 # no Window decorations for any X application.  This file creates a VM
-# with Termonad installed in Gnome 3.  This should let you see what Termonad
+# with Termonad installed in Gnome 3.  This lets you see what Termonad
 # looks like when it has Window decorations, a title bar, etc.
 #
 # A virtual machine can be created based on this file with the following
