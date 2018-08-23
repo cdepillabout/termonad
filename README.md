@@ -12,6 +12,8 @@ Termonad is a terminal emulator configurable in Haskell.  It is extremely
 customizable and provides hooks to modify the default behavior.  It can be
 thought of as the "XMonad" of terminal emulators.
 
+![image of Termonad](./img/termonad.png)
+
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
