@@ -45,7 +45,7 @@ library
                      , gi-glib
                      , gi-gtk >= 3.0.24
                      , gi-pango
-                     , gi-vte >= 2.91.18
+                     , gi-vte >= 2.91.19
                      , haskell-gi-base
                      , lens
                      , pretty-simple
