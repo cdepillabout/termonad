@@ -45,7 +45,10 @@ request.
 
 The following steps use the
 [`stack`](https://docs.haskellstack.org/en/stable/README/) build tool to build
-Termonad, but [`cabal`](https://www.haskell.org/cabal/) can be used as well.
+Termonad, but [`cabal`](https://www.haskell.org/cabal/) can be used as well. Steps for
+installing `stack` can be found on
+[this page](https://docs.haskellstack.org/en/stable/install_and_upgrade/).
+
 
 ### Arch Linux
 
@@ -54,10 +57,6 @@ First, you must install the required GTK system libraries:
 ```sh
 $ pacman -S vte3
 ```
-
-You must have `stack` to be able to build Termonad.  Steps for
-installing `stack` can be found on
-[this page](https://docs.haskellstack.org/en/stable/install_and_upgrade/).
 
 In order to install Termonad, clone this repository and run `stack install`.
 This will install the `termonad` binary to `~/.local/bin/`:
@@ -75,10 +74,6 @@ First, you must install the required GTK system libraries:
 ```sh
 $ apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev
 ```
-
-You must have `stack` to be able to build Termonad.  Steps for
-installing `stack` can be found on
-[this page](https://docs.haskellstack.org/en/stable/install_and_upgrade/).
 
 In order to install Termonad, clone this repository and run `stack install`.
 This will install the `termonad` binary to `~/.local/bin/`:
@@ -114,11 +109,11 @@ $ nix-build
 
 ### Mac OS X
 
-(*currently no instructions available.  please send PR if you get it to build.*)
+(*currently no instructions available.  please send PR if you get termonad to build.*)
 
 ### Windows
 
-(*currently no instructions available.  please send PR if you get it to build.*)
+(*currently no instructions available.  please send PR if you get termonad to build.*)
 
 ## How to use Termonad
 
