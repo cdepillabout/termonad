@@ -109,11 +109,11 @@ $ nix-build
 
 ### Mac OS X
 
-(*currently no instructions available.  please send PR if you get termonad to build.*)
+(*currently no instructions available.  please send a PR adding instructions if you get termonad to build.*)
 
 ### Windows
 
-(*currently no instructions available.  please send PR if you get termonad to build.*)
+(*currently no instructions available.  please send a PR adding instructions if you get termonad to build.*)
 
 ## How to use Termonad
 
@@ -203,14 +203,14 @@ Haskell libraries to be able to compile `~/.config/termonad/termonad.hs`.
 There are a couple solutions to this problem, listed in the sections below.
 
 (These steps are definitely confusing, and I would love to figure out a better
-way to do this.  Please submit and issue or PR if you have a good idea about
+way to do this.  Please submit an issue or PR if you have a good idea about
 how to fix this.)
 
 #### Running with `stack`
 
 If you originally compiled Termonad with `stack`, you can use `stack` to
 execute Termonad.  First, you must change to the directory with the Termonad
-source.  From there, you can run `stack exec`:
+source code.  From there, you can run `stack exec`:
 
 ```sh
 $ cd termonad/  # change to the termonad source code directory
@@ -233,8 +233,8 @@ $ stack exec --package lens --package conduit -- termonad
 The problem with this is that `stack exec` changes quite a few of your
 environment variables.  It is not recommended to actually run Termonad from
 within `stack exec`.  After you run `stack exec -- termonad` and let it
-recompile your `~/.config/termonad/termonad.hs` file, then exit Termonad.
-Rerun Termonad rerun by calling it directly.  Termonad will notice that
+recompile your `~/.config/termonad/termonad.hs` file, exit Termonad.
+Re-run Termonad by calling it directly.  Termonad will notice that
 `~/.config/termonad/termonad.hs` hasn't changed since
 `~/.cache/termonad/termonad-linux-x86_64` has been recompiled, so it will
 directly execute `~/.cache/termonad/termonad-linux-x86_64`.
