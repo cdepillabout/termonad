@@ -9,8 +9,8 @@ let
   nixpkgs = import ./.nix-helpers/nixpkgs.nix;
 
   set-gi-vte-version = _: {
-    version = "2.91.18";
-    sha256 = "0rixrkw0k2vz59y20lsd8zw54n7l069mij0n76dnmah2bjjk1r7w";
+    version = "2.91.19";
+    sha256 = "1hnhidjr7jh7i826lj6kdn264i592sfl5kwvymnpiycmcb37dd4y";
   };
 
   set-gi-gtk-version = _: {
