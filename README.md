@@ -23,7 +23,12 @@ thought of as the "XMonad" of terminal emulators.
         - [Ubuntu / Debian](#ubuntu--debian)
         - [NixOS](#nixos)
     - [How to use Termonad](#how-to-use-termonad)
+        - [Configuring Termonad](#configuring-termonad)
+        - [Compiling Local Settings](#compiling-local-settings)
+            - [Running with `stack`](#running-with-stack)
+            - [Running with `nix`](#running-with-nix)
     - [Goals](#goals)
+    - [Contributions](#contributions)
     - [Maintainers](#maintainers)
 
 <!-- markdown-toc end -->
@@ -285,9 +290,18 @@ Termonad has the following goals:
   emulator.  It should not crash for any reason.  If you experience a crash,
   please file an issue or a pull request!
 
+* good documentation
+
+  The [documentation](https://hackage.haskell.org/package/termonad) for
+  Termonad on Hackage should be good.  You shouldn't have to guess at what
+  certain data types or functions do.  If you have a hard time understanding
+  anything in the documentation, please submit an issue or PR.
+
 ## Contributions
 
-Contributions are highly appreciated.  
+Contributions are highly appreciated.  Termonad is currently missing many
+helpful configuration options and behavior hooks.  If there is something you
+would like to add, please submit an issue or PR.
 
 ## Maintainers
 
