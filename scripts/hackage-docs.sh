@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # This script should be run to generate and upload documentation for Hackage.
 # First, you should get into a nix-shell that has cabal-install available:
@@ -15,7 +15,7 @@
 set -e
 
 dir=$(mktemp -d dist-docs.XXXXXX)
-trap 'rm -r "$dir"' EXIT
+trap 'rm -rf "$dir"' EXIT
 
 cabal configure --builddir="$dir"
 cabal haddock --builddir="$dir" --for-hackage --haddock-option=--hyperlinked-source
