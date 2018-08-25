@@ -1,7 +1,8 @@
 
-## next
+## 0.2.1.0
 
 * Make sure the window title is set to "Termonad".
+* Relabel tabs when termonad is started.
 
 ## 0.2.0.0
 
