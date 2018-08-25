@@ -21,7 +21,7 @@ extra-source-files:  README.md
                    , .nix-helpers/stack-nix-shell.nix
                    , .nix-helpers/termonad.nix
                    , shell.nix
-data-files:        , img/termonad-lambda.png
+data-files:          img/termonad-lambda.png
 custom-setup
   setup-depends:     base
                    , Cabal
