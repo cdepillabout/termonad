@@ -44,7 +44,6 @@ request.
 The following steps use the
 [`stack`](https://docs.haskellstack.org/en/stable/README/) build tool to build
 Termonad, but [`cabal`](https://www.haskell.org/cabal/) can be used as well.
-If `cabal` doesn't work for you, please open an issue or send a pull request.
 
 ### Arch Linux
 
@@ -110,6 +109,14 @@ $ git clone https://github.com/cdepillabout/termonad
 $ cd termonad/
 $ nix-build
 ```
+
+### Mac OS X
+
+(*currently no instructions available.  please send PR if you get it to build.*)
+
+### Windows
+
+(*currently no instructions available.  please send PR if you get it to build.*)
 
 ## How to use Termonad
 
