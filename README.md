@@ -35,10 +35,11 @@ thought of as the "XMonad" of terminal emulators.
 
 ## Installation
 
-Termonad can be able to be installed on any system as long as the necessary GTK
-libraries are installed.  The following lists instructions for a few
-distributions.  If the given steps don't work for you, or you want to add
-instructions for an additional distribution, please send a pull request.
+Termonad can be installed on any system as long as the necessary GTK libraries
+are available.  The following are instructions for installing Termonad on a few
+different distributions and systems.  If the given steps don't work for you, or
+you want to add instructions for an additional system, please send a pull
+request.
 
 The following steps use the
 [`stack`](https://docs.haskellstack.org/en/stable/README/) build tool to build
