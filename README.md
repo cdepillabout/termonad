@@ -183,7 +183,111 @@ main = do
   defaultMain termonadConf
 ```
 
+### Compiling Local Settings
+
+If you lauch Termonad by calling `~/.local/bin/termonad`, it will try to
+compile the `~/.config/termonad/termonad.hs` file if it exists.  The problem is
+that `~/.local/bin/termonad` needs to be able to see GHC and the required
+Haskell libraries to be able to compile `~/.config/termonad/termonad.hs`.
+
+There are a couple solutions to this problem, listed in the sections below.
+
+(These steps are definitely confusing, and I would love to figure out a better
+way to do this.  Please submit and issue or PR if you have a good idea about
+how to fix this.)
+
+#### Running with `stack`
+
+If you originally compiled Termonad with `stack`, you can use `stack` to
+execute Termonad.  First, you must change to the directory with the Termonad
+source.  From there, you can run `stack exec`:
+
+```sh
+$ cd termonad/  # change to the termonad source code directory
+$ stack exec -- termonad
+```
+
+`stack` will pick up the correct GHC version and libraries from the
+`stack.yaml` and `termonad.cabal` file.  `termonad` will be run in an
+environment with GHC available.  `termonad` will use this GHC and libraries to
+compile your `~/.config/termonad/termonad.hs` file.  It if succeeds, it should
+create a `~/.cache/termonad/termonad-linux-x86_64` binary.
+
+If you need extra Haskell libraries available when compiling your
+`~/.config/termonad/termonad.hs` file, you can specify them to `stack exec`:
+
+```sh
+$ stack exec --package lens --package conduit -- termonad
+```
+
+The problem with this is that `stack exec` changes quite a few of your
+environment variables.  It is not recommended to actually run Termonad from
+within `stack exec`.  After you run `stack exec -- termonad` and let it
+recompile your `~/.config/termonad/termonad.hs` file, then exit Termonad.
+Rerun Termonad rerun by calling it directly.  Termonad will notice that
+`~/.config/termonad/termonad.hs` hasn't changed since
+`~/.cache/termonad/termonad-linux-x86_64` has been recompiled, so it will
+directly execute `~/.cache/termonad/termonad-linux-x86_64`.
+
+#### Running with `nix`
+
+If you originally compiled Termonad with `nix`, you can use `nix` to create
+an environment with GHC and specified Haskell libraries available.
+
+There is a `.nix` file available you can use to do this:
+
+[`.nix-helpers/running-termonad.nix`](./.nix-helpers/running-termonad.nix)
+
+This file will give us an environment with `termonad`, GHC, and a few Haskell
+libraries installed.  You can enter this environment using `nix-shell`:
+
+```sh
+$ cd termonad/  # change to the termonad source code directory
+$ nix-shell ./.nix-helpers/running-termonad.nix
+```
+
+From within this environment, you can run `termonad`.  It will find the
+`~/.config/termonad/termonad.hs` file and compile it, outputting the
+`.cache/termonad/termonad-linux-x86_64` binary.  Termonad will then re-exec
+this binary.
+
+The problem with this is that `nix-shell` may change your environment variables
+in ways you do not want.  I recommend running `termonad` to get it to
+recompile your `~/.config/termonad/termonad.hs` file, then exit the nix-shell environment and
+rerun Termonad by calling it directly.  Termonad will notice that
+`~/.config/termonad/termonad.hs` hasn't been changed since
+`~/.cache/termonad/termonad-linux-x86_64` has been recompiled, so it will
+directly execute `~/.cache/termonad/termonad-linux-x86_64`.
+
 ## Goals
+
+Termonad has the following goals:
+
+* fully configurable in Haskell
+
+  There are already
+  [many](https://gnometerminator.blogspot.com/p/introduction.html)
+  [good](https://www.enlightenment.org/about-terminology.md)
+  [terminal](http://software.schmorp.de/pkg/rxvt-unicode.html)
+  [emulators](https://launchpad.net/sakura).  However, there are no terminal
+  emulators fully configurable in Haskell.  Termonad fills this niche.
+
+* flexible
+
+  Most people only need a terminal emulator that lets you change the font-size,
+  cursor color, etc.  They don't need tons of configuration options.
+  Termonad should be for people that like lots of configuration options.
+  Termonad should provide many hooks to allow the user to change it's behavior.
+
+* stable
+
+  Termonad should be able to be used as everyday as your main terminal
+  emulator.  It should not crash for any reason.  If you experience a crash,
+  please file an issue or a pull request!
+
+## Contributions
+
+Contributions are highly appreciated.  
 
 ## Maintainers
 
