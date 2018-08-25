@@ -22,6 +22,8 @@ thought of as the "XMonad" of terminal emulators.
         - [Arch Linux](#arch-linux)
         - [Ubuntu / Debian](#ubuntu--debian)
         - [NixOS](#nixos)
+        - [Mac OS X](#mac-os-x)
+        - [Windows](#windows)
     - [How to use Termonad](#how-to-use-termonad)
         - [Configuring Termonad](#configuring-termonad)
         - [Compiling Local Settings](#compiling-local-settings)
