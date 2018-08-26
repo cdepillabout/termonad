@@ -25,6 +25,7 @@ thought of as the "XMonad" of terminal emulators.
         - [Mac OS X](#mac-os-x)
         - [Windows](#windows)
     - [How to use Termonad](#how-to-use-termonad)
+        - [Default Keybindings](#default-keybindings)
         - [Configuring Termonad](#configuring-termonad)
         - [Compiling Local Settings](#compiling-local-settings)
             - [Running with `stack`](#running-with-stack)
@@ -127,9 +128,11 @@ of what Termonad is like:
 $ ~/.local/bin/termonad
 ```
 
+The following section describes the default keybindings.
+
 If you would like to configure termonad with your own settings, first you will
-need to create a Haskell file called `~/.config/termonad/termonad.hs`. The
-next section gives an example configuration file.
+need to create a Haskell file called `~/.config/termonad/termonad.hs`. A following
+section gives an example configuration file.
 
 If this file exists, when the `~/.local/bin/termonad` binary launches, it will
 try to compile it. If it succeeds, it will create a separate binary file called
@@ -145,6 +148,16 @@ However, there is one difficulty with this setup. In order for the
 `~/.config/termonad/termonad.hs` file, it needs to know where GHC is, as well as
 where all your Haskell packages live. This presents some difficulties that will
 be discussed in a following section.
+
+### Default Keybindings
+
+Termonad provides the following default key bindings.
+
+| Keybinding | Action |
+|------------|--------|
+| <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>t</kbd> | Open new tab. |
+| <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>w</kbd> | Close tab. |
+| <kbd>Alt</kbd> <kbd>(number key)</kbd> | Switch to tab `number`.  For example, <kbd>Alt</kbd> <kbd>2</kbd> switches to tab 2. |
 
 ### Configuring Termonad
 
