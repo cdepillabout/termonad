@@ -5,7 +5,7 @@ import Termonad.Prelude
 
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
-import Test.FocusList (focusListTests)
+import Test.FocusList (focusListTestsIO)
 
 main :: IO ()
 main = do
@@ -14,6 +14,7 @@ main = do
 
 testsIO :: IO TestTree
 testsIO = do
+  focusListTests <- focusListTestsIO
   pure $
     testGroup
       "tests"

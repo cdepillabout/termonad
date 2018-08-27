@@ -1,43 +1,50 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Test.FocusList where
 
 import Termonad.Prelude
 
-import Control.Lens ((^.))
-import Hedgehog
-  ( Gen
-  , Property
-  , PropertyT
-  , annotate
-  , annotateShow
-  , failure
-  , forAll
-  , property
-  , success
-  )
-import Hedgehog.Gen (alphaNum, choice, int, string)
-import Hedgehog.Range (constant, linear)
-import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.QuickCheck (Arbitrary, Gen, arbitrary)
+import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hspec (Spec, testSpec)
+import Test.Validity (GenInvalid, GenUnchecked(genUnchecked, shrinkUnchecked), GenValid(genValid), Validity(validate), check, eqSpec, genValidSpec)
 
-import Termonad.FocusList
-  ( FocusList
-  , debugFL
-  , deleteFL
-  , emptyFL
-  , insertFL
-  , invariantFL
-  , isEmptyFL
-  , lensFocusListLen
-  , lookupFL
-  , removeFL
-  )
+import Termonad.FocusList (Focus, FocusList, invariantFL)
 
 import Test.FocusList.Invariants (testInvariantsInFocusList)
 
-focusListTests :: TestTree
-focusListTests = do
-  testGroup
-    "FocusList"
-    [ testProperty "invariants in FocusList" testInvariantsInFocusList
-    ]
+instance Arbitrary a => GenUnchecked (IntMap a) where
+  genUnchecked :: Gen (IntMap a)
+  genUnchecked = arbitrary
+
+  shrinkUnchecked :: IntMap a -> [IntMap a]
+  shrinkUnchecked = pure
+
+instance GenUnchecked Focus
+
+instance Arbitrary a => GenUnchecked (FocusList a)
+
+instance Validity (FocusList a) where
+  validate fl = check (invariantFL fl) "the FocusList has been constructed correctly"
+
+instance Arbitrary a => GenValid (FocusList a) where
+  genValid :: Gen (FocusList a)
+  genValid = arbitrary
+
+instance Arbitrary a => GenInvalid (FocusList a)
+
+focusListTestsIO :: IO TestTree
+focusListTestsIO = do
+  specs <- testSpec "validity tests" validitySpec
+  pure $
+    testGroup
+      "FocusList"
+      [ testProperty "invariants in FocusList" testInvariantsInFocusList
+      , specs
+      ]
+
+validitySpec :: Spec
+validitySpec = do
+  eqSpec @(FocusList String)
+  genValidSpec @(FocusList String)
