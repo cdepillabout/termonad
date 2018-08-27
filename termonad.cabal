@@ -106,6 +106,8 @@ test-suite termonad-test
   type:                exitcode-stdio-1.0
   main-is:             Test.hs
   hs-source-dirs:      test
+  other-modules:       Test.FocusList
+                     , Test.FocusList.Invariants
   build-depends:       base
                      , hedgehog
                      , lens
