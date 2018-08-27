@@ -67,6 +67,7 @@ import GI.Pango
   , fontDescriptionNew
   , fontDescriptionSetFamily
   , fontDescriptionSetSize
+  , fontDescriptionSetAbsoluteSize
   )
 import GI.Vte
   ( terminalCopyClipboard
@@ -75,7 +76,7 @@ import GI.Vte
 
 import Paths_termonad (getDataFileName)
 import Termonad.Config
-  ( FontConfig(fontFamily, fontSize)
+  ( FontConfig(fontFamily, fontSize, fontInPixels)
   , TMConfig
   , lensFontConfig
   )
@@ -152,7 +153,10 @@ createFontDesc tmConfig = do
   fontDesc <- fontDescriptionNew
   let fontConf = tmConfig ^. lensFontConfig
   fontDescriptionSetFamily fontDesc (fontFamily fontConf)
-  fontDescriptionSetSize fontDesc (fromIntegral (fontSize fontConf) * SCALE)
+  let fSize = fromIntegral (fontSize fontConf) * SCALE
+  if fontInPixels fontConf
+    then fontDescriptionSetAbsoluteSize fontDesc (fromIntegral fSize)
+    else fontDescriptionSetSize fontDesc fSize
   pure fontDesc
 
 compareScrolledWinAndTab :: ScrolledWindow -> a -> TMNotebookTab -> Bool
