@@ -77,7 +77,7 @@ import GI.Vte
 import Paths_termonad (getDataFileName)
 import Termonad.Config
   ( FontConfig(fontFamily, fontSize, fontInPixels)
-  , TMConfig
+  , TMConfig(confirmExit)
   , lensFontConfig
   )
 import Termonad.FocusList (findFL, moveFromToFL, updateFocusFL)
@@ -187,14 +187,23 @@ updateFLTabPos mvarTMState oldPos newPos =
           tmState &
             lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
 
-exitWithConfirmation :: TMState -> IO ()
-exitWithConfirmation mvarTMState = do
-  respType <- exitWithConfirmationDialog mvarTMState
-  case respType of
-    ResponseTypeYes -> do
-      setUserRequestedExit mvarTMState
-      quit mvarTMState
-    _ -> pure ()
+exit :: (ResponseType -> IO a) -> TMConfig -> TMState -> IO a
+exit handleResponse conf tmst = handleResponse =<<
+  if confirmExit conf
+    then exitWithConfirmationDialog tmst
+    else pure ResponseTypeYes
+
+quitOnResponse :: TMState -> ResponseType -> IO ()
+quitOnResponse tmst respType = case respType of
+  ResponseTypeYes -> do
+    setUserRequestedExit tmst
+    quit tmst
+  _               -> pure ()
+
+stopOtherHandlers :: ResponseType -> IO Bool
+stopOtherHandlers respType = pure $ case respType of
+  ResponseTypeYes -> False
+  _               -> True
 
 exitWithConfirmationDialog :: TMState -> IO ResponseType
 exitWithConfirmationDialog mvarTMState = do
@@ -305,7 +314,7 @@ setupTermonad tmConfig app win builder = do
 
   quitAction <- simpleActionNew "quit" Nothing
   void $ onSimpleActionActivate quitAction $ \_ ->
-    exitWithConfirmation mvarTMState
+    exit (quitOnResponse mvarTMState) tmConfig mvarTMState
   actionMapAddAction app quitAction
   applicationSetAccelsForAction app "app.quit" ["<Shift><Ctrl>Q"]
 
@@ -337,13 +346,7 @@ setupTermonad tmConfig app win builder = do
     userRequestedExit <- getUserRequestedExit mvarTMState
     case userRequestedExit of
       UserRequestedExit -> pure False
-      UserDidNotRequestExit -> do
-        respType <- exitWithConfirmationDialog mvarTMState
-        let stopOtherHandlers =
-              case respType of
-                ResponseTypeYes -> False
-                _ -> True
-        pure stopOtherHandlers
+      UserDidNotRequestExit -> exit stopOtherHandlers tmConfig mvarTMState
   void $ onWidgetDestroy win $ quit mvarTMState
 
   widgetShowAll win

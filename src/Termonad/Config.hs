@@ -41,6 +41,7 @@ data TMConfig = TMConfig
   , showScrollbar :: !ShowScrollbar
   , cursorColor :: !(Colour Double)
   , scrollbackLen :: !Integer
+  , confirmExit :: !Bool
   } deriving (Eq, Show)
 
 $(makeLensesFor
@@ -48,6 +49,7 @@ $(makeLensesFor
     , ("showScrollbar", "lensShowScrollbar")
     , ("cursorColor", "lensCursorColor")
     , ("scrollbackLen", "lensScrollbackLen")
+    , ("confirmExit", "lensConfirmExit")
     ]
     ''TMConfig
  )
@@ -59,4 +61,5 @@ defaultTMConfig =
     , showScrollbar = ShowScrollbarIfNeeded
     , cursorColor = lightgrey
     , scrollbackLen = 10000
+    , confirmExit = True
     }
