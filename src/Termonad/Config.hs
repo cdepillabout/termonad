@@ -11,11 +11,13 @@ import Data.Colour.Names -- (grey)
 data FontConfig = FontConfig
   { fontFamily :: !Text
   , fontSize :: !Int
+  , fontInPixels :: !Bool
   } deriving (Eq, Show)
 
 $(makeLensesFor
     [ ("fontFamily", "lensFontFamily")
     , ("fontSize", "lensFontSize")
+    , ("fontInPixels", "lensFontInPixels")
     ]
     ''FontConfig
  )
@@ -25,6 +27,7 @@ defaultFontConfig =
   FontConfig
     { fontFamily = "Monospace" -- or "DejaVu Sans Mono" or "Bitstream Vera Sans Mono Roman" or "Source Code Pro"
     , fontSize = 12
+    , fontInPixels = False
     }
 
 data ShowScrollbar
@@ -38,6 +41,7 @@ data TMConfig = TMConfig
   , showScrollbar :: !ShowScrollbar
   , cursorColor :: !(Colour Double)
   , scrollbackLen :: !Integer
+  , confirmExit :: !Bool
   } deriving (Eq, Show)
 
 $(makeLensesFor
@@ -45,6 +49,7 @@ $(makeLensesFor
     , ("showScrollbar", "lensShowScrollbar")
     , ("cursorColor", "lensCursorColor")
     , ("scrollbackLen", "lensScrollbackLen")
+    , ("confirmExit", "lensConfirmExit")
     ]
     ''TMConfig
  )
@@ -56,4 +61,5 @@ defaultTMConfig =
     , showScrollbar = ShowScrollbarIfNeeded
     , cursorColor = lightgrey
     , scrollbackLen = 10000
+    , confirmExit = True
     }

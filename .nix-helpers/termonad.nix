@@ -11,7 +11,8 @@ mkDerivation {
     baseNameOf path != ".git" &&
     baseNameOf path != "result" &&
     baseNameOf path != ".stack-work" &&
-    baseNameOf path != "dist") ./..;
+    baseNameOf path != "dist" &&
+    baseNameOf path != ".ghc.environment.x86_64-linux-8.4.3") ./..;
   isLibrary = true;
   isExecutable = true;
   doCheck = false;

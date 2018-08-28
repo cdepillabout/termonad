@@ -67,6 +67,7 @@ import GI.Pango
   , fontDescriptionNew
   , fontDescriptionSetFamily
   , fontDescriptionSetSize
+  , fontDescriptionSetAbsoluteSize
   )
 import GI.Vte
   ( terminalCopyClipboard
@@ -75,8 +76,8 @@ import GI.Vte
 
 import Paths_termonad (getDataFileName)
 import Termonad.Config
-  ( FontConfig(fontFamily, fontSize)
-  , TMConfig
+  ( FontConfig(fontFamily, fontSize, fontInPixels)
+  , TMConfig(confirmExit)
   , lensFontConfig
   )
 import Termonad.FocusList (findFL, moveFromToFL, updateFocusFL)
@@ -152,7 +153,10 @@ createFontDesc tmConfig = do
   fontDesc <- fontDescriptionNew
   let fontConf = tmConfig ^. lensFontConfig
   fontDescriptionSetFamily fontDesc (fontFamily fontConf)
-  fontDescriptionSetSize fontDesc (fromIntegral (fontSize fontConf) * SCALE)
+  let fSize = fromIntegral (fontSize fontConf) * SCALE
+  if fontInPixels fontConf
+    then fontDescriptionSetAbsoluteSize fontDesc (fromIntegral fSize)
+    else fontDescriptionSetSize fontDesc fSize
   pure fontDesc
 
 compareScrolledWinAndTab :: ScrolledWindow -> a -> TMNotebookTab -> Bool
@@ -183,14 +187,23 @@ updateFLTabPos mvarTMState oldPos newPos =
           tmState &
             lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
 
-exitWithConfirmation :: TMState -> IO ()
-exitWithConfirmation mvarTMState = do
-  respType <- exitWithConfirmationDialog mvarTMState
-  case respType of
-    ResponseTypeYes -> do
-      setUserRequestedExit mvarTMState
-      quit mvarTMState
-    _ -> pure ()
+exit :: (ResponseType -> IO a) -> TMConfig -> TMState -> IO a
+exit handleResponse conf tmst = handleResponse =<<
+  if confirmExit conf
+    then exitWithConfirmationDialog tmst
+    else pure ResponseTypeYes
+
+quitOnResponse :: TMState -> ResponseType -> IO ()
+quitOnResponse tmst respType = case respType of
+  ResponseTypeYes -> do
+    setUserRequestedExit tmst
+    quit tmst
+  _               -> pure ()
+
+stopOtherHandlers :: ResponseType -> IO Bool
+stopOtherHandlers respType = pure $ case respType of
+  ResponseTypeYes -> False
+  _               -> True
 
 exitWithConfirmationDialog :: TMState -> IO ResponseType
 exitWithConfirmationDialog mvarTMState = do
@@ -301,7 +314,7 @@ setupTermonad tmConfig app win builder = do
 
   quitAction <- simpleActionNew "quit" Nothing
   void $ onSimpleActionActivate quitAction $ \_ ->
-    exitWithConfirmation mvarTMState
+    exit (quitOnResponse mvarTMState) tmConfig mvarTMState
   actionMapAddAction app quitAction
   applicationSetAccelsForAction app "app.quit" ["<Shift><Ctrl>Q"]
 
@@ -333,13 +346,7 @@ setupTermonad tmConfig app win builder = do
     userRequestedExit <- getUserRequestedExit mvarTMState
     case userRequestedExit of
       UserRequestedExit -> pure False
-      UserDidNotRequestExit -> do
-        respType <- exitWithConfirmationDialog mvarTMState
-        let stopOtherHandlers =
-              case respType of
-                ResponseTypeYes -> False
-                _ -> True
-        pure stopOtherHandlers
+      UserDidNotRequestExit -> exit stopOtherHandlers tmConfig mvarTMState
   void $ onWidgetDestroy win $ quit mvarTMState
 
   widgetShowAll win
