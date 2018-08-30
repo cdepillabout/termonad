@@ -15,11 +15,12 @@ extra-source-files:  README.md
                    , CHANGELOG.md
                    , default.nix
                    , img/termonad.png
+                   , .nix-helpers/bare.nix
                    , .nix-helpers/nixops.nix
                    , .nix-helpers/nixpkgs.nix
-                   , .nix-helpers/running-termonad.nix
                    , .nix-helpers/stack-nix-shell.nix
                    , .nix-helpers/termonad.nix
+                   , .nix-helpers/termonad-with-packages.nix
                    , shell.nix
 data-files:          img/termonad-lambda.png
 custom-setup

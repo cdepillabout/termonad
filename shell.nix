@@ -11,6 +11,6 @@ let
   nixpkgs = import .nix-helpers/nixpkgs.nix;
 in
 
-(import ./default.nix { inherit compiler; }).env.overrideAttrs (oldAttrs: rec {
+(import .nix-helpers/bare.nix { inherit compiler; }).env.overrideAttrs (oldAttrs: rec {
   nativeBuildInputs = oldAttrs.nativeBuildInputs ++ [ nixpkgs.pkgs.haskell.packages.${compiler}.cabal-install ];
 })

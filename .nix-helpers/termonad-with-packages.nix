@@ -23,13 +23,16 @@
 
 let
   nixpkgs  = import ./nixpkgs.nix;
-  termonad = nixpkgs.callPackage ../. {};
-  defghcWithP = nixpkgs.haskellPackages.ghcWithPackages;
   defpackages = self: [ self.colour self.lens ];
 in
 
-{ ghcWithPackages ? defghcWithP, packages ? defpackages }:
-let env = ghcWithPackages (self: [ termonad ] ++ packages self); in
+{ packages ? defpackages, compiler ? "ghc843" }:
+
+let
+  ghcWithPackages = nixpkgs.haskell.packages."${compiler}".ghcWithPackages;
+  termonad = import ./bare.nix { inherit compiler; };
+  env = ghcWithPackages (self: [ termonad ] ++ packages self);
+in
 
 { stdenv, makeWrapper }:
 stdenv.mkDerivation {
