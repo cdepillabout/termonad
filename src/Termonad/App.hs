@@ -77,8 +77,9 @@ import GI.Vte
 import Paths_termonad (getDataFileName)
 import Termonad.Config
   ( FontConfig(fontFamily, fontSize, fontInPixels)
-  , TMConfig(confirmExit)
+  , TMConfig
   , lensFontConfig
+  , lensConfirmExit
   )
 import Termonad.FocusList (findFL, moveFromToFL, updateFocusFL)
 import Termonad.Gtk (appNew, objFromBuildUnsafe)
@@ -95,6 +96,7 @@ import Termonad.Types
   , lensTMNotebookTabTerm
   , lensTMStateApp
   , lensTMStateNotebook
+  , lensTMStateConfig
   , lensTerm
   , newEmptyTMState
   , setUserRequestedExit
@@ -187,17 +189,19 @@ updateFLTabPos mvarTMState oldPos newPos =
           tmState &
             lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
 
-exit :: (ResponseType -> IO a) -> TMConfig -> TMState -> IO a
-exit handleResponse conf tmst = handleResponse =<<
-  if confirmExit conf
-    then exitWithConfirmationDialog tmst
+exit :: (ResponseType -> IO a) -> TMState -> IO a
+exit handleResponse mvarTMState = do
+  tmState <- readMVar mvarTMState
+  let confirm = tmState ^. lensTMStateConfig ^. lensConfirmExit
+  handleResponse =<< if confirm
+    then exitWithConfirmationDialog mvarTMState
     else pure ResponseTypeYes
 
 quitOnResponse :: TMState -> ResponseType -> IO ()
-quitOnResponse tmst respType = case respType of
+quitOnResponse mvarTMState respType = case respType of
   ResponseTypeYes -> do
-    setUserRequestedExit tmst
-    quit tmst
+    setUserRequestedExit mvarTMState
+    quit mvarTMState
   _               -> pure ()
 
 stopOtherHandlers :: ResponseType -> IO Bool
@@ -314,7 +318,7 @@ setupTermonad tmConfig app win builder = do
 
   quitAction <- simpleActionNew "quit" Nothing
   void $ onSimpleActionActivate quitAction $ \_ ->
-    exit (quitOnResponse mvarTMState) tmConfig mvarTMState
+    exit (quitOnResponse mvarTMState) mvarTMState
   actionMapAddAction app quitAction
   applicationSetAccelsForAction app "app.quit" ["<Shift><Ctrl>Q"]
 
@@ -346,7 +350,7 @@ setupTermonad tmConfig app win builder = do
     userRequestedExit <- getUserRequestedExit mvarTMState
     case userRequestedExit of
       UserRequestedExit -> pure False
-      UserDidNotRequestExit -> exit stopOtherHandlers tmConfig mvarTMState
+      UserDidNotRequestExit -> exit stopOtherHandlers mvarTMState
   void $ onWidgetDestroy win $ quit mvarTMState
 
   widgetShowAll win

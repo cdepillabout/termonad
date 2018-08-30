@@ -82,7 +82,12 @@ import GI.Vte
 import System.FilePath ((</>))
 import System.Directory (getSymbolicLinkTarget)
 
-import Termonad.Config (ShowScrollbar(..), TMConfig(cursorColor, scrollbackLen), lensShowScrollbar)
+import Termonad.Config
+  ( ShowScrollbar(..)
+  , TMConfig(cursorColor, scrollbackLen)
+  , lensShowScrollbar
+  , lensConfirmExit
+  )
 import Termonad.FocusList (appendFL, deleteFL, getFLFocusItem)
 import Termonad.Types
   ( TMNotebookTab
@@ -121,7 +126,14 @@ termExitFocused mvarTMState = do
         tmState ^. lensTMStateNotebook . lensTMNotebookTabs . to getFLFocusItem
   case maybeTab of
     Nothing -> pure ()
-    Just tab -> termExitWithConfirmation tab mvarTMState
+    Just tab -> termClose tab mvarTMState
+
+termClose :: TMNotebookTab -> TMState -> IO ()
+termClose tab mvarTMState = do
+  tmState <- readMVar mvarTMState
+  let confirm = tmState ^. lensTMStateConfig ^. lensConfirmExit
+      close = if confirm then termExitWithConfirmation else termExit
+  close tab mvarTMState
 
 termExitWithConfirmation :: TMNotebookTab -> TMState -> IO ()
 termExitWithConfirmation tab mvarTMState = do
@@ -287,7 +299,7 @@ createTerm handleKeyPress mvarTMState = do
   let notebookTab = createTMNotebookTab tabLabel scrolledWin tmTerm
   void $
     onButtonClicked tabCloseButton $
-      termExitWithConfirmation notebookTab mvarTMState
+      termClose notebookTab mvarTMState
   setCurrPageAction <-
     modifyMVar mvarTMState $ \tmState -> do
       let notebook = tmStateNotebook tmState
