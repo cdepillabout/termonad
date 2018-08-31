@@ -5,8 +5,8 @@
 # to recompile its `~/.config/termonad/termonad.hs` file.
 #
 # You probably should not call `nix-build` on this file directly.  Instead, it
-# is a better idea to use the ./termonad-with-packages.nix file, or just the
-# ../default.nix file.  See the comments in those files for how they work.
+# is a better idea to use the `./termonad-with-packages.nix` file, or just the
+# `../default.nix` file.  See the comments in those files for how they work.
 
 { compiler ? "ghc843" }:
 
