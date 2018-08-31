@@ -7,10 +7,10 @@
 # Example usage in an overlay:
 #
 # > # This file at ~/.config/nixpkgs/overlays/termonad-overlay.nix
-# > self: super:
-# > let packages = hp: [ hp.colour hp.lens hp.MonadRandom ]; in
-# > { termonad = super.callPackage
-# >     (import /path/to/termonad-with-packages.nix { inherit packages; }) {};
+# > self: super: {
+# >   termonad = import /path/to/termonad-with-packages.nix {
+# >     packages = hp: [ hp.colour hp.lens hp.MonadRandom ];
+# >   };
 # > }
 #
 # Then termonad can be installed through nix's standard methods, e.g. nix-env.
@@ -19,25 +19,21 @@
 # > nixpkgs.overlays = [ (import /path/to/termonad-overlay.nix) ];
 #
 # Note that packages has a default value; you don't need to define your own.
-# To use the default, just pass in {} rather than { inherit packages; }.
+# To use the default, just pass in {} rather than { packages = ... ; }.
+
+{ packages ? (self: [ self.colour self.lens ])
+, compiler ? "ghc843" }:
 
 let
   nixpkgs  = import ./nixpkgs.nix;
-  defpackages = self: [ self.colour self.lens ];
-in
-
-{ packages ? defpackages, compiler ? "ghc843" }:
-
-let
   ghcWithPackages = nixpkgs.haskell.packages."${compiler}".ghcWithPackages;
   termonad = import ./bare.nix { inherit compiler; };
   env = ghcWithPackages (self: [ termonad ] ++ packages self);
 in
 
-{ stdenv, makeWrapper }:
-stdenv.mkDerivation {
+nixpkgs.stdenv.mkDerivation {
   name = "termonad-with-packages-${env.version}";
-  nativeBuildInputs = [ makeWrapper ];
+  nativeBuildInputs = [ nixpkgs.makeWrapper ];
   buildCommand = ''
     mkdir -p $out/bin
     makeWrapper ${env}/bin/termonad $out/bin/termonad \
