@@ -6,6 +6,5 @@
 
 { compiler ? "ghc843" }:
 
-(import <nixpkgs> {}).callPackage
-  (import .nix-helpers/termonad-with-packages.nix { inherit compiler; }) {}
+import .nix-helpers/termonad-with-packages.nix { inherit compiler; }
 
