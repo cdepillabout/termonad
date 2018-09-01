@@ -22,7 +22,7 @@
 # By default, you will be able to use the Haskell packages `lens` and `colour`
 # in your `~/.config/termonad/termonad.hs` configuration file.
 #
-# If you want to use alternative Haskell packages, you can specify it on the
+# If you want to use alternative Haskell packages, you can specify them on the
 # command line:
 #
 # $ nix-build .nix-helpers/termonad-with-packages.nix \
