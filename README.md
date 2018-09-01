@@ -21,7 +21,7 @@ thought of as the "XMonad" of terminal emulators.
     - [Installation](#installation)
         - [Arch Linux](#arch-linux)
         - [Ubuntu / Debian](#ubuntu--debian)
-        - [NixOS](#nixos)
+        - [Nix](#nix)
         - [Mac OS X](#mac-os-x)
         - [Windows](#windows)
     - [How to use Termonad](#how-to-use-termonad)
@@ -85,9 +85,11 @@ $ cd termonad/
 $ stack install
 ```
 
-### NixOS
+### Nix
 
-There are two methods to build Termonad on NixOS.
+If you have `nix` installed, you should be able to use it to build Termonad.
+This means that it will work on NixOS, or with `nix` on another distro.  There
+are two different ways to use `nix` to build Termonad:
 
 The first is using `stack`.  The following commands install `stack` for your
 user, clone this repository, and install the `termonad` binary to `~/.local/bin/`:
@@ -201,6 +203,7 @@ main = do
         defaultTMConfig
           { cursorColor = cursColor
           , fontConfig = fontConf
+          -- Make sure the scrollbar is always visible.
           , showScrollbar = ShowScrollbarAlways
           }
   defaultMain termonadConf
@@ -254,33 +257,15 @@ directly execute `~/.cache/termonad/termonad-linux-x86_64`.
 
 #### Running with `nix`
 
-If you originally compiled Termonad with `nix`, you can use `nix` to create
-an environment with GHC and specified Haskell libraries available.
+Building Termonad with `nix` (by running `nix-build` in the top
+directory) sets it up so that Termonad can see GHC.  Termonad should be able
+to compile the `~/.config/termonad/termonad.hs` file by default.
 
-There is a `.nix` file available you can use to do this:
-
-[`.nix-helpers/running-termonad.nix`](./.nix-helpers/running-termonad.nix)
-
-This file will give us an environment with `termonad`, GHC, and a few Haskell
-libraries installed.  You can enter this environment using `nix-shell`:
-
-```sh
-$ cd termonad/  # change to the termonad source code directory
-$ nix-shell ./.nix-helpers/running-termonad.nix
-```
-
-From within this environment, you can run `termonad`.  It will find the
-`~/.config/termonad/termonad.hs` file and compile it, outputting the
-`.cache/termonad/termonad-linux-x86_64` binary.  Termonad will then re-exec
-this binary.
-
-The problem with this is that `nix-shell` may change your environment variables
-in ways you do not want.  I recommend running `termonad` to get it to
-recompile your `~/.config/termonad/termonad.hs` file, then exit the nix-shell environment and
-rerun Termonad by calling it directly.  Termonad will notice that
-`~/.config/termonad/termonad.hs` hasn't been changed since
-`~/.cache/termonad/termonad-linux-x86_64` has been recompiled, so it will
-directly execute `~/.cache/termonad/termonad-linux-x86_64`.
+If you're interested in how this works, or want to change which Haskell
+packages are available from your `~/.config/termonad/termonad.hs` file, please
+see the documentation in the
+[`.nix-helpers/termonad-with-packages.nix`](./.nix-helpers/termonad-with-packages.nix)
+file.
 
 ## Goals
 
@@ -298,13 +283,13 @@ Termonad has the following goals:
 * flexible
 
   Most people only need a terminal emulator that lets you change the font-size,
-  cursor color, etc.  They don't need tons of configuration options.
-  Termonad should be for people that like lots of configuration options.
-  Termonad should provide many hooks to allow the user to change it's behavior.
+  cursor color, etc.  They don't need tons of configuration options.  Termonad
+  should be for people that like lots of configuration options.  Termonad
+  should provide many hooks to allow the user full control over its behavior.
 
 * stable
 
-  Termonad should be able to be used as everyday as your main terminal
+  Termonad should be able to be used everyday as your main terminal
   emulator.  It should not crash for any reason.  If you experience a crash,
   please file an issue or a pull request!
 
