@@ -121,7 +121,7 @@ setupScreenStyle = do
             -- , "  border-width: 200px;"
             , "  background-color: #aaaaaa;"
             -- , "  color: #ff0000;"
-            , "  min-width: 4px;"
+            -- , "  min-width: 4px;"
             , "}"
             -- , "scrollbar trough {"
             -- , "  -GtkRange-slider-width: 200px;"
