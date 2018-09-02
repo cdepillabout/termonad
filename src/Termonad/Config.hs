@@ -42,6 +42,7 @@ data TMConfig = TMConfig
   , cursorColor :: !(Colour Double)
   , scrollbackLen :: !Integer
   , confirmExit :: !Bool
+  , wordCharExceptions :: !Text
   } deriving (Eq, Show)
 
 $(makeLensesFor
@@ -50,6 +51,7 @@ $(makeLensesFor
     , ("cursorColor", "lensCursorColor")
     , ("scrollbackLen", "lensScrollbackLen")
     , ("confirmExit", "lensConfirmExit")
+    , ("wordCharExceptions", "lensWordCharExceptions")
     ]
     ''TMConfig
  )
@@ -62,4 +64,5 @@ defaultTMConfig =
     , cursorColor = lightgrey
     , scrollbackLen = 10000
     , confirmExit = True
+    , wordCharExceptions = ":./"
     }
