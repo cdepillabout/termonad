@@ -64,5 +64,5 @@ defaultTMConfig =
     , cursorColor = lightgrey
     , scrollbackLen = 10000
     , confirmExit = True
-    , wordCharExceptions = ":./"
+    , wordCharExceptions = "-#%&+,./=?@\\_~\183:"
     }
