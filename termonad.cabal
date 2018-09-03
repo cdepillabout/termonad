@@ -28,6 +28,12 @@ custom-setup
                    , Cabal
                    , cabal-doctest >=1.0.2 && <1.1
 
+-- This flag builds the example code from the README.md file.  It is only used
+-- for testing.  It should be enabled for CI.
+flag buildreadme
+  description: Build an executable from the example from the README.md file
+  default:     False
+
 library
   hs-source-dirs:      src
   exposed-modules:     Termonad
@@ -140,8 +146,7 @@ test-suite termonad-test
                      , TypeOperators
   other-extensions:    TemplateHaskell
 
-test-suite readme
-  type:           exitcode-stdio-1.0
+executable termonad-readme
   main-is:        README.lhs
   hs-source-dirs: test/readme
   build-depends:  base
@@ -149,6 +154,11 @@ test-suite readme
                   , termonad
                   , colour
   ghc-options: -pgmL markdown-unlit
+
+  if flag(buildexe)
+    buildable:       True
+  else
+    buildable:       False
 
 source-repository head
   type:     git
