@@ -140,6 +140,20 @@ test-suite termonad-test
                      , TypeOperators
   other-extensions:    TemplateHaskell
 
+test-suite readme
+  type:           exitcode-stdio-1.0
+  main-is:        README.lhs
+  hs-source-dirs: test/readme
+  build-depends:  base
+                  , markdown-unlit
+                  , termonad
+                  , colour
+  ghc-options: -pgmL markdown-unlit
+
+source-repository head
+  type:     git
+  location: https://github.com/cdepillabout/termonad/
+
 -- benchmark termonad-bench
 --   type:                exitcode-stdio-1.0
 --   main-is:             Bench.hs
