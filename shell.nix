@@ -5,14 +5,20 @@
 #  * Local haddocks for those dependencies.
 #  * Hoogle with an index generated from those haddocks.
 #  * Cabal.
+#  * ghcid.
+#  * open-haddock.
 #
 # In this environment you should be able to e.g.
-#  * Build termonad by running `cabal new-build`.
-#  * Open a repl with access to the termonad libraries by running
-#    `cabal new-repl`.
-#  * Use `ghcid` (not provided), by running `ghcid --command='cabal new-repl'`.
-#  * Open local haddocks with the open-haddock utility (not provided; see
-#    github.com/jml/open-haddock for details).
+#  * Build termonad:
+#    $ cabal new-build
+#  * Open a repl with access to the termonad libraries:
+#    $ cabal new-repl
+#  * Use `ghcid`:
+#    $ ghcid --command='cabal new-repl'
+#  * Open local haddocks for e.g. GI.Vte.Objects.Terminal:
+#    $ open-haddock GI.Vte.Objects.Terminal
+#    or for the gi-gtk package:
+#    $ open-haddock gi-gtk
 #
 # If you pass nix-shell the arguments `--arg indexTermonad true`, then hoogle
 # will also index the Termonad libraries, however this will mean the environment
@@ -24,19 +30,17 @@ let
   nixpkgs = (import .nix-helpers/nixpkgs.nix { inherit compiler; });
   hspkgs = nixpkgs.haskellPackages;
   env = hspkgs.termonad.env;
+  nbis = with hspkgs; [ cabal-install ghcid open-haddock ];
 in
 
 if indexTermonad
   then
-    env.overrideAttrs (oa: { nativeBuildInputs = oa.nativeBuildInputs ++ [
-      hspkgs.cabal-install
-      (hspkgs.ghcWithHoogle (p: [ p.termonad ]))
-    ]; })
+    env.overrideAttrs (oa: { nativeBuildInputs = oa.nativeBuildInputs ++ nbis ++
+      [ (hspkgs.ghcWithHoogle (p: [ p.termonad ])) ];
+    })
   else
     hspkgs.shellFor {
       withHoogle = true;
       packages = p: [ p.termonad ];
-      nativeBuildInputs = env.nativeBuildInputs ++ [
-        hspkgs.cabal-install
-      ];
+      nativeBuildInputs = env.nativeBuildInputs ++ nbis;
     }

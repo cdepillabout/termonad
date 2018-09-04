@@ -1,7 +1,7 @@
 # This file pins the version of nixpkgs to a known good version. The nixpkgs is
 # imported with an overlay overriding haskellPackages to generate haddocks for
-# GI dependencies, and to use the GHC, VTE and GTK versions we want.
-# It is imported from various other files.
+# GI dependencies, and to use the GHC, VTE, GTK and open-haddock versions we
+# want. It is imported from various other files.
 
 { compiler ? "ghc843" }:
 
@@ -38,8 +38,17 @@ let
         termonad = hself.callPackage ./termonad.nix {
           inherit (self.gnome3) gtk3;
         };
+        open-haddock = hsuper.open-haddock.overrideAttrs (oa: {
+          src = super.fetchFromGitHub {
+            owner = "jml";
+            repo = "open-haddock";
+            rev = "472d10d61d7b9262626171af0484a65365863fa6";
+            sha256 = "072d680j1k3n0vkzsbghhnah2p799yxrm7mhvr0nkdvr7iy04gcz";
+          };
+        });
       };
     };
   };
 
 in import nixpkgsTarball { overlays = [ haskellPackagesOL ]; }
+
