@@ -177,8 +177,8 @@ module Main where
 import Data.Colour.SRGB (Colour, sRGB24)
 import Termonad.App (defaultMain)
 import Termonad.Config
-  ( FontConfig, ShowScrollbar(ShowScrollbarAlways), cursorColor
-  , defaultFontConfig, defaultTMConfig, fontConfig, fontFamily
+  ( FontConfig, FontSize(FontSizePoints), ShowScrollbar(ShowScrollbarAlways)
+  , cursorColor, defaultFontConfig, defaultTMConfig, fontConfig, fontFamily
   , fontSize, showScrollbar
   )
 
@@ -194,7 +194,7 @@ fontConf :: FontConfig
 fontConf =
   defaultFontConfig
     { fontFamily = "DejaVu Sans Mono"
-    , fontSize = 13
+    , fontSize = FontSizePoints 13
     }
 
 main :: IO ()
