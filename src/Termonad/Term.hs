@@ -78,13 +78,14 @@ import GI.Vte
   , terminalSetFont
   , terminalSetScrollbackLines
   , terminalSpawnSync
+  , terminalSetWordCharExceptions
   )
 import System.FilePath ((</>))
 import System.Directory (getSymbolicLinkTarget)
 
 import Termonad.Config
   ( ShowScrollbar(..)
-  , TMConfig(cursorColor, scrollbackLen)
+  , TMConfig(cursorColor, scrollbackLen, wordCharExceptions)
   , lensShowScrollbar
   , lensConfirmExit
   )
@@ -277,6 +278,7 @@ createTerm handleKeyPress mvarTMState = do
   maybeCurrDir <- maybe (pure Nothing) cwdOfPid maybeCurrFocusedTabPid
   vteTerm <- terminalNew
   terminalSetFont vteTerm (Just tmStateFontDesc)
+  terminalSetWordCharExceptions vteTerm "-#%&+,./=?@\\_~\183:"
   terminalSetScrollbackLines vteTerm (fromIntegral (scrollbackLen tmStateConfig))
   cursorColor <- getCursorColor tmStateConfig
   terminalSetColorCursor vteTerm (Just cursorColor)
