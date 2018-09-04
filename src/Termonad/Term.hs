@@ -278,7 +278,7 @@ createTerm handleKeyPress mvarTMState = do
   maybeCurrDir <- maybe (pure Nothing) cwdOfPid maybeCurrFocusedTabPid
   vteTerm <- terminalNew
   terminalSetFont vteTerm (Just tmStateFontDesc)
-  terminalSetWordCharExceptions vteTerm "-#%&+,./=?@\\_~\183:"
+  terminalSetWordCharExceptions vteTerm $ wordCharExceptions tmStateConfig
   terminalSetScrollbackLines vteTerm (fromIntegral (scrollbackLen tmStateConfig))
   cursorColor <- getCursorColor tmStateConfig
   terminalSetColorCursor vteTerm (Just cursorColor)
