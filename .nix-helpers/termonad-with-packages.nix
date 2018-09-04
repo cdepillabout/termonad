@@ -97,8 +97,7 @@ with (import ./nixpkgs.nix { inherit compiler; });
 
 let
   ghcWithPackages = haskellPackages.ghcWithPackages;
-  termonad = import ./bare.nix { inherit compiler; };
-  env = ghcWithPackages (self: [ termonad ] ++ extraHaskellPackages self);
+  env = ghcWithPackages (self: [ self.termonad ] ++ extraHaskellPackages self);
 in
 
 stdenv.mkDerivation {

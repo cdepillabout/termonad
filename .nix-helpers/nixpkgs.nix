@@ -35,6 +35,9 @@ let
             (hsuper.gi-vte.override { vte = super.gnome3.vte; })
             super.gnome3.gtk;
         in doHaddock (overrideCabal g3-vte set-gi-vte-version);
+        termonad = hself.callPackage ./termonad.nix {
+          inherit (self.gnome3) gtk3;
+        };
       };
     };
   };

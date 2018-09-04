@@ -21,28 +21,22 @@
 { compiler ? "ghc843", indexTermonad ? false }:
 
 let
-
-  hspkgs =
-    (import .nix-helpers/nixpkgs.nix { inherit compiler; }).haskellPackages;
-  termonad = import .nix-helpers/bare.nix { inherit compiler; };
-
-  addNativeBIs = drv: nbis: drv.overrideAttrs (oa: {
-    nativeBuildInputs = oa.nativeBuildInputs ++ nbis ;
-  });
-
+  nixpkgs = (import .nix-helpers/nixpkgs.nix { inherit compiler; });
+  hspkgs = nixpkgs.haskellPackages;
+  env = hspkgs.termonad.env;
 in
 
 if indexTermonad
   then
-    addNativeBIs termonad.env [
+    env.overrideAttrs (oa: { nativeBuildInputs = oa.nativeBuildInputs ++ [
       hspkgs.cabal-install
-      (hspkgs.ghcWithHoogle (_: [ termonad ]))
-    ]
+      (hspkgs.ghcWithHoogle (p: [ p.termonad ]))
+    ]; })
   else
     hspkgs.shellFor {
       withHoogle = true;
-      packages = _: [ termonad ];
-      nativeBuildInputs = termonad.env.nativeBuildInputs ++ [
+      packages = p: [ p.termonad ];
+      nativeBuildInputs = env.nativeBuildInputs ++ [
         hspkgs.cabal-install
       ];
     }
