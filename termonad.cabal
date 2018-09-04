@@ -155,7 +155,7 @@ executable termonad-readme
                   , colour
   ghc-options: -pgmL markdown-unlit
 
-  if flag(buildexe)
+  if flag(buildreadme)
     buildable:       True
   else
     buildable:       False
