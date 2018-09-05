@@ -87,6 +87,7 @@ library
                      , TypeApplications
                      , TypeFamilies
                      , TypeOperators
+                     , DeriveFunctor
   other-extensions:    TemplateHaskell
   pkgconfig-depends:   gtk+-3.0
 
