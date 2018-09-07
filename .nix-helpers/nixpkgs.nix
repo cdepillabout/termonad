@@ -22,6 +22,9 @@ let
     sha256 = "14cyj1acxs39avciyzqqb1qa5dr4my8rv3mfwv1kv92wa9a5i97v";
   };
 
+  overrideTC = lib: compiler == "ghcHEAD" ||
+    lib.strings.toInt (lib.strings.removePrefix "ghc" compiler) > 822;
+
   haskellPackagesOL = self: super: with super.haskell.lib; {
     haskellPackages = super.haskell.packages.${compiler}.override {
       overrides = hself: hsuper: {
@@ -46,6 +49,16 @@ let
             sha256 = "072d680j1k3n0vkzsbghhnah2p799yxrm7mhvr0nkdvr7iy04gcz";
           };
         });
+        type-combinators =
+          if ! overrideTC super.stdenv.lib then hsuper.type-combinators else
+          hsuper.type-combinators.overrideAttrs (oa: {
+            src = super.fetchFromGitHub {
+              owner = "kylcarte";
+              repo = "type-combinators";
+              rev = "071942730b6bb34990d37e1a25236382cf0dcbc6";
+              sha256 = "09criipy1ry2ala8bmr5np14cdr6ncph8zd0ald152jcrfh0fphm";
+            };
+          });
       };
     };
   };

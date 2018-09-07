@@ -2,7 +2,7 @@
 , constraints, data-default, doctest, dyre, gi-gdk, gi-gio, gi-glib
 , gi-gtk, gi-pango, gi-vte, gtk3, haskell-gi-base, hedgehog, lens
 , pretty-simple, QuickCheck, stdenv, tasty, tasty-hedgehog
-, template-haskell, xml-conduit, xml-html-qq
+, template-haskell, type-combinators, xml-conduit, xml-html-qq
 }:
 mkDerivation {
   pname = "termonad";
@@ -19,7 +19,7 @@ mkDerivation {
   libraryHaskellDepends = [
     base classy-prelude colour constraints data-default dyre gi-gdk
     gi-gio gi-glib gi-gtk gi-pango gi-vte haskell-gi-base lens
-    pretty-simple QuickCheck xml-conduit xml-html-qq
+    pretty-simple QuickCheck type-combinators xml-conduit xml-html-qq
   ];
   libraryPkgconfigDepends = [ gtk3 ];
   executableHaskellDepends = [ base ];
