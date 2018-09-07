@@ -110,6 +110,7 @@ import Termonad.Types
   , tmNotebookTabs
   , tmNotebookTabTerm
   , tmNotebookTabTermContainer
+  , assertTMStateInvariant
   )
 
 focusTerm :: Int -> TMState -> IO ()
@@ -273,6 +274,8 @@ cwdOfPid pd = do
 createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO TMTerm
 createTerm handleKeyPress mvarTMState = do
   scrolledWin <- createScrolledWin mvarTMState
+  initTMStateNoMVar <- readMVar mvarTMState
+  assertTMStateInvariant initTMStateNoMVar
   TMState{tmStateFontDesc, tmStateConfig, tmStateNotebook=currNote} <- readMVar mvarTMState
   let maybeCurrFocusedTabPid = pid . tmNotebookTabTerm <$> getFLFocusItem (tmNotebookTabs currNote)
   maybeCurrDir <- maybe (pure Nothing) cwdOfPid maybeCurrFocusedTabPid
@@ -324,4 +327,6 @@ createTerm handleKeyPress mvarTMState = do
   void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
   void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
   void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState
+  finalTMStateNoMVar <- readMVar mvarTMState
+  assertTMStateInvariant finalTMStateNoMVar  
   pure tmTerm

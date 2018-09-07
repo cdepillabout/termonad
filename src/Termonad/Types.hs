@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Termonad.Types where
 
@@ -12,14 +13,21 @@ import GI.Gtk
   , Label
   , Notebook
   , ScrolledWindow
+  , notebookGetCurrentPage
+  , notebookGetNthPage
+  , toWidget
   )
+import GI.Gtk (ManagedPtr(..))
+import GI.Gtk (Widget(..))
 import GI.Pango (FontDescription)
 import GI.Vte (Terminal)
 import Text.Pretty.Simple (pPrint)
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
 import Termonad.Config (TMConfig)
-import Termonad.FocusList (FocusList, emptyFL, focusItemGetter, singletonFL)
+import Termonad.FocusList (FocusList, emptyFL, focusItemGetter, singletonFL, getFLFocusItem, unsafeGetFLFocusItem)
+
+import Data.Maybe (fromMaybe,isNothing,fromJust)
 
 data TMTerm = TMTerm
   { term :: !Terminal
@@ -105,6 +113,14 @@ $(makeLensesFor
 
 data UserRequestedExit = UserRequestedExit | UserDidNotRequestExit deriving (Eq, Show)
 
+-- A hack to get widgets to have an eq class
+instance Eq (ManagedPtr a) where
+    (==) ManagedPtr { managedForeignPtr = p  }
+         ManagedPtr { managedForeignPtr = p' }
+         = p == p'
+
+deriving instance Eq Widget
+
 data TMState' = TMState
   { tmStateApp :: !Application
   , tmStateAppWin :: !ApplicationWindow
@@ -112,7 +128,7 @@ data TMState' = TMState
   , tmStateFontDesc :: !FontDescription
   , tmStateConfig :: !TMConfig
   , tmStateUserReqExit :: !UserRequestedExit
-    -- ^ This signifies whether or not the user has requested that Termonad
+  -- ^ This signifies whether or not the user has requested that Termonad
     -- exit by either closing all terminals or clicking the exit button.  If so,
     -- 'tmStateUserReqExit' should have a value of 'UserRequestedExit'.  However,
     -- if the window manager requested Termonad to exit (probably through the user
@@ -196,6 +212,8 @@ createTMNotebook note tabs =
 createEmptyTMNotebook :: Notebook -> TMNotebook
 createEmptyTMNotebook notebook = createTMNotebook notebook emptyFL
 
+
+
 newTMState :: TMConfig -> Application -> ApplicationWindow -> TMNotebook -> FontDescription -> IO TMState
 newTMState tmConfig app appWin note fontDesc =
   newMVar $
@@ -242,12 +260,36 @@ traceShowMTMState :: TMState -> IO ()
 traceShowMTMState mvarTMState = do
   tmState <- readMVar mvarTMState
   print tmState
+--checks that the FocusList and the actual gtk widget focused are in agreement.
+--Most of what is happening here is just stripping down so they are the same type
+invariantTMState :: TMState' -> IO Bool
+invariantTMState tmState = do
+    let tmNote = tmNotebook $ tmStateNotebook tmState
+    index <- notebookGetCurrentPage tmNote
+    noteWidget <- notebookGetNthPage tmNote index
+    let focusList = tmNotebookTabs $ tmStateNotebook tmState
+    let scrollWinFL = fmap tmNotebookTabTermContainer $ getFLFocusItem $ focusList
+    --This bit is necessary to get past initial termCreate
+    if (isNothing scrollWinFL )
+      then return True
+      else
+          do widgetFL <- toWidget $ fromJust scrollWinFL
+             return (noteWidget == (Just widgetFL))
+
+assertTMStateInvariant :: TMState' -> IO ()
+assertTMStateInvariant tmState = do
+   assertValue <- invariantTMState tmState
+   if (assertValue == True)
+      then return ()
+      else error $ pack "FocusList and Notebook do not match!"
+          
+  
 
 pTraceShowMTMState :: TMState -> IO ()
 pTraceShowMTMState mvarTMState = do
   tmState <- readMVar mvarTMState
   pPrint tmState
-
+  
 getFocusedTermFromState :: TMState -> IO (Maybe Terminal)
 getFocusedTermFromState mvarTMState = do
   withMVar
