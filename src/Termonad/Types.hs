@@ -111,14 +111,24 @@ $(makeLensesFor
     ''TMNotebook
  )
 
-data UserRequestedExit = UserRequestedExit | UserDidNotRequestExit deriving (Eq, Show)
+data UserRequestedExit
+  = UserRequestedExit
+  | UserDidNotRequestExit
+  deriving (Eq, Show)
 
--- A hack to get widgets to have an eq class
+-- | A hack to get widgets to have an 'Eq' class.
+--
+-- TODO: This compares widgets for pointer equality.  Would it ever be possible
+-- to have two widgets that are actually the same but don't have the same
+-- pointers?
+--
+-- Is there a more GTK-ish way to compare two objects to see if they are the same?
 instance Eq (ManagedPtr a) where
     (==) ManagedPtr { managedForeignPtr = p  }
          ManagedPtr { managedForeignPtr = p' }
          = p == p'
 
+-- | See the comment on the 'Eq' instance for 'ManagedPtr'.
 deriving instance Eq Widget
 
 data TMState' = TMState
@@ -260,36 +270,75 @@ traceShowMTMState :: TMState -> IO ()
 traceShowMTMState mvarTMState = do
   tmState <- readMVar mvarTMState
   print tmState
---checks that the FocusList and the actual gtk widget focused are in agreement.
---Most of what is happening here is just stripping down so they are the same type
-invariantTMState :: TMState' -> IO Bool
-invariantTMState tmState = do
-    let tmNote = tmNotebook $ tmStateNotebook tmState
-    index <- notebookGetCurrentPage tmNote
-    noteWidget <- notebookGetNthPage tmNote index
-    let focusList = tmNotebookTabs $ tmStateNotebook tmState
-    let scrollWinFL = fmap tmNotebookTabTermContainer $ getFLFocusItem $ focusList
-    --This bit is necessary to get past initial termCreate
-    if (isNothing scrollWinFL )
-      then return True
-      else
-          do widgetFL <- toWidget $ fromJust scrollWinFL
-             return (noteWidget == (Just widgetFL))
 
-assertTMStateInvariant :: TMState' -> IO ()
-assertTMStateInvariant tmState = do
+data FocusNotSameErr
+  = FocusListFocusExistsButNoNotebookTabWidget
+  | NotebookTabWidgetDiffersFromFocusListFocus
+  | NotebookTabWidgetExistsButNoFocusListFocus
+  deriving Show
+
+data TMStateInvariantErr
+  = FocusNotSame FocusNotSameErr Int
+  deriving Show
+
+invariantTMState :: TMState -> IO [TMStateInvariantErr]
+invariantTMState mvarTMState = readMVar mvarTMState >>= invariantTMState'
+
+invariantTMState' :: TMState' -> IO [TMStateInvariantErr]
+invariantTMState' tmState =
+  runInvariants
+    [ invariantFocusSame
+    ]
+  where
+    runInvariants :: [IO (Maybe TMStateInvariantErr)] -> IO [TMStateInvariantErr]
+    runInvariants = fmap catMaybes . sequence
+
+    invariantFocusSame :: IO (Maybe TMStateInvariantErr)
+    invariantFocusSame = do
+      let tmNote = tmNotebook $ tmStateNotebook tmState
+      index32 <- notebookGetCurrentPage tmNote
+      maybeWidgetFromNote <- notebookGetNthPage tmNote index32
+      let focusList = tmNotebookTabs $ tmStateNotebook tmState
+          maybeScrollWinFromFL =
+            fmap tmNotebookTabTermContainer $ getFLFocusItem $ focusList
+          index = fromIntegral index32
+      case (maybeWidgetFromNote, maybeScrollWinFromFL) of
+        (Nothing, Nothing) -> pure Nothing
+        (Just _, Nothing) ->
+          pure $
+            Just $
+              FocusNotSame NotebookTabWidgetExistsButNoFocusListFocus index
+        (Nothing, Just _) ->
+          pure $
+            Just $
+              FocusNotSame FocusListFocusExistsButNoNotebookTabWidget index
+        (Just widgetFromNote, Just scrollWinFromFL) -> do
+          scrollWinFromFLWidget <- toWidget scrollWinFromFL
+          if widgetFromNote == scrollWinFromFLWidget
+            then pure Nothing
+            else
+              pure $
+                Just $
+                  FocusNotSame NotebookTabWidgetDiffersFromFocusListFocus index
+      -- if isNothing scrollWinFL
+      --   then return True
+      --   else do
+      --     widgetFL <- toWidget $ fromJust scrollWinFL
+      --     pure $ noteWidget == Just widgetFL
+
+assertInvariantTMState :: TMState -> IO ()
+assertInvariantTMState tmState = do
    assertValue <- invariantTMState tmState
-   if (assertValue == True)
-      then return ()
-      else error $ pack "FocusList and Notebook do not match!"
-          
-  
+   case assertValue of
+     [] -> return ()
+     (_:_) ->
+      error $ pack "FocusList and Notebook do not match!"
 
 pTraceShowMTMState :: TMState -> IO ()
 pTraceShowMTMState mvarTMState = do
   tmState <- readMVar mvarTMState
   pPrint tmState
-  
+
 getFocusedTermFromState :: TMState -> IO (Maybe Terminal)
 getFocusedTermFromState mvarTMState = do
   withMVar
