@@ -15,19 +15,15 @@ import GI.Gtk
   , ScrolledWindow
   , notebookGetCurrentPage
   , notebookGetNthPage
-  , toWidget
   )
-import GI.Gtk (ManagedPtr(..))
-import GI.Gtk (Widget(..))
 import GI.Pango (FontDescription)
 import GI.Vte (Terminal)
 import Text.Pretty.Simple (pPrint)
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
 import Termonad.Config (TMConfig)
-import Termonad.FocusList (FocusList, emptyFL, focusItemGetter, singletonFL, getFLFocusItem, unsafeGetFLFocusItem)
-
-import Data.Maybe (fromMaybe,isNothing,fromJust)
+import Termonad.FocusList (FocusList, emptyFL, focusItemGetter, singletonFL, getFLFocusItem)
+import Termonad.Gtk (widgetEq)
 
 data TMTerm = TMTerm
   { term :: !Terminal
@@ -116,21 +112,6 @@ data UserRequestedExit
   | UserDidNotRequestExit
   deriving (Eq, Show)
 
--- | A hack to get widgets to have an 'Eq' class.
---
--- TODO: This compares widgets for pointer equality.  Would it ever be possible
--- to have two widgets that are actually the same but don't have the same
--- pointers?
---
--- Is there a more GTK-ish way to compare two objects to see if they are the same?
-instance Eq (ManagedPtr a) where
-    (==) ManagedPtr { managedForeignPtr = p  }
-         ManagedPtr { managedForeignPtr = p' }
-         = p == p'
-
--- | See the comment on the 'Eq' instance for 'ManagedPtr'.
-deriving instance Eq Widget
-
 data TMState' = TMState
   { tmStateApp :: !Application
   , tmStateAppWin :: !ApplicationWindow
@@ -139,11 +120,11 @@ data TMState' = TMState
   , tmStateConfig :: !TMConfig
   , tmStateUserReqExit :: !UserRequestedExit
   -- ^ This signifies whether or not the user has requested that Termonad
-    -- exit by either closing all terminals or clicking the exit button.  If so,
-    -- 'tmStateUserReqExit' should have a value of 'UserRequestedExit'.  However,
-    -- if the window manager requested Termonad to exit (probably through the user
-    -- trying to close Termonad through their window manager), then this will be
-    -- set to 'UserDidNotRequestExit'.
+  -- exit by either closing all terminals or clicking the exit button.  If so,
+  -- 'tmStateUserReqExit' should have a value of 'UserRequestedExit'.  However,
+  -- if the window manager requested Termonad to exit (probably through the user
+  -- trying to close Termonad through their window manager), then this will be
+  -- set to 'UserDidNotRequestExit'.
   }
 
 instance Show TMState' where
@@ -301,38 +282,39 @@ invariantTMState' tmState =
       let focusList = tmNotebookTabs $ tmStateNotebook tmState
           maybeScrollWinFromFL =
             fmap tmNotebookTabTermContainer $ getFLFocusItem $ focusList
-          index = fromIntegral index32
+          idx = fromIntegral index32
       case (maybeWidgetFromNote, maybeScrollWinFromFL) of
         (Nothing, Nothing) -> pure Nothing
         (Just _, Nothing) ->
           pure $
             Just $
-              FocusNotSame NotebookTabWidgetExistsButNoFocusListFocus index
+              FocusNotSame NotebookTabWidgetExistsButNoFocusListFocus idx
         (Nothing, Just _) ->
           pure $
             Just $
-              FocusNotSame FocusListFocusExistsButNoNotebookTabWidget index
+              FocusNotSame FocusListFocusExistsButNoNotebookTabWidget idx
         (Just widgetFromNote, Just scrollWinFromFL) -> do
-          scrollWinFromFLWidget <- toWidget scrollWinFromFL
-          if widgetFromNote == scrollWinFromFLWidget
+          isEq <- widgetEq widgetFromNote scrollWinFromFL
+          if isEq
             then pure Nothing
             else
               pure $
                 Just $
-                  FocusNotSame NotebookTabWidgetDiffersFromFocusListFocus index
-      -- if isNothing scrollWinFL
-      --   then return True
-      --   else do
-      --     widgetFL <- toWidget $ fromJust scrollWinFL
-      --     pure $ noteWidget == Just widgetFL
+                  FocusNotSame NotebookTabWidgetDiffersFromFocusListFocus idx
 
 assertInvariantTMState :: TMState -> IO ()
 assertInvariantTMState tmState = do
    assertValue <- invariantTMState tmState
    case assertValue of
-     [] -> return ()
-     (_:_) ->
-      error $ pack "FocusList and Notebook do not match!"
+     [] -> pure ()
+     errs@(_:_) -> do
+       putStrLn "In assertInvariantTMState, some invariants for TMState are being violated."
+       putStrLn "\nInvariants violated:"
+       print errs
+       putStrLn "\nTMState:"
+       readMVar tmState >>= print
+       putStrLn ""
+       fail "Invariants violated for TMState"
 
 pTraceShowMTMState :: TMState -> IO ()
 pTraceShowMTMState mvarTMState = do

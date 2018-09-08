@@ -112,7 +112,7 @@ import Termonad.Types
   , tmNotebookTabs
   , tmNotebookTabTerm
   , tmNotebookTabTermContainer
-  , assertTMStateInvariant
+  , assertInvariantTMState
   )
 
 focusTerm :: Int -> TMState -> IO ()
