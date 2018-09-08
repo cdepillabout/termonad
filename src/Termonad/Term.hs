@@ -5,7 +5,7 @@ module Termonad.Term where
 import Termonad.Prelude
 
 import Control.Lens ((^.), (&), (.~), set, to)
-import Data.Colour.SRGB (RGB(RGB), toSRGB)
+import Data.Colour.SRGB (Colour, RGB(RGB), toSRGB)
 import GI.Gdk
   ( EventKey
   , RGBA
@@ -74,6 +74,7 @@ import GI.Vte
   , terminalGetWindowTitle
   , terminalNew
   , terminalSetCursorBlinkMode
+  , terminalSetColors
   , terminalSetColorCursor
   , terminalSetFont
   , terminalSetScrollbackLines
@@ -85,7 +86,8 @@ import System.Directory (getSymbolicLinkTarget)
 
 import Termonad.Config
   ( ShowScrollbar(..)
-  , TMConfig(cursorColor, scrollbackLen, wordCharExceptions)
+  , TMConfig(scrollbackLen, wordCharExceptions, colourConfig)
+  , ColourConfig(..)
   , lensShowScrollbar
   , lensConfirmExit
   )
@@ -110,7 +112,7 @@ import Termonad.Types
   , tmNotebookTabs
   , tmNotebookTabTerm
   , tmNotebookTabTermContainer
-  , assertTMStateInvariant
+  , assertInvariantTMState
   )
 
 focusTerm :: Int -> TMState -> IO ()
@@ -240,10 +242,9 @@ createNotebookTabLabel = do
   widgetShow button
   pure (box, label, button)
 
-getCursorColor :: TMConfig -> IO RGBA
-getCursorColor tmConfig = do
-  let color = cursorColor tmConfig
-      RGB red green blue = toSRGB color
+toRGBA :: Colour Double -> IO RGBA
+toRGBA colour = do
+  let RGB red green blue = toSRGB colour
   rgba <- newZeroRGBA
   setRGBARed rgba red
   setRGBAGreen rgba green
@@ -273,9 +274,8 @@ cwdOfPid pd = do
 
 createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO TMTerm
 createTerm handleKeyPress mvarTMState = do
+  assertInvariantTMState mvarTMState
   scrolledWin <- createScrolledWin mvarTMState
-  initTMStateNoMVar <- readMVar mvarTMState
-  assertTMStateInvariant initTMStateNoMVar
   TMState{tmStateFontDesc, tmStateConfig, tmStateNotebook=currNote} <- readMVar mvarTMState
   let maybeCurrFocusedTabPid = pid . tmNotebookTabTerm <$> getFLFocusItem (tmNotebookTabs currNote)
   maybeCurrDir <- maybe (pure Nothing) cwdOfPid maybeCurrFocusedTabPid
@@ -283,8 +283,13 @@ createTerm handleKeyPress mvarTMState = do
   terminalSetFont vteTerm (Just tmStateFontDesc)
   terminalSetWordCharExceptions vteTerm $ wordCharExceptions tmStateConfig
   terminalSetScrollbackLines vteTerm (fromIntegral (scrollbackLen tmStateConfig))
-  cursorColor <- getCursorColor tmStateConfig
-  terminalSetColorCursor vteTerm (Just cursorColor)
+  let colourConf = colourConfig tmStateConfig
+      mGetRGBA accessor = Just <$> toRGBA (accessor colourConf)
+  terminalSetColorCursor vteTerm =<< mGetRGBA cursorColour
+  join $ terminalSetColors vteTerm
+    <$> mGetRGBA foregroundColour
+    <*> mGetRGBA backgroundColour
+    <*> (Just <$> traverse toRGBA (palette colourConf))
   terminalSetCursorBlinkMode vteTerm CursorBlinkModeOn
   widgetShow vteTerm
   widgetGrabFocus $ vteTerm
@@ -327,6 +332,5 @@ createTerm handleKeyPress mvarTMState = do
   void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
   void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
   void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState
-  finalTMStateNoMVar <- readMVar mvarTMState
-  assertTMStateInvariant finalTMStateNoMVar  
+  assertInvariantTMState mvarTMState
   pure tmTerm

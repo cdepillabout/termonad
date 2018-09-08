@@ -15,19 +15,15 @@ import GI.Gtk
   , ScrolledWindow
   , notebookGetCurrentPage
   , notebookGetNthPage
-  , toWidget
   )
-import GI.Gtk (ManagedPtr(..))
-import GI.Gtk (Widget(..))
 import GI.Pango (FontDescription)
 import GI.Vte (Terminal)
 import Text.Pretty.Simple (pPrint)
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
 import Termonad.Config (TMConfig)
-import Termonad.FocusList (FocusList, emptyFL, focusItemGetter, singletonFL, getFLFocusItem, unsafeGetFLFocusItem)
-
-import Data.Maybe (fromMaybe,isNothing,fromJust)
+import Termonad.FocusList (FocusList, emptyFL, focusItemGetter, singletonFL, getFLFocusItem)
+import Termonad.Gtk (widgetEq)
 
 data TMTerm = TMTerm
   { term :: !Terminal
@@ -111,15 +107,10 @@ $(makeLensesFor
     ''TMNotebook
  )
 
-data UserRequestedExit = UserRequestedExit | UserDidNotRequestExit deriving (Eq, Show)
-
--- A hack to get widgets to have an eq class
-instance Eq (ManagedPtr a) where
-    (==) ManagedPtr { managedForeignPtr = p  }
-         ManagedPtr { managedForeignPtr = p' }
-         = p == p'
-
-deriving instance Eq Widget
+data UserRequestedExit
+  = UserRequestedExit
+  | UserDidNotRequestExit
+  deriving (Eq, Show)
 
 data TMState' = TMState
   { tmStateApp :: !Application
@@ -129,11 +120,11 @@ data TMState' = TMState
   , tmStateConfig :: !TMConfig
   , tmStateUserReqExit :: !UserRequestedExit
   -- ^ This signifies whether or not the user has requested that Termonad
-    -- exit by either closing all terminals or clicking the exit button.  If so,
-    -- 'tmStateUserReqExit' should have a value of 'UserRequestedExit'.  However,
-    -- if the window manager requested Termonad to exit (probably through the user
-    -- trying to close Termonad through their window manager), then this will be
-    -- set to 'UserDidNotRequestExit'.
+  -- exit by either closing all terminals or clicking the exit button.  If so,
+  -- 'tmStateUserReqExit' should have a value of 'UserRequestedExit'.  However,
+  -- if the window manager requested Termonad to exit (probably through the user
+  -- trying to close Termonad through their window manager), then this will be
+  -- set to 'UserDidNotRequestExit'.
   }
 
 instance Show TMState' where
@@ -260,36 +251,83 @@ traceShowMTMState :: TMState -> IO ()
 traceShowMTMState mvarTMState = do
   tmState <- readMVar mvarTMState
   print tmState
---checks that the FocusList and the actual gtk widget focused are in agreement.
---Most of what is happening here is just stripping down so they are the same type
-invariantTMState :: TMState' -> IO Bool
-invariantTMState tmState = do
-    let tmNote = tmNotebook $ tmStateNotebook tmState
-    index <- notebookGetCurrentPage tmNote
-    noteWidget <- notebookGetNthPage tmNote index
-    let focusList = tmNotebookTabs $ tmStateNotebook tmState
-    let scrollWinFL = fmap tmNotebookTabTermContainer $ getFLFocusItem $ focusList
-    --This bit is necessary to get past initial termCreate
-    if (isNothing scrollWinFL )
-      then return True
-      else
-          do widgetFL <- toWidget $ fromJust scrollWinFL
-             return (noteWidget == (Just widgetFL))
 
-assertTMStateInvariant :: TMState' -> IO ()
-assertTMStateInvariant tmState = do
-   assertValue <- invariantTMState tmState
-   if (assertValue == True)
-      then return ()
-      else error $ pack "FocusList and Notebook do not match!"
-          
-  
+data FocusNotSameErr
+  = FocusListFocusExistsButNoNotebookTabWidget
+  | NotebookTabWidgetDiffersFromFocusListFocus
+  | NotebookTabWidgetExistsButNoFocusListFocus
+  deriving Show
 
-pTraceShowMTMState :: TMState -> IO ()
-pTraceShowMTMState mvarTMState = do
+data TMStateInvariantErr
+  = FocusNotSame FocusNotSameErr Int
+  deriving Show
+
+-- | Gather up the invariants for 'TMState' and return them as a list.
+--
+-- If no invariants have been violated, then this function should return an
+-- empty list.
+invariantTMState :: TMState -> IO [TMStateInvariantErr]
+invariantTMState mvarTMState = readMVar mvarTMState >>= invariantTMState'
+
+invariantTMState' :: TMState' -> IO [TMStateInvariantErr]
+invariantTMState' tmState =
+  runInvariants
+    [ invariantFocusSame
+    ]
+  where
+    runInvariants :: [IO (Maybe TMStateInvariantErr)] -> IO [TMStateInvariantErr]
+    runInvariants = fmap catMaybes . sequence
+
+    invariantFocusSame :: IO (Maybe TMStateInvariantErr)
+    invariantFocusSame = do
+      let tmNote = tmNotebook $ tmStateNotebook tmState
+      index32 <- notebookGetCurrentPage tmNote
+      maybeWidgetFromNote <- notebookGetNthPage tmNote index32
+      let focusList = tmNotebookTabs $ tmStateNotebook tmState
+          maybeScrollWinFromFL =
+            fmap tmNotebookTabTermContainer $ getFLFocusItem $ focusList
+          idx = fromIntegral index32
+      case (maybeWidgetFromNote, maybeScrollWinFromFL) of
+        (Nothing, Nothing) -> pure Nothing
+        (Just _, Nothing) ->
+          pure $
+            Just $
+              FocusNotSame NotebookTabWidgetExistsButNoFocusListFocus idx
+        (Nothing, Just _) ->
+          pure $
+            Just $
+              FocusNotSame FocusListFocusExistsButNoNotebookTabWidget idx
+        (Just widgetFromNote, Just scrollWinFromFL) -> do
+          isEq <- widgetEq widgetFromNote scrollWinFromFL
+          if isEq
+            then pure Nothing
+            else
+              pure $
+                Just $
+                  FocusNotSame NotebookTabWidgetDiffersFromFocusListFocus idx
+
+-- | Check the invariants for 'TMState', and call 'fail' if we find that they
+-- have been violated.
+assertInvariantTMState :: TMState -> IO ()
+assertInvariantTMState mvarTMState = do
+  tmState <- readMVar mvarTMState
+  assertValue <- invariantTMState' tmState
+  case assertValue of
+    [] -> pure ()
+    errs@(_:_) -> do
+      putStrLn "In assertInvariantTMState, some invariants for TMState are being violated."
+      putStrLn "\nInvariants violated:"
+      print errs
+      putStrLn "\nTMState:"
+      pPrint tmState
+      putStrLn ""
+      fail "Invariants violated for TMState"
+
+pPrintTMState :: TMState -> IO ()
+pPrintTMState mvarTMState = do
   tmState <- readMVar mvarTMState
   pPrint tmState
-  
+
 getFocusedTermFromState :: TMState -> IO (Maybe Terminal)
 getFocusedTermFromState mvarTMState = do
   withMVar

@@ -15,7 +15,6 @@ extra-source-files:  README.md
                    , CHANGELOG.md
                    , default.nix
                    , img/termonad.png
-                   , .nix-helpers/bare.nix
                    , .nix-helpers/nixops.nix
                    , .nix-helpers/nixpkgs.nix
                    , .nix-helpers/stack-nix-shell.nix
@@ -87,6 +86,7 @@ library
                      , TypeApplications
                      , TypeFamilies
                      , TypeOperators
+                     , DeriveFunctor
   other-extensions:    TemplateHaskell
   pkgconfig-depends:   gtk+-3.0
 

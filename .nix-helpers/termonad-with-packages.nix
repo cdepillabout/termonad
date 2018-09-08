@@ -88,18 +88,16 @@
 # ```
 
 let
-  nixpkgs  = import ./nixpkgs.nix;
   defaultPackages = haskellPackages: [ haskellPackages.colour haskellPackages.lens ];
 in
 
 { extraHaskellPackages ? defaultPackages, compiler ? "ghc843" }:
 
-with nixpkgs;
+with (import ./nixpkgs.nix { inherit compiler; });
 
 let
-  ghcWithPackages = haskell.packages."${compiler}".ghcWithPackages;
-  termonad = import ./bare.nix { inherit compiler; };
-  env = ghcWithPackages (self: [ termonad ] ++ extraHaskellPackages self);
+  ghcWithPackages = haskellPackages.ghcWithPackages;
+  env = ghcWithPackages (self: [ self.termonad ] ++ extraHaskellPackages self);
 in
 
 stdenv.mkDerivation {
