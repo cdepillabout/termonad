@@ -262,6 +262,10 @@ data TMStateInvariantErr
   = FocusNotSame FocusNotSameErr Int
   deriving Show
 
+-- | Gather up the invariants for 'TMState' and return them as a list.
+--
+-- If no invariants have been violated, then this function should return an
+-- empty list.
 invariantTMState :: TMState -> IO [TMStateInvariantErr]
 invariantTMState mvarTMState = readMVar mvarTMState >>= invariantTMState'
 
@@ -302,22 +306,25 @@ invariantTMState' tmState =
                 Just $
                   FocusNotSame NotebookTabWidgetDiffersFromFocusListFocus idx
 
+-- | Check the invariants for 'TMState', and call 'fail' if we find that they
+-- have been violated.
 assertInvariantTMState :: TMState -> IO ()
-assertInvariantTMState tmState = do
-   assertValue <- invariantTMState tmState
-   case assertValue of
-     [] -> pure ()
-     errs@(_:_) -> do
-       putStrLn "In assertInvariantTMState, some invariants for TMState are being violated."
-       putStrLn "\nInvariants violated:"
-       print errs
-       putStrLn "\nTMState:"
-       readMVar tmState >>= print
-       putStrLn ""
-       fail "Invariants violated for TMState"
+assertInvariantTMState mvarTMState = do
+  tmState <- readMVar mvarTMState
+  assertValue <- invariantTMState' tmState
+  case assertValue of
+    [] -> pure ()
+    errs@(_:_) -> do
+      putStrLn "In assertInvariantTMState, some invariants for TMState are being violated."
+      putStrLn "\nInvariants violated:"
+      print errs
+      putStrLn "\nTMState:"
+      pPrint tmState
+      putStrLn ""
+      fail "Invariants violated for TMState"
 
-pTraceShowMTMState :: TMState -> IO ()
-pTraceShowMTMState mvarTMState = do
+pPrintTMState :: TMState -> IO ()
+pPrintTMState mvarTMState = do
   tmState <- readMVar mvarTMState
   pPrint tmState
 
