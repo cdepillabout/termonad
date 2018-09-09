@@ -13,16 +13,20 @@ import GI.Gtk
   , Label
   , Notebook
   , ScrolledWindow
+  , IsWidget
+  , Widget
   , notebookGetCurrentPage
   , notebookGetNthPage
+  , notebookGetNPages
   )
 import GI.Pango (FontDescription)
 import GI.Vte (Terminal)
 import Text.Pretty.Simple (pPrint)
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
+import Data.Maybe(fromJust)
 
 import Termonad.Config (TMConfig)
-import Termonad.FocusList (FocusList, emptyFL, focusItemGetter, singletonFL, getFLFocusItem)
+import Termonad.FocusList (FocusList, emptyFL, focusItemGetter, singletonFL, getFLFocusItem, focusListLen, toListFL)
 import Termonad.Gtk (widgetEq)
 
 data TMTerm = TMTerm
@@ -203,8 +207,16 @@ createTMNotebook note tabs =
 createEmptyTMNotebook :: Notebook -> TMNotebook
 createEmptyTMNotebook notebook = createTMNotebook notebook emptyFL
 
-
-
+notebookToList :: Notebook -> IO [Widget]
+notebookToList notebook = 
+  let foldHelper :: Int32 -> [Widget] -> IO [Widget]
+      foldHelper index32 acc = do
+        notePage <- notebookGetNthPage notebook index32
+        case notePage of
+          Nothing -> pure acc
+          _  -> foldHelper (index32 + 1) (acc ++ [fromJust notePage]) 
+  in            
+    foldHelper 0 []
 newTMState :: TMConfig -> Application -> ApplicationWindow -> TMNotebook -> FontDescription -> IO TMState
 newTMState tmConfig app appWin note fontDesc =
   newMVar $
@@ -258,26 +270,35 @@ data FocusNotSameErr
   | NotebookTabWidgetExistsButNoFocusListFocus
   deriving Show
 
+data TabsDoNotMatch =
+  TabLengthsDifferent Int Int -- ^ The first 'Int' is the number of tabs in the actual GTK 'Notebook'.  The second 'Int' is the number of tabs in the 'FocusList'.
+  |
+  TabAtIndexDifferent Int -- ^ The tab at index 'Int' is different between the actual GTK 'Notebook' and the 'FocusList'.
+  deriving Show
+
 data TMStateInvariantErr
   = FocusNotSame FocusNotSameErr Int
+  | TabsDoNotMatch TabsDoNotMatch
   deriving Show
+
 
 -- | Gather up the invariants for 'TMState' and return them as a list.
 --
 -- If no invariants have been violated, then this function should return an
 -- empty list.
-invariantTMState :: TMState -> IO [TMStateInvariantErr]
-invariantTMState mvarTMState = readMVar mvarTMState >>= invariantTMState'
+
 
 invariantTMState' :: TMState' -> IO [TMStateInvariantErr]
 invariantTMState' tmState =
   runInvariants
-    [ invariantFocusSame
+    [   invariantFocusSame
+      , invariantTMTabLength
+      , invariantTabsAllMatch
     ]
   where
     runInvariants :: [IO (Maybe TMStateInvariantErr)] -> IO [TMStateInvariantErr]
-    runInvariants = fmap catMaybes . sequence
-
+    runInvariants = fmap catMaybes . sequence        
+      
     invariantFocusSame :: IO (Maybe TMStateInvariantErr)
     invariantFocusSame = do
       let tmNote = tmNotebook $ tmStateNotebook tmState
@@ -306,6 +327,42 @@ invariantTMState' tmState =
                 Just $
                   FocusNotSame NotebookTabWidgetDiffersFromFocusListFocus idx
 
+    invariantTMTabLength :: IO (Maybe TMStateInvariantErr)
+    invariantTMTabLength = do
+      let tmNote = tmNotebook $ tmStateNotebook tmState
+      noteLength32 <- notebookGetNPages tmNote
+      let noteLength = fromIntegral noteLength32
+          focusListLength = focusListLen $ tmNotebookTabs $ tmStateNotebook tmState
+          lengthEqual = focusListLength == noteLength
+      case lengthEqual of
+        True  -> pure Nothing
+        False -> pure $
+                  Just $
+                   TabsDoNotMatch $
+                    TabLengthsDifferent noteLength focusListLength
+
+    invariantTabsAllMatch :: IO (Maybe TMStateInvariantErr)
+    invariantTabsAllMatch = do
+      --Turns a FocusList and Notebook into two lists of widgets and compares each widget for equality
+      let tmNote = tmNotebook $ tmStateNotebook tmState
+          focusList = tmNotebookTabs $ tmStateNotebook tmState
+          flList = fmap tmNotebookTabTermContainer $ toListFL focusList
+      noteList <- notebookToList tmNote
+      tabsMatch noteList flList 0
+      where
+        tabsMatch :: (IsWidget a, IsWidget b) => [a] -> [b] -> Int -> IO (Maybe TMStateInvariantErr)        
+        tabsMatch [] [] _ = pure Nothing
+        tabsMatch [] (_:_) _ = pure Nothing
+        tabsMatch (_:_) [] _ = pure Nothing
+        tabsMatch (x:xs) (y:ys) i = do
+          isEq <- widgetEq x y
+          if isEq
+          then tabsMatch xs ys (i+1)
+          else pure $
+                      Just $
+                       TabsDoNotMatch $
+                        TabAtIndexDifferent i
+
 -- | Check the invariants for 'TMState', and call 'fail' if we find that they
 -- have been violated.
 assertInvariantTMState :: TMState -> IO ()
@@ -322,6 +379,9 @@ assertInvariantTMState mvarTMState = do
       pPrint tmState
       putStrLn ""
       fail "Invariants violated for TMState"
+
+
+
 
 pPrintTMState :: TMState -> IO ()
 pPrintTMState mvarTMState = do

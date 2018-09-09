@@ -10,7 +10,6 @@ import Control.Lens
 import qualified Data.Foldable as Foldable
 import Test.QuickCheck
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
-
 -- $setup
 -- >>> :set -XFlexibleContexts
 -- >>> :set -XScopedTypeVariables
@@ -699,8 +698,16 @@ deleteFL item = go
           in
           case maybeNewFL of
             Nothing -> fl
-            Just newFL -> go newFL
+            Just newFL -> go newFL 
 
+-- turns a focuslist's IntMap into a list of the elements thereof. Returns Nothing if the list is empty.
+toListFL :: (FocusList a) -> [a]
+toListFL fl = do
+  intMapElems $ focusList fl
+
+
+intMapElems :: IntMap a -> [a]
+intMapElems = foldr (:) []
 -- | Set the 'Focus' for a 'FocusList'.
 --
 -- This is just like 'updateFocusFL', but doesn't return the new focused item.
