@@ -1,12 +1,57 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Termonad.Config where
 
-import Termonad.Prelude
+-- --< Imports >-- {{{
+
+import Termonad.Prelude hiding ((\\), index)
 
 import Control.Lens (makeLensesFor, makePrisms)
-import Data.Colour (Colour)
-import Data.Colour.SRGB (sRGB24)
+import Data.Colour (Colour, affineCombo, blend)
+import Data.Colour.Names (black, white)
+import Data.Colour.SRGB (sRGB24, sRGB)
+import Data.Type.Combinator (I(..), Uncur3(..))
+import Data.Type.Vector
+  ( VecT(..), Vec, pattern (:+), M(..), vgen_, mgen_, onTail, tail', index
+  , Matrix, onMatrix )
+import Data.Type.Product (Prod(..))
+import Data.Type.Fin (Fin(..), fin)
+import Data.Type.Fin.Indexed (IFin(..))
+import Data.Type.Nat (Nat(..))
+import Type.Class.Witness ((\\))
+import Type.Class.Known (Known(..))
+import Type.Family.Nat (N(..), N3, N6, N8, type (+))
+import Type.Family.List (Fsts3, Thds3)
+
+import qualified Data.Foldable
+
+-- }}}
+
+-- --< Orphan instances >-- {{{
+-- These should eventually be provided by type-combinators.
+
+deriving instance Functor  (Matrix ns) => Functor  (M ns)
+deriving instance Foldable (Matrix ns) => Foldable (M ns)
+
+instance Applicative (Matrix ns) => Applicative (M ns) where
+  pure = M . pure
+  M f <*> M a = M $ f <*> a
+
+instance Monad (Matrix ns) => Monad (M ns) where
+  M ma >>= f = M (ma >>= getMatrix . f)
+
+instance Known (IFin ('S n)) 'Z where
+  known = IFZ
+
+instance Known (IFin n) m => Known (IFin ('S n)) ('S m) where
+  type KnownC (IFin ('S n)) ('S m) = Known (IFin n) m
+  known = IFS known
+
+-- }}}
+
+-- --< FontConfig >-- {{{
 
 -- | The font size for the Termonad terminal.  There are two ways to set the
 -- fontsize, corresponding to the two different ways to set the font size in
@@ -64,11 +109,67 @@ $(makeLensesFor
     ''FontConfig
  )
 
+-- }}}
+
+-- --< ColourConfig >-- {{{
+
+data Palette c
+  = NoPalette
+  | BasicPalette !(Vec N8 c)
+  | ExtendedPalette !(Vec N8 c) !(Vec N8 c)
+  | ColourCubePalette !(Vec N8 c) !(Vec N8 c) !(M [N6, N6, N6] c)
+  | FullPalette !(Vec N8 c) !(Vec N8 c) !(M [N6, N6, N6] c) !(Vec N24 c)
+  deriving (Eq, Show, Functor, Foldable)
+
+type N24 = N8 + N8 + N8
+
+pattern EmptyV :: VecT 'Z f c
+pattern EmptyV = ØV
+
+paletteToList :: Palette c -> [c]
+paletteToList = Data.Foldable.toList
+
+defaultStandardColours :: (Ord b, Floating b) => Vec N8 (Colour b)
+defaultStandardColours
+   = sRGB24   0   0   0 -- 00: black
+  :+ sRGB24 192   0   0 -- 01: red
+  :+ sRGB24   0 192   0 -- 02: green
+  :+ sRGB24 192 192   0 -- 03: yellow
+  :+ sRGB24   0   0 192 -- 04: blue
+  :+ sRGB24 192   0 192 -- 05: purple
+  :+ sRGB24   0 192 192 -- 06: cyan
+  :+ sRGB24 192 192 192 -- 07: lightgrey
+  :+ EmptyV
+
+defaultLightColours :: (Ord b, Floating b) => Vec N8 (Colour b)
+defaultLightColours = (<> sRGB24 63 63 63) <$> defaultStandardColours
+
+-- | Specify a colour cube with one colour vector for its displacement and three
+--   colour vectors for its edges. Produces a uniform 6x6x6 grid bounded by
+--   and orthognal to the faces.
+cube
+  :: Fractional b => Colour b -> Vec N3 (Colour b) -> M [N6, N6, N6] (Colour b)
+cube d (I i :* I j :* I k :* ØV) = mgen_ $ \(x :< y :< z :< Ø) ->
+  affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] black
+  where coef n = fromIntegral (fin n) / 5
+
+defaultColourCube :: (Ord b, Floating b) => M [N6, N6, N6] (Colour b)
+defaultColourCube
+  = cube black (sRGB 1 0 0 :+ sRGB 0 1 0 :+ sRGB 0 0 1 :+ EmptyV)
+
+defaultGreyscale :: (Ord b, Floating b) => Vec N24 (Colour b)
+defaultGreyscale = vgen_ $ \n -> I $ blend (beta n) white black
+  where beta n = (fromIntegral (fin n) / 23) ** 2
+
+-- | NB: Currently due to issues either with VTE or the bindings generated for
+--   Haskell, background colour cannot be set independently of the palette.
+--   The @backgroundColour@ field will be ignored and the 0th colour in the
+--   palette (usually black) will be used as the background colour.
 data ColourConfig c = ColourConfig
   { cursorColour :: !c
   , foregroundColour :: !c
   , backgroundColour :: !c
-  , palette :: ![c]
+  , palette :: !(Palette c)
   } deriving (Eq, Show, Functor)
 
 $(makeLensesFor
@@ -80,36 +181,122 @@ $(makeLensesFor
     ''ColourConfig
  )
 
-defaultColourConfig :: ColourConfig (Colour Double)
+defaultColourConfig :: (Ord b, Floating b) => ColourConfig (Colour b)
 defaultColourConfig = ColourConfig
-  { cursorColour = sRGB24 192 192 192 -- lightgrey
-  , foregroundColour = sRGB24 192 192 192 -- lightgrey
-  , backgroundColour = sRGB24   0   0   0 -- black
-  , palette =
-    [ sRGB24   0   0   0 -- 00: black
-    , sRGB24 192   0   0 -- 01: red
-    , sRGB24   0 192   0 -- 02: green
-    , sRGB24 192 192   0 -- 03: yellow
-    , sRGB24   0   0 192 -- 04: blue
-    , sRGB24 192   0 192 -- 05: purple
-    , sRGB24   0 192 192 -- 06: cyan
-    , sRGB24 192 192 192 -- 07: lightgrey
-    , sRGB24  63  63  63 -- 08: grey
-    , sRGB24 255  63  63 -- 09: lightred
-    , sRGB24  63 255  63 -- 10: lightgreen
-    , sRGB24 255 255  63 -- 11: lightyellow
-    , sRGB24  63  63 255 -- 12: lightblue
-    , sRGB24 255  63 255 -- 13: lightpurple
-    , sRGB24  63 255 255 -- 14: lightcyan
-    , sRGB24 255 255 255 -- 15: white
-    ]
+  { cursorColour = sRGB24 192 192 192
+  , foregroundColour = sRGB24 192 192 192
+  , backgroundColour = sRGB24 0 0 0
+  , palette = FullPalette defaultStandardColours defaultLightColours
+                          defaultColourCube defaultGreyscale
   }
+
+-- }}}
+
+-- --< VecT operations >-- {{{
+-- These should be upstreamed.
+
+-- --< Misc >-- {{{
+
+onHead :: (f a -> f a) -> VecT ('S n) f a -> VecT ('S n) f a
+onHead f (a :* as) = f a :* as
+
+take' :: IFin ('S n) m -> VecT n f a -> VecT m f a
+take' = \case
+  IFS n -> onTail (take' n) \\ n
+  IFZ   -> const EmptyV
+
+drop' :: Nat m -> VecT (m + n) f a -> VecT n f a
+drop' = \case
+  S_ n -> drop' n . tail'
+  Z_   -> id
+
+asM :: (M ms a -> M ns a) -> (Matrix ms a -> Matrix ns a)
+asM f = getMatrix . f . M
+
+mIndex :: Prod Fin ns -> M ns a -> a
+mIndex = \case
+  i :< is -> mIndex is . onMatrix (index i)
+  Ø       -> getI . getMatrix
+
+deIndex :: IFin n m -> Fin n
+deIndex = \case
+  IFS n -> FS (deIndex n)
+  IFZ   -> FZ
+
+-- }}}
+
+-- --< Update/Set at index >-- {{{
+
+vUpdateAt :: Fin n -> (f a -> f a) -> VecT n f a -> VecT n f a
+vUpdateAt = \case
+  FS m -> onTail . vUpdateAt m
+  FZ   -> onHead
+
+vSetAt :: Fin n -> f a -> VecT n f a -> VecT n f a
+vSetAt n = vUpdateAt n . const
+
+vSetAt' :: Fin n -> a -> Vec n a -> Vec n a
+vSetAt' n = vSetAt n . I
+
+mUpdateAt :: Prod Fin ns -> (a -> a) -> M ns a -> M ns a
+mUpdateAt = \case
+  n :< ns -> onMatrix . vUpdateAt n . asM . mUpdateAt ns
+  Ø       -> (<$>)
+
+mSetAt :: Prod Fin ns -> a -> M ns a -> M ns a
+mSetAt ns = mUpdateAt ns . const
+
+-- }}}
+
+-- --< Update/Set over range >-- {{{
+
+data Range n l m = Range (IFin ('S n) l) (IFin ('S n) (l + m))
+  deriving (Show, Eq)
+
+instance (Known (IFin ('S n)) l, Known (IFin ('S n)) (l + m))
+  => Known (Range n l) m where
+  type KnownC (Range n l) m
+    = (Known (IFin ('S n)) l, Known (IFin ('S n)) (l + m))
+  known = Range known known
+
+updateRange :: Range n l m -> (Fin m -> f a -> f a) -> VecT n f a -> VecT n f a
+updateRange = \case
+  Range  IFZ     IFZ    -> \_ -> id
+  Range (IFS l) (IFS m) -> \f -> onTail (updateRange (Range l m) f) \\ m
+  Range  IFZ    (IFS m) -> \f -> onTail (updateRange (Range IFZ m) $ f . FS)
+                               . onHead (f FZ) \\ m
+
+setRange :: Range n l m -> VecT m f a -> VecT n f a -> VecT n f a
+setRange r nv = updateRange r (\i _ -> index i nv)
+
+updateSubmatrix
+  :: (ns ~ Fsts3 nlms, ms ~ Thds3 nlms)
+  => Prod (Uncur3 Range) nlms -> (Prod Fin ms -> a -> a) -> M ns a -> M ns a
+updateSubmatrix = \case
+  Ø              -> \f -> (f Ø <$>)
+  Uncur3 r :< rs -> \f -> onMatrix . updateRange r $ \i ->
+    asM . updateSubmatrix rs $ f . (i :<)
+
+setSubmatrix
+  :: (ns ~ Fsts3 nlms, ms ~ Thds3 nlms)
+  => Prod (Uncur3 Range) nlms -> M ms a -> M ns a -> M ns a
+setSubmatrix rs sm = updateSubmatrix rs $ \is _ -> mIndex is sm
+
+-- }}}
+
+-- }}}
+
+-- --< Scrollbar >-- {{{
 
 data ShowScrollbar
   = ShowScrollbarNever
   | ShowScrollbarAlways
   | ShowScrollbarIfNeeded
   deriving (Eq, Show)
+
+-- }}}
+
+-- --< TMConfig >-- {{{
 
 data TMConfig = TMConfig
   { fontConfig :: !FontConfig
@@ -141,3 +328,6 @@ defaultTMConfig =
     , confirmExit = True
     , wordCharExceptions = "-#%&+,./=?@\\_~\183:"
     }
+
+-- }}}
+

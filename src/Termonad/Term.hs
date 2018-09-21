@@ -76,6 +76,8 @@ import GI.Vte
   , terminalSetCursorBlinkMode
   , terminalSetColors
   , terminalSetColorCursor
+--, terminalSetColorBackground
+  , terminalSetColorForeground
   , terminalSetFont
   , terminalSetScrollbackLines
   , terminalSpawnSync
@@ -90,6 +92,7 @@ import Termonad.Config
   , ColourConfig(..)
   , lensShowScrollbar
   , lensConfirmExit
+  , paletteToList
   )
 import Termonad.FocusList (appendFL, deleteFL, getFLFocusItem)
 import Termonad.Types
@@ -284,12 +287,12 @@ createTerm handleKeyPress mvarTMState = do
   terminalSetWordCharExceptions vteTerm $ wordCharExceptions tmStateConfig
   terminalSetScrollbackLines vteTerm (fromIntegral (scrollbackLen tmStateConfig))
   let colourConf = colourConfig tmStateConfig
-      mGetRGBA accessor = Just <$> toRGBA (accessor colourConf)
-  terminalSetColorCursor vteTerm =<< mGetRGBA cursorColour
-  join $ terminalSetColors vteTerm
-    <$> mGetRGBA foregroundColour
-    <*> mGetRGBA backgroundColour
-    <*> (Just <$> traverse toRGBA (palette colourConf))
+  terminalSetColors vteTerm Nothing Nothing . Just
+    =<< traverse toRGBA (paletteToList . palette $ colourConf)
+  -- PR#28/IS#29: Setting the background colour is broken in gi-vte or VTE.
+--terminalSetColorBackground vteTerm =<< toRGBA (backgroundColour colourConf)
+  terminalSetColorForeground vteTerm =<< toRGBA (foregroundColour colourConf)
+  terminalSetColorCursor vteTerm . Just =<< toRGBA (cursorColour colourConf)
   terminalSetCursorBlinkMode vteTerm CursorBlinkModeOn
   widgetShow vteTerm
   widgetGrabFocus $ vteTerm
