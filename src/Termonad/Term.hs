@@ -48,8 +48,10 @@ import GI.Gtk
   , noAdjustment
   , notebookAppendPage
   , notebookDetachTab
+  , notebookGetNPages
   , notebookPageNum
   , notebookSetCurrentPage
+  , notebookSetShowTabs
   , notebookSetTabReorderable
   , onButtonClicked
   , onWidgetKeyPressEvent
@@ -89,9 +91,11 @@ import System.Environment (lookupEnv)
 
 import Termonad.Config
   ( ShowScrollbar(..)
+  , ShowTabBar(..)
   , TMConfig(scrollbackLen, wordCharExceptions, colourConfig)
   , ColourConfig(..)
   , lensShowScrollbar
+  , lensShowTabBar
   , lensConfirmExit
   , paletteToList
   )
@@ -246,6 +250,13 @@ createNotebookTabLabel = do
   widgetShow button
   pure (box, label, button)
 
+setShowTabs :: TMConfig -> Notebook -> IO ()
+setShowTabs tmConfig note =
+  notebookSetShowTabs note =<< case tmConfig ^. lensShowTabBar of
+    ShowTabBarIfNeeded -> notebookGetNPages note <&> (> 1)
+    ShowTabBarAlways   -> pure True
+    ShowTabBarNever    -> pure False
+
 toRGBA :: Colour Double -> IO RGBA
 toRGBA colour = do
   let RGB red green blue = toSRGB colour
@@ -318,7 +329,7 @@ createTerm handleKeyPress mvarTMState = do
   void $
     onButtonClicked tabCloseButton $
       termClose notebookTab mvarTMState
-  setCurrPageAction <-
+  mvarReturnAction <-
     modifyMVar mvarTMState $ \tmState -> do
       let notebook = tmStateNotebook tmState
           note = tmNotebook notebook
@@ -328,10 +339,11 @@ createTerm handleKeyPress mvarTMState = do
       let newTabs = appendFL tabs notebookTab
           newTMState =
             tmState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
-          setCurrPageAction = do
+          mvarReturnAction = do
             notebookSetCurrentPage note pageIndex
-      pure (newTMState, setCurrPageAction)
-  setCurrPageAction
+            setShowTabs (tmState ^. lensTMStateConfig) note
+      pure (newTMState, mvarReturnAction)
+  mvarReturnAction
   relabelTab (tmNotebook currNote) tabLabel scrolledWin vteTerm
   void $ onTerminalWindowTitleChanged vteTerm $ do
     TMState{tmStateNotebook} <- readMVar mvarTMState

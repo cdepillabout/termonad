@@ -86,7 +86,7 @@ import Termonad.Config
 import Termonad.FocusList (findFL, moveFromToFL, updateFocusFL)
 import Termonad.Gtk (appNew, objFromBuildUnsafe)
 import Termonad.Keys (handleKeyPress)
-import Termonad.Term (createTerm, relabelTabs, termExitFocused)
+import Termonad.Term (createTerm, relabelTabs, termExitFocused, setShowTabs)
 import Termonad.Types
   ( TMNotebookTab
   , TMState
@@ -267,6 +267,7 @@ setupTermonad tmConfig app win builder = do
     when (pages == 0) $ do
       setUserRequestedExit mvarTMState
       quit mvarTMState
+    setShowTabs tmConfig note
 
   void $ onNotebookSwitchPage note $ \_ pageNum -> do
     maybeRes <- tryTakeMVar mvarTMState
