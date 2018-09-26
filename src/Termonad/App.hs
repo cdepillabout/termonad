@@ -81,6 +81,7 @@ import Termonad.Config
   , TMConfig
   , lensFontConfig
   , lensConfirmExit
+  , lensShowMenu
   )
 import Termonad.FocusList (findFL, moveFromToFL, updateFocusFL)
 import Termonad.Gtk (appNew, objFromBuildUnsafe)
@@ -342,9 +343,10 @@ setupTermonad tmConfig app win builder = do
   void $ onSimpleActionActivate aboutAction (const $ showAboutDialog app)
   actionMapAddAction app aboutAction
 
-  menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
-  menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
-  applicationSetMenubar app (Just menuModel)
+  when (tmConfig ^. lensShowMenu) $ do
+    menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
+    menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
+    applicationSetMenubar app (Just menuModel)
 
   windowSetTitle win "Termonad"
 
