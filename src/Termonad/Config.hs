@@ -305,6 +305,7 @@ data TMConfig = TMConfig
   , scrollbackLen :: !Integer
   , confirmExit :: !Bool
   , wordCharExceptions :: !Text
+  , showMenu :: !Bool
   } deriving (Eq, Show)
 
 $(makeLensesFor
@@ -314,6 +315,7 @@ $(makeLensesFor
     , ("scrollbackLen", "lensScrollbackLen")
     , ("confirmExit", "lensConfirmExit")
     , ("wordCharExceptions", "lensWordCharExceptions")
+    , ("showMenu", "lensShowMenu")
     ]
     ''TMConfig
  )
@@ -327,6 +329,7 @@ defaultTMConfig =
     , scrollbackLen = 10000
     , confirmExit = True
     , wordCharExceptions = "-#%&+,./=?@\\_~\183:"
+    , showMenu = True
     }
 
 -- }}}
