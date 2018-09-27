@@ -85,6 +85,7 @@ import GI.Vte
   )
 import System.FilePath ((</>))
 import System.Directory (getSymbolicLinkTarget)
+import System.Environment (lookupEnv)
 
 import Termonad.Config
   ( ShowScrollbar(..)
@@ -204,7 +205,7 @@ relabelTab :: Notebook -> Label -> ScrolledWindow -> Terminal -> IO ()
 relabelTab notebook label scrolledWin term' = do
   pageNum <- notebookPageNum notebook scrolledWin
   maybeTitle <- terminalGetWindowTitle term'
-  let title = fromMaybe "bash" maybeTitle
+  let title = fromMaybe "shell" maybeTitle
   labelSetLabel label $ tshow (pageNum + 1) <> ". " <> title
 
 showScrollbarToPolicy :: ShowScrollbar -> PolicyType
@@ -296,12 +297,16 @@ createTerm handleKeyPress mvarTMState = do
   terminalSetCursorBlinkMode vteTerm CursorBlinkModeOn
   widgetShow vteTerm
   widgetGrabFocus $ vteTerm
+  -- Should probably use GI.Vte.Functions.getUserShell, but contrary to its
+  -- documentation it raises an exception rather wrap in Maybe.
+  mShell <- lookupEnv "SHELL"
+  let argv = fromMaybe ["/usr/bin/env", "bash"] (pure <$> mShell)
   terminalProcPid <-
     terminalSpawnSync
       vteTerm
       [PtyFlagsDefault]
       maybeCurrDir
-      ["/usr/bin/env", "bash"]
+      argv
       Nothing
       ([SpawnFlagsDefault] :: [SpawnFlags])
       Nothing
