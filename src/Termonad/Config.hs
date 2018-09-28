@@ -296,6 +296,16 @@ data ShowScrollbar
 
 -- }}}
 
+-- --< TabBar >-- {{{
+
+data ShowTabBar
+  = ShowTabBarNever
+  | ShowTabBarAlways
+  | ShowTabBarIfNeeded
+  deriving (Eq, Show)
+
+-- }}}
+
 -- --< TMConfig >-- {{{
 
 data TMConfig = TMConfig
@@ -306,6 +316,7 @@ data TMConfig = TMConfig
   , confirmExit :: !Bool
   , wordCharExceptions :: !Text
   , showMenu :: !Bool
+  , showTabBar :: !ShowTabBar
   } deriving (Eq, Show)
 
 $(makeLensesFor
@@ -316,6 +327,7 @@ $(makeLensesFor
     , ("confirmExit", "lensConfirmExit")
     , ("wordCharExceptions", "lensWordCharExceptions")
     , ("showMenu", "lensShowMenu")
+    , ("showTabBar", "lensShowTabBar")
     ]
     ''TMConfig
  )
@@ -330,6 +342,7 @@ defaultTMConfig =
     , confirmExit = True
     , wordCharExceptions = "-#%&+,./=?@\\_~\183:"
     , showMenu = True
+    , showTabBar = ShowTabBarIfNeeded
     }
 
 -- }}}
