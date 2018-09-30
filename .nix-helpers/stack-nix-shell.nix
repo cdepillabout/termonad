@@ -15,7 +15,18 @@ let
     #url = "https://github.com/NixOS/nixpkgs/archive/4ccaa7de8eb34a0bb140f109a0e88095480118eb.tar.gz";
     #sha256 = "0szbxfrzmlmxrgkqz5wnfgmsjp82vaddgz7mhdz7jj0jhd0hza4i";
   };
-  nixpkgs = import nixpkgsTarball { };
+
+  pkgFixes = self: pkgs: {
+    gtk3 = pkgs.gtk3.overrideDerivation (oldattrs: {
+      patches = oldattrs.patches ++ [ ./patches/gdk.patch ];
+    } );
+  };
+
+  nixpkgs = import nixpkgsTarball {
+    overlays = [
+      pkgFixes
+    ];
+  };
 in
 
 with nixpkgs;
