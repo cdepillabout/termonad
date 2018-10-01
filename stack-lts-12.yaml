@@ -11,6 +11,9 @@ packages:
 extra-deps:
     - gi-vte-2.91.19
     - gi-gtk-3.0.24
+    # This is for https://github.com/cdepillabout/termonad/pull/36.
+    - git: https://github.com/kylcarte/type-combinators.git
+      commit: 071942730b6bb34990d37e1a25236382cf0dcbc6
 
 # Override default flag values for local packages and extra-deps
 flags: {}

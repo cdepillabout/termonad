@@ -49,6 +49,7 @@ let
             sha256 = "072d680j1k3n0vkzsbghhnah2p799yxrm7mhvr0nkdvr7iy04gcz";
           };
         });
+        # This is for https://github.com/cdepillabout/termonad/pull/36.
         type-combinators =
           if ! overrideTC super.stdenv.lib then hsuper.type-combinators else
           hsuper.type-combinators.overrideAttrs (oa: {
