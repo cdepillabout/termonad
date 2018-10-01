@@ -23,6 +23,9 @@ thought of as the "XMonad" of terminal emulators.
         - [Ubuntu / Debian](#ubuntu--debian)
         - [Nix](#nix)
         - [Mac OS X](#mac-os-x)
+            - [Installing with just `stack`](#installing-with-just-stack)
+            - [Installing with just `nix`](#installing-with-just-nix)
+            - [Installing with `stack` using `nix`](#installing-with-stack-using-nix)
         - [Windows](#windows)
     - [How to use Termonad](#how-to-use-termonad)
         - [Default Keybindings](#default-keybindings)
@@ -112,7 +115,59 @@ $ nix-build
 
 ### Mac OS X
 
-(*currently no instructions available.  please send a PR adding instructions if you get termonad to build.*)
+Building and installing Termonad on Mac OS X should be possible with any of the following three methods:
+
+-   Install the required system libraries (like GTK and VTE) by hand, then use
+    `stack` to build Termonad.
+
+    This is probably the easiest method.  You don't have to understand anything
+    about `nix`.  However, it is slightly annoying to have to install GTK and
+    VTE by hand.
+
+-   Use `nix` to install both the required system libraries and Termonad itself.
+
+    If you are a nix user and want an easy way to install Termonad, this
+    is the recommended method.
+
+-   Use `nix` to install install the required system libraries, and `stack` to
+    build Termonad.
+
+    If you are a nix user, but want to use `stack` to actually do development
+    on Termonad, using `stack` may be easier than using `cabal`.
+
+The following sections describe each method.
+
+#### Installing with just `stack`
+
+(*currently no instructions available.  please send a PR adding instructions if you get termonad to build using this method.*)
+
+#### Installing with just `nix`
+
+(*currently no instructions available.  please send a PR adding instructions if you get termonad to build using this method.*)
+
+#### Installing with `stack` using `nix`
+
+`stack` can be used in conjunction with `nix` to install Termonad.  `nix` will
+handle installing system dependencies (like GTK and VTE), while `stack` will
+handle compiling and installing Haskell packages.
+
+You must have `nix` [installed](https://nixos.org/nix/download.html).
+
+You will also need `stack` installed.  You can do that with the following command:
+
+```sh
+$ nix-env -i stack
+```
+
+After `stack` is installed, you will need to clone Termonad and build it:
+
+```
+$ git clone https://github.com/cdepillabout/termonad
+$ cd termonad/
+$ stack --nix install
+```
+
+This will install the `termonad` binary to `~/.local/bin/`.
 
 ### Windows
 
@@ -132,7 +187,7 @@ $ ~/.local/bin/termonad
 
 The following section describes the default keybindings.
 
-If you would like to configure termonad with your own settings, first you will
+If you would like to configure Termonad with your own settings, first you will
 need to create a Haskell file called `~/.config/termonad/termonad.hs`. A following
 section gives an example configuration file.
 
@@ -211,14 +266,14 @@ main = do
 
 ### Compiling Local Settings
 
-If you lauch Termonad by calling `~/.local/bin/termonad`, it will try to
+If you launch Termonad by calling `~/.local/bin/termonad`, it will try to
 compile the `~/.config/termonad/termonad.hs` file if it exists.  The problem is
 that `~/.local/bin/termonad` needs to be able to see GHC and the required
 Haskell libraries to be able to compile `~/.config/termonad/termonad.hs`.
 
 There are a couple solutions to this problem, listed in the sections below.
 
-(These steps are definitely confusing, and I would love to figure out a better
+(These steps are definitely confusing. I would love to figure out a better
 way to do this.  Please submit an issue or PR if you have a good idea about
 how to fix this.)
 
