@@ -17,6 +17,11 @@ let
   };
 
   pkgFixes = self: pkgs: {
+    # GTK+-3 needs some patches to be able to be compiled on Darwin. This has
+    # already been merged into the most recent nixpkgs, but since we are using
+    # an old version, the problem still exists.  This can be removed when we
+    # start using the most recent version of nixpkgs.
+    # https://github.com/cdepillabout/termonad/pull/42
     gtk3 = pkgs.gtk3.overrideDerivation (oldattrs: {
       patches = oldattrs.patches ++ [ ./patches/gdk.patch ];
     } );
