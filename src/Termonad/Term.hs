@@ -4,7 +4,7 @@ module Termonad.Term where
 
 import Termonad.Prelude
 
-import Control.Lens ((^.), (&), (.~), set, to)
+import Control.Lens ((^.), (&), (<&>), (.~), set, to)
 import Data.Colour.SRGB (Colour, RGB(RGB), toSRGB)
 import GI.Gdk
   ( EventKey
