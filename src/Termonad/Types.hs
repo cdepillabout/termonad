@@ -207,7 +207,7 @@ createEmptyTMNotebook :: Notebook -> TMNotebook
 createEmptyTMNotebook notebook = createTMNotebook notebook emptyFL
 
 notebookToList :: Notebook -> IO [Widget]
-notebookToList notebook =   
+notebookToList notebook =
   unfoldHelper 0 []
   where unfoldHelper :: Int32 -> [Widget] -> IO [Widget]
         unfoldHelper index32 acc = do
@@ -294,7 +294,7 @@ invariantTMState' tmState =
   where
     runInvariants :: [IO (Maybe TMStateInvariantErr)] -> IO [TMStateInvariantErr]
     runInvariants = fmap catMaybes . sequence
-    
+
     invariantFocusSame :: IO (Maybe TMStateInvariantErr)
     invariantFocusSame = do
       let tmNote = tmNotebook $ tmStateNotebook tmState
