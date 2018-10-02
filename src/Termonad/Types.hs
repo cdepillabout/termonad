@@ -294,7 +294,7 @@ invariantTMState' tmState =
   where
     runInvariants :: [IO (Maybe TMStateInvariantErr)] -> IO [TMStateInvariantErr]
     runInvariants = fmap catMaybes . sequence
-      
+    
     invariantFocusSame :: IO (Maybe TMStateInvariantErr)
     invariantFocusSame = do
       let tmNote = tmNotebook $ tmStateNotebook tmState
@@ -331,33 +331,27 @@ invariantTMState' tmState =
           focusListLength = focusListLen $ tmNotebookTabs $ tmStateNotebook tmState
           lengthEqual = focusListLength == noteLength
       if lengthEqual
-      then pure Nothing
-      else  pure $
+        then pure Nothing
+        else  pure $
                Just $
-                   TabsDoNotMatch $
-                    TabLengthsDifferent noteLength focusListLength
+                TabsDoNotMatch $
+                 TabLengthsDifferent noteLength focusListLength
 
     invariantTabsAllMatch :: IO (Maybe TMStateInvariantErr)
     invariantTabsAllMatch = do
-      --Turns a FocusList and Notebook into two lists of widgets and compares each widget for equality
+  --Turns a FocusList and Notebook into two lists of widgets and compares each widget for equality
       let tmNote = tmNotebook $ tmStateNotebook tmState
           focusList = tmNotebookTabs $ tmStateNotebook tmState
           flList = fmap tmNotebookTabTermContainer $ toList focusList
       noteList <- notebookToList tmNote
-      tabsMatch noteList flList 0
+      tabsMatch noteList flList
       where
-        tabsMatch :: (IsWidget a, IsWidget b) => [a] -> [b] -> Int -> IO (Maybe TMStateInvariantErr)        
-        tabsMatch [] [] _ = pure Nothing
-        tabsMatch [] (_:_) _ = pure Nothing
-        tabsMatch (_:_) [] _ = pure Nothing
-        tabsMatch (x:xs) (y:ys) i = do
-          isEq <- widgetEq x y
-          if isEq
-          then tabsMatch xs ys (i+1)
-          else pure $
-                      Just $
-                       TabsDoNotMatch $
-                        TabAtIndexDifferent i
+        tabsMatch :: (IsWidget a, IsWidget b) => [a] -> [b] -> IO (Maybe TMStateInvariantErr)
+        tabsMatch xs ys = foldr go (pure Nothing) (zip3 xs ys [0..])
+          where
+            go (x, y, i) acc = widgetEq x y >>= (\z -> case z of
+                                                    True  -> acc
+                                                    False -> pure . Just $ TabsDoNotMatch (TabAtIndexDifferent i))
 
 -- | Check the invariants for 'TMState', and call 'fail' if we find that they
 -- have been violated.
@@ -366,7 +360,7 @@ assertInvariantTMState mvarTMState = do
   tmState <- readMVar mvarTMState
   assertValue <- invariantTMState' tmState
   case assertValue of
-    [] -> pure ()
+    [] x-> pure ()
     errs@(_:_) -> do
       putStrLn "In assertInvariantTMState, some invariants for TMState are being violated."
       putStrLn "\nInvariants violated:"
