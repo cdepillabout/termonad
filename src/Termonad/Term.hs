@@ -4,12 +4,11 @@ module Termonad.Term where
 
 import Termonad.Prelude
 
-import Control.Lens ((^.), (&), (<&>), (.~), set, to)
+import Control.Lens ((^.), (&), (.~), set, to)
 import Data.Colour.SRGB (Colour, RGB(RGB), toSRGB)
 import GI.Gdk
   ( EventKey
   , RGBA
-  , castTo
   , newZeroRGBA
   , setRGBABlue
   , setRGBAGreen
@@ -23,7 +22,7 @@ import GI.GLib
   )
 import GI.Gtk
   ( Align(AlignFill)
-  , Box(Box)
+  , Box
   , Button
   , IconSize(IconSizeMenu)
   , Label
@@ -38,7 +37,6 @@ import GI.Gtk
   , buttonNewFromIconName
   , buttonSetRelief
   , containerAdd
-  , containerForeach
   , dialogAddButton
   , dialogGetContentArea
   , dialogNew
@@ -51,8 +49,6 @@ import GI.Gtk
   , notebookAppendPage
   , notebookDetachTab
   , notebookGetNPages
-  , notebookGetNthPage
-  , notebookGetTabLabel
   , notebookPageNum
   , notebookSetCurrentPage
   , notebookSetShowTabs
@@ -268,33 +264,6 @@ setShowTabs tmConfig note = do
           ShowTabBarAlways   -> True
           ShowTabBarNever    -> False
   notebookSetShowTabs note shouldShowTabs
-  -- If we show the tabs for the first time after they were hidden,
-  -- we need to go through and set all the labels to be non-focusable.
-  foldMap go ([0..(npages -1)] :: [Int32])
-  where
-    go :: Int32 -> IO ()
-    go i = do
-      print $ "making non-focusable i: " <> tshow i
-      maybeChildWidg <- notebookGetNthPage note i
-      let childWidg =
-            fromMaybe
-              (error "could not get child page even though it should exist")
-              maybeChildWidg
-      maybeTabLabelWidg <- notebookGetTabLabel note childWidg
-      let tabLabelWidg =
-            fromMaybe
-              (error "could not get tab label widget even though it should exist")
-              maybeTabLabelWidg
-      maybeBox <- castTo Box tabLabelWidg
-      let box =
-            fromMaybe
-              (error "tab label widget is not actually a box even though it should be")
-              maybeBox
-      widgetSetCanFocus box False
-      widgetSetFocusOnClick box False
-      containerForeach box $ \widg -> do
-        widgetSetCanFocus widg False
-        widgetSetFocusOnClick widg False
 
 toRGBA :: Colour Double -> IO RGBA
 toRGBA colour = do
@@ -347,7 +316,6 @@ createTerm handleKeyPress mvarTMState = do
   terminalSetColorCursor vteTerm . Just =<< toRGBA (cursorColour colourConf)
   terminalSetCursorBlinkMode vteTerm CursorBlinkModeOn
   widgetShow vteTerm
-  widgetGrabFocus vteTerm
   -- Should probably use GI.Vte.Functions.getUserShell, but contrary to its
   -- documentation it raises an exception rather wrap in Maybe.
   mShell <- lookupEnv "SHELL"
