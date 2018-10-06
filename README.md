@@ -376,4 +376,5 @@ would like to add, please submit an issue or PR.
 
 ## Maintainers
 
-- [Dennis Gosnell](https://github.com/cdepillabout)
+- [cdepillabout](https://github.com/cdepillabout)
+- [LSLeary](https://github.com/LSLeary)
