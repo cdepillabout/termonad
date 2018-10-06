@@ -269,16 +269,18 @@ data FocusNotSameErr
   | NotebookTabWidgetExistsButNoFocusListFocus
   deriving Show
 
--- ^ The first 'Int' is the number of tabs in the actual GTK 'Notebook'.  The second 'Int' is the number of tabs in the 'FocusList'.
-data TabsDoNotMatch = TabLengthsDifferent Int Int
-                    | TabAtIndexDifferent Int -- ^ The tab at index 'Int' is different between the actual GTK 'Notebook' and the 'FocusList'.
-                    deriving Show
+data TabsDoNotMatch
+  = TabLengthsDifferent Int Int -- ^ The first 'Int' is the number of tabs in the
+                                -- actual GTK 'Notebook'.  The second 'Int' is
+                                -- the number of tabs in the 'FocusList'.
+  | TabAtIndexDifferent Int     -- ^ The tab at index 'Int' is different between
+                                -- the actual GTK 'Notebook' and the 'FocusList'.
+  deriving (Show)
 
 data TMStateInvariantErr
   = FocusNotSame FocusNotSameErr Int
   | TabsDoNotMatch TabsDoNotMatch
   deriving Show
-
 
 -- | Gather up the invariants for 'TMState' and return them as a list.
 --
@@ -337,21 +339,29 @@ invariantTMState' tmState =
                 TabsDoNotMatch $
                  TabLengthsDifferent noteLength focusListLength
 
+    -- Turns a FocusList and Notebook into two lists of widgets and compares each widget for equality
     invariantTabsAllMatch :: IO (Maybe TMStateInvariantErr)
     invariantTabsAllMatch = do
-  --Turns a FocusList and Notebook into two lists of widgets and compares each widget for equality
       let tmNote = tmNotebook $ tmStateNotebook tmState
           focusList = tmNotebookTabs $ tmStateNotebook tmState
           flList = fmap tmNotebookTabTermContainer $ toList focusList
       noteList <- notebookToList tmNote
       tabsMatch noteList flList
       where
-        tabsMatch :: (IsWidget a, IsWidget b) => [a] -> [b] -> IO (Maybe TMStateInvariantErr)
+        tabsMatch
+          :: forall a b
+           . (IsWidget a, IsWidget b)
+          => [a]
+          -> [b]
+          -> IO (Maybe TMStateInvariantErr)
         tabsMatch xs ys = foldr go (pure Nothing) (zip3 xs ys [0..])
           where
-            go (x, y, i) acc = widgetEq x y >>= (\z -> case z of
-                                                    True  -> acc
-                                                    False -> pure . Just $ TabsDoNotMatch (TabAtIndexDifferent i))
+            go :: (a, b, Int) -> IO (Maybe TMStateInvariantErr) -> IO (Maybe TMStateInvariantErr)
+            go (x, y, i) acc = do
+              isEq <- widgetEq x y
+              if isEq
+                then acc
+                else pure . Just $ TabsDoNotMatch (TabAtIndexDifferent i)
 
 -- | Check the invariants for 'TMState', and call 'fail' if we find that they
 -- have been violated.
