@@ -5,8 +5,10 @@ Termonad
 [![Build Status](https://secure.travis-ci.org/cdepillabout/termonad.svg)](http://travis-ci.org/cdepillabout/termonad)
 [![Hackage](https://img.shields.io/hackage/v/termonad.svg)](https://hackage.haskell.org/package/termonad)
 [![Stackage LTS](http://stackage.org/package/termonad/badge/lts)](http://stackage.org/lts/package/termonad)
-[![Stackage Nightly](http://stackage.org/package/termonad/badge/nightly)](http://stackage.org/nightly/package/termonad) [![Join the chat at https://gitter.im/termonad/Lobby](https://badges.gitter.im/termonad/Lobby.svg)](https://gitter.im/termonad/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-![BSD3 license](https://img.shields.io/badge/license-BSD3-blue.svg)
+[![Stackage Nightly](http://stackage.org/package/termonad/badge/nightly)](http://stackage.org/nightly/package/termonad)
+[![BSD3 license](https://img.shields.io/badge/license-BSD3-blue.svg)](./LICENSE)
+[![Join the chat at https://gitter.im/termonad/Lobby](https://badges.gitter.im/termonad/Lobby.svg)](https://gitter.im/termonad/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Join the chat in #termonad on irc.freenode.net](https://img.shields.io/badge/%23termonad-irc.freenode.net-brightgreen.svg)](https://webchat.freenode.net/)
 
 Termonad is a terminal emulator configurable in Haskell.  It is extremely
 customizable and provides hooks to modify the default behavior.  It can be
@@ -34,6 +36,7 @@ thought of as the "XMonad" of terminal emulators.
             - [Running with `stack`](#running-with-stack)
             - [Running with `nix`](#running-with-nix)
     - [Goals](#goals)
+    - [Where to get help](#where-to-get-help)
     - [Contributions](#contributions)
     - [Maintainers](#maintainers)
 
@@ -355,6 +358,16 @@ Termonad has the following goals:
   certain data types or functions do.  If you have a hard time understanding
   anything in the documentation, please submit an issue or PR.
 
+## Where to get help
+
+If you find a bug in Termonad, please either
+[send a PR](https://github.com/cdepillabout/termonad/pulls) fixing it or create
+an [issue](https://github.com/cdepillabout/termonad/issues) explaining it.
+
+If you just need help with configuring Termonad, you can either join the
+[Gitter room](https://gitter.im/termonad/Lobby) or
+[#termonad on irc.freenode.net](https://webchat.freenode.net/).
+
 ## Contributions
 
 Contributions are highly appreciated.  Termonad is currently missing many
@@ -363,4 +376,5 @@ would like to add, please submit an issue or PR.
 
 ## Maintainers
 
-- [Dennis Gosnell](https://github.com/cdepillabout)
+- [cdepillabout](https://github.com/cdepillabout)
+- [LSLeary](https://github.com/LSLeary)
