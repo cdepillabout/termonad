@@ -129,20 +129,18 @@ pattern EmptyV = ØV
 paletteToList :: Palette c -> [c]
 paletteToList = Data.Foldable.toList
 
+coloursFromBits :: (Ord b, Floating b) => Word8 -> Word8 -> Vec N8 (Colour b)
+coloursFromBits scale offset = vgen_ $ I . (sRGB24 <$> cmp 0 <*> cmp 1 <*> cmp 2)
+  where
+    bit :: Int -> Int -> Int
+    bit m i = i `div` (2 ^ m) `mod` 2
+    cmp i = (offset +) . (scale *) . fromIntegral . bit i . fin
+
 defaultStandardColours :: (Ord b, Floating b) => Vec N8 (Colour b)
-defaultStandardColours
-   = sRGB24   0   0   0 -- 00: black
-  :+ sRGB24 192   0   0 -- 01: red
-  :+ sRGB24   0 192   0 -- 02: green
-  :+ sRGB24 192 192   0 -- 03: yellow
-  :+ sRGB24   0   0 192 -- 04: blue
-  :+ sRGB24 192   0 192 -- 05: purple
-  :+ sRGB24   0 192 192 -- 06: cyan
-  :+ sRGB24 192 192 192 -- 07: lightgrey
-  :+ EmptyV
+defaultStandardColours = coloursFromBits 192 0
 
 defaultLightColours :: (Ord b, Floating b) => Vec N8 (Colour b)
-defaultLightColours = (<> sRGB24 63 63 63) <$> defaultStandardColours
+defaultLightColours = coloursFromBits 192 63
 
 -- | Specify a colour cube with one colour vector for its displacement and three
 --   colour vectors for its edges. Produces a uniform 6x6x6 grid bounded by
