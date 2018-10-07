@@ -70,8 +70,7 @@ import GI.Gtk
   )
 import GI.Pango (EllipsizeMode(EllipsizeModeMiddle))
 import GI.Vte
-  ( CursorBlinkMode(CursorBlinkModeOn)
-  , PtyFlags(PtyFlagsDefault)
+  ( PtyFlags(PtyFlagsDefault)
   , Terminal
   , onTerminalChildExited
   , onTerminalWindowTitleChanged
@@ -95,7 +94,7 @@ import System.Environment (lookupEnv)
 import Termonad.Config
   ( ShowScrollbar(..)
   , ShowTabBar(..)
-  , TMConfig(scrollbackLen, wordCharExceptions, colourConfig)
+  , TMConfig(scrollbackLen, wordCharExceptions, colourConfig, cursorBlinkMode)
   , ColourConfig(..)
   , lensShowScrollbar
   , lensShowTabBar
@@ -319,7 +318,7 @@ createTerm handleKeyPress mvarTMState = do
         setC vteTerm . Just =<< toRGBA c
   optPerform terminalSetColorCursor cursorBgColour
   optPerform terminalSetColorCursorForeground cursorFgColour
-  terminalSetCursorBlinkMode vteTerm CursorBlinkModeOn
+  terminalSetCursorBlinkMode vteTerm (cursorBlinkMode tmStateConfig)
   widgetShow vteTerm
   -- Should probably use GI.Vte.Functions.getUserShell, but contrary to its
   -- documentation it raises an exception rather wrap in Maybe.

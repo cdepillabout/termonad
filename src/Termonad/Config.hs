@@ -25,6 +25,7 @@ import Type.Family.Nat (N(..), N3, N6, N8, type (+))
 import Type.Family.List (Fsts3, Thds3)
 
 import qualified Data.Foldable
+import GI.Vte (CursorBlinkMode(CursorBlinkModeOn))
 
 -- }}}
 
@@ -380,6 +381,7 @@ data TMConfig = TMConfig
   , wordCharExceptions :: !Text
   , showMenu :: !Bool
   , showTabBar :: !ShowTabBar
+  , cursorBlinkMode :: !CursorBlinkMode
   } deriving (Eq, Show)
 
 $(makeLensesFor
@@ -391,6 +393,7 @@ $(makeLensesFor
     , ("wordCharExceptions", "lensWordCharExceptions")
     , ("showMenu", "lensShowMenu")
     , ("showTabBar", "lensShowTabBar")
+    , ("cursorBlinkMode", "lensCursorBlinkMode")
     ]
     ''TMConfig
  )
@@ -406,6 +409,7 @@ defaultTMConfig =
     , wordCharExceptions = "-#%&+,./=?@\\_~\183:"
     , showMenu = True
     , showTabBar = ShowTabBarIfNeeded
+    , cursorBlinkMode = CursorBlinkModeOn
     }
 
 -- }}}
