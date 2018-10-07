@@ -166,14 +166,16 @@ defaultGreyscale = vgen_ $ \n -> I $ blend (beta n) white black
 --   The @backgroundColour@ field will be ignored and the 0th colour in the
 --   palette (usually black) will be used as the background colour.
 data ColourConfig c = ColourConfig
-  { cursorColour :: !c
+  { cursorFgColour :: !c
+  , cursorBgColour :: !c
   , foregroundColour :: !c
   , backgroundColour :: !c
   , palette :: !(Palette c)
   } deriving (Eq, Show, Functor)
 
 $(makeLensesFor
-    [ ("cursorColour", "lensCursorColour")
+    [ ("cursorFgColour", "lensCursorFgColour")
+    , ("cursorBgColour", "lensCursorBgColour")
     , ("foregroundColour", "lensForegroundColour")
     , ("backgroundColour", "lensBackgroundColour")
     , ("palette", "lensPalette")
@@ -183,9 +185,10 @@ $(makeLensesFor
 
 defaultColourConfig :: (Ord b, Floating b) => ColourConfig (Colour b)
 defaultColourConfig = ColourConfig
-  { cursorColour = sRGB24 192 192 192
+  { cursorFgColour = black
+  , cursorBgColour = sRGB24 192 192 192
   , foregroundColour = sRGB24 192 192 192
-  , backgroundColour = sRGB24 0 0 0
+  , backgroundColour = black
   , palette = NoPalette
   }
 

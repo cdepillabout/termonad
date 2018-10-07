@@ -80,6 +80,7 @@ import GI.Vte
   , terminalSetCursorBlinkMode
   , terminalSetColors
   , terminalSetColorCursor
+  , terminalSetColorCursorForeground
 --, terminalSetColorBackground
   , terminalSetColorForeground
   , terminalSetFont
@@ -313,7 +314,9 @@ createTerm handleKeyPress mvarTMState = do
   -- PR#28/IS#29: Setting the background colour is broken in gi-vte or VTE.
 --terminalSetColorBackground vteTerm =<< toRGBA (backgroundColour colourConf)
   terminalSetColorForeground vteTerm =<< toRGBA (foregroundColour colourConf)
-  terminalSetColorCursor vteTerm . Just =<< toRGBA (cursorColour colourConf)
+  let perform setC cField = setC vteTerm . Just =<< toRGBA (cField colourConf)
+  perform terminalSetColorCursor cursorBgColour
+  perform terminalSetColorCursorForeground cursorFgColour
   terminalSetCursorBlinkMode vteTerm CursorBlinkModeOn
   widgetShow vteTerm
   -- Should probably use GI.Vte.Functions.getUserShell, but contrary to its
