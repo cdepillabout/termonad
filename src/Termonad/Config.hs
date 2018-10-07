@@ -186,8 +186,7 @@ defaultColourConfig = ColourConfig
   { cursorColour = sRGB24 192 192 192
   , foregroundColour = sRGB24 192 192 192
   , backgroundColour = sRGB24 0 0 0
-  , palette = FullPalette defaultStandardColours defaultLightColours
-                          defaultColourCube defaultGreyscale
+  , palette = NoPalette
   }
 
 -- }}}
