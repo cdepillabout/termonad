@@ -9,13 +9,12 @@ module Termonad.Config where
 import Termonad.Prelude hiding ((\\), index)
 
 import Control.Lens (makeLensesFor, makePrisms)
-import Data.Colour (Colour, affineCombo, blend)
-import Data.Colour.Names (black, white)
-import Data.Colour.SRGB (sRGB24, sRGB)
+import Data.Colour (Colour, affineCombo)
+import Data.Colour.Names (black)
+import Data.Colour.SRGB (sRGB24)
 import Data.Type.Combinator (I(..), Uncur3(..))
 import Data.Type.Vector
-  ( VecT(..), Vec, pattern (:+), M(..), vgen_, mgen_, onTail, tail', index
-  , Matrix, onMatrix )
+  (VecT(..), Vec, M(..), vgen_, mgen_, onTail, tail', index , Matrix, onMatrix)
 import Data.Type.Product (Prod(..))
 import Data.Type.Fin (Fin(..), fin)
 import Data.Type.Fin.Indexed (IFin(..))
@@ -152,12 +151,16 @@ cube d (I i :* I j :* I k :* ØV) = mgen_ $ \(x :< y :< z :< Ø) ->
   where coef n = fromIntegral (fin n) / 5
 
 defaultColourCube :: (Ord b, Floating b) => M [N6, N6, N6] (Colour b)
-defaultColourCube
-  = cube black (sRGB 1 0 0 :+ sRGB 0 1 0 :+ sRGB 0 0 1 :+ EmptyV)
+defaultColourCube = mgen_ $ \(x :< y :< z :< Ø) -> sRGB24 (cmp x) (cmp y) (cmp z)
+  where
+    cmp i =
+      let i' = fromIntegral (fin i)
+      in signum i' * 55 + 40 * i'
 
 defaultGreyscale :: (Ord b, Floating b) => Vec N24 (Colour b)
-defaultGreyscale = vgen_ $ \n -> I $ blend (beta n) white black
-  where beta n = (fromIntegral (fin n) / 23) ** 2
+defaultGreyscale = vgen_ $ \n -> I $
+  let l = 8 + 10 * fromIntegral (fin n)
+  in sRGB24 l l l
 
 -- | NB: Currently due to issues either with VTE or the bindings generated for
 --   Haskell, background colour cannot be set independently of the palette.
