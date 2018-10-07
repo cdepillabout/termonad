@@ -101,6 +101,7 @@ import Termonad.Config
   , lensShowTabBar
   , lensConfirmExit
   , paletteToList
+  , whenSet
   )
 import Termonad.FocusList (appendFL, deleteFL, getFLFocusItem)
 import Termonad.Types
@@ -314,9 +315,10 @@ createTerm handleKeyPress mvarTMState = do
   -- PR#28/IS#29: Setting the background colour is broken in gi-vte or VTE.
 --terminalSetColorBackground vteTerm =<< toRGBA (backgroundColour colourConf)
   terminalSetColorForeground vteTerm =<< toRGBA (foregroundColour colourConf)
-  let perform setC cField = setC vteTerm . Just =<< toRGBA (cField colourConf)
-  perform terminalSetColorCursor cursorBgColour
-  perform terminalSetColorCursorForeground cursorFgColour
+  let optPerform setC cField = whenSet (cField colourConf) $ \c ->
+        setC vteTerm . Just =<< toRGBA c
+  optPerform terminalSetColorCursor cursorBgColour
+  optPerform terminalSetColorCursorForeground cursorFgColour
   terminalSetCursorBlinkMode vteTerm CursorBlinkModeOn
   widgetShow vteTerm
   -- Should probably use GI.Vte.Functions.getUserShell, but contrary to its

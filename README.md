@@ -236,8 +236,8 @@ import Data.Colour.SRGB (Colour, sRGB24)
 import Termonad.App (defaultMain)
 import Termonad.Config
   ( FontConfig, FontSize(FontSizePoints), ShowScrollbar(ShowScrollbarAlways)
-  , cursorBgColour, defaultFontConfig, defaultTMConfig, fontConfig, fontFamily
-  , fontSize, showScrollbar
+  , Option(Set), cursorBgColour, defaultFontConfig, defaultTMConfig, fontConfig
+  , fontFamily, fontSize, showScrollbar
   )
 
 -- | This sets the color of the cursor in the terminal.
@@ -259,7 +259,7 @@ main :: IO ()
 main = do
   let termonadConf =
         defaultTMConfig
-          { cursorBgColour = cursColor
+          { cursorBgColour = Set cursColor
           , fontConfig = fontConf
           -- Make sure the scrollbar is always visible.
           , showScrollbar = ShowScrollbarAlways

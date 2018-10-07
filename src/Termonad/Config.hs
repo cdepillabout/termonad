@@ -161,13 +161,21 @@ defaultGreyscale :: (Ord b, Floating b) => Vec N24 (Colour b)
 defaultGreyscale = vgen_ $ \n -> I $ blend (beta n) white black
   where beta n = (fromIntegral (fin n) / 23) ** 2
 
+data Option a = Unset | Set !a
+  deriving (Show, Read, Eq, Ord, Functor, Foldable)
+
+whenSet :: Monoid m => Option a -> (a -> m) -> m
+whenSet = \case
+  Unset -> \_ -> mempty
+  Set x -> \f -> f x
+
 -- | NB: Currently due to issues either with VTE or the bindings generated for
 --   Haskell, background colour cannot be set independently of the palette.
 --   The @backgroundColour@ field will be ignored and the 0th colour in the
 --   palette (usually black) will be used as the background colour.
 data ColourConfig c = ColourConfig
-  { cursorFgColour :: !c
-  , cursorBgColour :: !c
+  { cursorFgColour :: !(Option c)
+  , cursorBgColour :: !(Option c)
   , foregroundColour :: !c
   , backgroundColour :: !c
   , palette :: !(Palette c)
@@ -185,8 +193,8 @@ $(makeLensesFor
 
 defaultColourConfig :: (Ord b, Floating b) => ColourConfig (Colour b)
 defaultColourConfig = ColourConfig
-  { cursorFgColour = black
-  , cursorBgColour = sRGB24 192 192 192
+  { cursorFgColour = Unset
+  , cursorBgColour = Unset
   , foregroundColour = sRGB24 192 192 192
   , backgroundColour = black
   , palette = NoPalette
