@@ -162,6 +162,15 @@ defaultGreyscale = vgen_ $ \n -> I $
   let l = 8 + 10 * fromIntegral (fin n)
   in sRGB24 l l l
 
+-- | This data type represents an option that can either be 'Set' or 'Unset'.
+--
+-- This data type is used in situations where leaving an option unset results
+-- in a special state that is not representable by setting any specific value.
+--
+-- An example of this is 'cursorFgColour' and 'cursorBgColour'.  By default,
+-- 'cursorFgColour' and 'cursorBgColour' are both 'Unset'.  However, when
+-- 'cursorBgColour' is 'Set', 'cursorFgColour' defaults to the color of the text
+-- underneath.  There is no way to represent this by 'Set'ting 'cursorFgColour'.
 data Option a = Unset | Set !a
   deriving (Show, Read, Eq, Ord, Functor, Foldable)
 
@@ -171,9 +180,52 @@ whenSet = \case
   Set x -> \f -> f x
 
 -- | NB: Currently due to issues either with VTE or the bindings generated for
---   Haskell, background colour cannot be set independently of the palette.
---   The @backgroundColour@ field will be ignored and the 0th colour in the
---   palette (usually black) will be used as the background colour.
+-- Haskell, background colour cannot be set independently of the palette.
+-- The @backgroundColour@ field will be ignored and the 0th colour in the
+-- palette (usually black) will be used as the background colour.
+--
+-- Termonad will behave differently depending on the combination
+-- 'cursorFgColour' and 'cursorBgColour' being 'Set' vs. 'Unset'.
+-- Here is the summary of the different possibilities:
+--
+-- * 'cursorFgColour' is 'Set' and 'cursorBgColour' is 'Set'
+--
+--   The foreground and background colors of the cursor are as you have set.
+--
+-- * 'cursorFgColour' is 'Set' and 'cursorBgColour' is 'Unset'
+--
+--   The cursor background color turns completely black so that it is not
+--   visible.  The foreground color of the cursor is the color that you have
+--   'Set'.  This ends up being mostly unusable, so you are recommended to
+--   always 'Set' 'cursorBgColour' when you have 'Set' 'cursorFgColour'.
+--
+-- * 'cursorFgColour' is 'Unset' and 'cursorBgColour' is 'Set'
+--
+--   The cursor background color becomes the color you 'Set', while the cursor
+--   foreground color doesn't change from the letter it is over.  For instance,
+--   imagine there is a letter on the screen with a black background and a
+--   green foreground.  If you bring the cursor overtop of it, the cursor
+--   background will be the color you have 'Set', while the cursor foreground
+--   will be green.
+--
+--   This is completely usable, but is slightly annoying if you place the
+--   cursor over a letter with the same foreground color as the cursor because
+--   the letter will not be readable.  For instance, imagine you have set your
+--   cursor background color to red, and somewhere on the screen there is a
+--   letter with a black background and a red foreground.  If you move your
+--   cursor over the letter, the background of the cursor will be red (as you
+--   have set), and the cursor foreground will be red (to match the original
+--   foreground color of the letter), but this will make it so you can't
+--   actually read the letter, because the foreground and background are both
+--   red.
+--
+-- * 'cursorFgColour' is 'Unset' and 'cursorBgColour' is 'Unset'
+--
+--   This combination makes the cursor inverse of whatever text it is over.
+--   If your cursor is over red text with a black background, the cursor
+--   background will be red and the cursor foreground will be black.
+--
+--   This is the default.
 data ColourConfig c = ColourConfig
   { cursorFgColour :: !(Option c)
   , cursorBgColour :: !(Option c)
