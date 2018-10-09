@@ -162,19 +162,29 @@ defaultGreyscale = vgen_ $ \n -> I $
   let l = 8 + 10 * fromIntegral (fin n)
   in sRGB24 l l l
 
+data Option a = Unset | Set !a
+  deriving (Show, Read, Eq, Ord, Functor, Foldable)
+
+whenSet :: Monoid m => Option a -> (a -> m) -> m
+whenSet = \case
+  Unset -> \_ -> mempty
+  Set x -> \f -> f x
+
 -- | NB: Currently due to issues either with VTE or the bindings generated for
 --   Haskell, background colour cannot be set independently of the palette.
 --   The @backgroundColour@ field will be ignored and the 0th colour in the
 --   palette (usually black) will be used as the background colour.
 data ColourConfig c = ColourConfig
-  { cursorColour :: !c
+  { cursorFgColour :: !(Option c)
+  , cursorBgColour :: !(Option c)
   , foregroundColour :: !c
   , backgroundColour :: !c
   , palette :: !(Palette c)
   } deriving (Eq, Show, Functor)
 
 $(makeLensesFor
-    [ ("cursorColour", "lensCursorColour")
+    [ ("cursorFgColour", "lensCursorFgColour")
+    , ("cursorBgColour", "lensCursorBgColour")
     , ("foregroundColour", "lensForegroundColour")
     , ("backgroundColour", "lensBackgroundColour")
     , ("palette", "lensPalette")
@@ -184,9 +194,10 @@ $(makeLensesFor
 
 defaultColourConfig :: (Ord b, Floating b) => ColourConfig (Colour b)
 defaultColourConfig = ColourConfig
-  { cursorColour = sRGB24 192 192 192
+  { cursorFgColour = Unset
+  , cursorBgColour = Unset
   , foregroundColour = sRGB24 192 192 192
-  , backgroundColour = sRGB24 0 0 0
+  , backgroundColour = black
   , palette = NoPalette
   }
 
