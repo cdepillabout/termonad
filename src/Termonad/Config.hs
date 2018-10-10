@@ -7,12 +7,29 @@ import Termonad.Prelude hiding ((\\), index)
 import Control.Lens (makeLensesFor, makePrisms)
 import Data.Colour (Colour, affineCombo)
 import Data.Colour.Names (black)
-import Data.Colour.SRGB (sRGB24)
+import Data.Colour.SRGB (sRGB24, sRGB24show)
 import qualified Data.Foldable
 import GI.Vte (CursorBlinkMode(CursorBlinkModeOn))
 
 import Termonad.Config.Vec
-  (I(I), M, N3, N24, N6, N8, Prod((:<), Ø), Vec, VecT((:*), ØV), fin, mgen_, vgen_)
+  ( Fin
+  , I(I)
+  , Length
+  , M(M)
+  , Matrix
+  , N24
+  , N3
+  , N6
+  , N8
+  , Prod((:<), Ø)
+  , Vec
+  , VecT((:*), ØV)
+  , fin
+  , known
+  , mgen_
+  , ppMatrix'
+  , vgen_
+  )
 
 -----------------
 -- Font Config --
@@ -122,35 +139,81 @@ data Palette c
 paletteToList :: Palette c -> [c]
 paletteToList = Data.Foldable.toList
 
-coloursFromBits :: (Ord b, Floating b) => Word8 -> Word8 -> Vec N8 (Colour b)
-coloursFromBits scale offset = vgen_ $ I . (sRGB24 <$> cmp 0 <*> cmp 1 <*> cmp 2)
+-- | Create a vector of colors based on input bits.
+--
+-- This is used to derive 'defaultStandardColours' and 'defaultLightColours'.
+--
+-- >>> coloursFromBits 192 0 == defaultStandardColours
+-- True
+--
+-- >>> coloursFromBits 192 63 == defaultLightColours
+-- True
+coloursFromBits :: forall b. (Ord b, Floating b) => Word8 -> Word8 -> Vec N8 (Colour b)
+coloursFromBits scale offset = vgen_ createElem
   where
-    bit :: Int -> Int -> Int
-    bit m i = i `div` (2 ^ m) `mod` 2
+    createElem :: Fin N8 -> I (Colour b)
+    createElem finN =
+      let red = cmp 0 finN
+          green = cmp 1 finN
+          blue = cmp 2 finN
+          color = sRGB24 red green blue
+      in I color
+
+    cmp :: Int -> Fin N8 -> Word8
     cmp i = (offset +) . (scale *) . fromIntegral . bit i . fin
 
+    bit :: Int -> Int -> Int
+    bit m i = i `div` (2 ^ m) `mod` 2
+
+-- | A 'Vec' of standard colors.  Default value when used in 'BasicPalette'.
+--
+-- >>> showColourVec defaultStandardColours
+-- ["#000000","#c00000","#00c000","#c0c000","#0000c0","#c000c0","#00c0c0","#c0c0c0"]
 defaultStandardColours :: (Ord b, Floating b) => Vec N8 (Colour b)
 defaultStandardColours = coloursFromBits 192 0
 
+-- | A 'Vec' of extended (light) colors.  Default value when used in 'ExtendedPalette'.
+--
+-- >>> showColourVec defaultLightColours
+-- ["#3f3f3f","#ff3f3f","#3fff3f","#ffff3f","#3f3fff","#ff3fff","#3fffff","#ffffff"]
 defaultLightColours :: (Ord b, Floating b) => Vec N8 (Colour b)
 defaultLightColours = coloursFromBits 192 63
+
+-- | A helper function for showing all the colors in 'Vec' of colors.
+showColourVec :: forall n. Vec n (Colour Double) -> [String]
+showColourVec = fmap sRGB24show . Data.Foldable.toList
 
 -- | Specify a colour cube with one colour vector for its displacement and three
 -- colour vectors for its edges. Produces a uniform 6x6x6 grid bounded by
 -- and orthognal to the faces.
 cube
-  :: Fractional b => Colour b -> Vec N3 (Colour b) -> M [N6, N6, N6] (Colour b)
+  :: Fractional b => Colour b -> Vec N3 (Colour b) -> M '[N6, N6, N6] (Colour b)
 cube d (I i :* I j :* I k :* ØV) = mgen_ $ \(x :< y :< z :< Ø) ->
   affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] black
   where coef n = fromIntegral (fin n) / 5
 
-defaultColourCube :: (Ord b, Floating b) => M [N6, N6, N6] (Colour b)
+-- | A matrix of a 6 x 6 x 6 color cube. Default value when used in 'ColourCubePalette'.
+--
+-- >>> putStrLn $ pack $ showColourCube defaultColourCube
+-- foobarbaz
+defaultColourCube :: (Ord b, Floating b) => M '[N6, N6, N6] (Colour b)
 defaultColourCube = mgen_ $ \(x :< y :< z :< Ø) -> sRGB24 (cmp x) (cmp y) (cmp z)
   where
     cmp i =
       let i' = fromIntegral (fin i)
       in signum i' * 55 + 40 * i'
 
+-- | Helper function for showing all the colors in a color cube.
+--
+-- TODO: rewrite this function so it actually looks good.
+showColourCube :: forall n m o. M '[n, m, o] (Colour Double) -> String
+showColourCube (M (matrix :: Matrix '[n, m, o] (Colour Double))) =
+  ppMatrix' (known :: Length '[n, m, o]) (fmap sRGB24show matrix :: Matrix '[n, m, o] String) ""
+
+-- | A 'Vec' of a grey scale.  Default value when used in 'FullPalette'.
+--
+-- >>> showColourVec defaultGreyscale
+-- ["#080808","#121212","#1c1c1c","#262626","#303030","#3a3a3a","#444444","#4e4e4e","#585858","#626262","#6c6c6c","#767676","#808080","#8a8a8a","#949494","#9e9e9e","#a8a8a8","#b2b2b2","#bcbcbc","#c6c6c6","#d0d0d0","#dadada","#e4e4e4","#eeeeee"]
 defaultGreyscale :: (Ord b, Floating b) => Vec N24 (Colour b)
 defaultGreyscale = vgen_ $ \n -> I $
   let l = 8 + 10 * fromIntegral (fin n)
