@@ -38,6 +38,7 @@ library
   exposed-modules:     Termonad
                      , Termonad.App
                      , Termonad.Config
+                     , Termonad.Config.Vec
                      , Termonad.FocusList
                      , Termonad.Gtk
                      , Termonad.Keys
