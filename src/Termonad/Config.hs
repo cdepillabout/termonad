@@ -1,10 +1,6 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Termonad.Config where
-
--- --< Imports >-- {{{
 
 import Termonad.Prelude hiding ((\\), index)
 
@@ -12,46 +8,15 @@ import Control.Lens (makeLensesFor, makePrisms)
 import Data.Colour (Colour, affineCombo)
 import Data.Colour.Names (black)
 import Data.Colour.SRGB (sRGB24)
-import Data.Type.Combinator (I(..), Uncur3(..))
-import Data.Type.Vector
-  (VecT(..), Vec, M(..), vgen_, mgen_, onTail, tail', index , Matrix, onMatrix)
-import Data.Type.Product (Prod(..))
-import Data.Type.Fin (Fin(..), fin)
-import Data.Type.Fin.Indexed (IFin(..))
-import Data.Type.Nat (Nat(..))
-import Type.Class.Witness ((\\))
-import Type.Class.Known (Known(..))
-import Type.Family.Nat (N(..), N3, N6, N8, type (+))
-import Type.Family.List (Fsts3, Thds3)
-
 import qualified Data.Foldable
 import GI.Vte (CursorBlinkMode(CursorBlinkModeOn))
 
--- }}}
+import Termonad.Config.Vec
+  (I(I), M, N3, N24, N6, N8, Prod((:<), Ø), Vec, VecT((:*), ØV), fin, mgen_, vgen_)
 
--- --< Orphan instances >-- {{{
--- These should eventually be provided by type-combinators.
-
-deriving instance Functor  (Matrix ns) => Functor  (M ns)
-deriving instance Foldable (Matrix ns) => Foldable (M ns)
-
-instance Applicative (Matrix ns) => Applicative (M ns) where
-  pure = M . pure
-  M f <*> M a = M $ f <*> a
-
-instance Monad (Matrix ns) => Monad (M ns) where
-  M ma >>= f = M (ma >>= getMatrix . f)
-
-instance Known (IFin ('S n)) 'Z where
-  known = IFZ
-
-instance Known (IFin n) m => Known (IFin ('S n)) ('S m) where
-  type KnownC (IFin ('S n)) ('S m) = Known (IFin n) m
-  known = IFS known
-
--- }}}
-
--- --< FontConfig >-- {{{
+-----------------
+-- Font Config --
+-----------------
 
 -- | The font size for the Termonad terminal.  There are two ways to set the
 -- fontsize, corresponding to the two different ways to set the font size in
@@ -109,23 +74,51 @@ $(makeLensesFor
     ''FontConfig
  )
 
--- }}}
+-------------------
+-- Colour Config --
+-------------------
 
--- --< ColourConfig >-- {{{
 
+-- | This is the color palette to use for the terminal. Each data constructor
+-- lets you set progressively more colors.  These colors are used in
+-- <https://en.wikipedia.org/wiki/ANSI_escape_code#Colors ANSI escape codes>.
+--
+-- There are 256 total terminal colors. 'BasicPalette' lets you set the first 8,
+-- 'ExtendedPalette' lets you set the first 16, 'ColourCubePalette' lets you set
+-- the first 232, and 'FullPalette' lets you set all 256.
+--
+-- The first 8 colors codes are the standard colors. The next 8 are the
+-- high-intensity colors. The next 216 are a full color cube. The last 24 are a
+-- grey scale.
+--
+-- The following image gives an idea of what each individual color looks like:
+--
+-- <<https://raw.githubusercontent.com/cdepillabout/termonad/master/img/terminal-colors.png>>
+--
+-- This picture does not exactly match up with Termonad's default colors, but it gives an
+-- idea of what each block of colors represents.
+--
+-- You can use 'defaultStandardColours', 'defaultLightColours',
+-- 'defaultColourCube', and 'defaultGreyscale' as a starting point to
+-- customize the colors. The only time you'd need to use a constructor other
+-- than 'NoPalette' is when you want to customize the default colors.
 data Palette c
   = NoPalette
+  -- ^ Don't set any colors and just use the default from VTE.  This is a black
+  -- background with light grey text.
   | BasicPalette !(Vec N8 c)
+  -- ^ Set the colors from the standard colors.
   | ExtendedPalette !(Vec N8 c) !(Vec N8 c)
-  | ColourCubePalette !(Vec N8 c) !(Vec N8 c) !(M [N6, N6, N6] c)
-  | FullPalette !(Vec N8 c) !(Vec N8 c) !(M [N6, N6, N6] c) !(Vec N24 c)
+  -- ^ Set the colors from the extended (light) colors (as well as standard colors).
+  | ColourCubePalette !(Vec N8 c) !(Vec N8 c) !(M '[N6, N6, N6] c)
+  -- ^ Set the colors from the color cube (as well as the standard colors and
+  -- extended colors).
+  | FullPalette !(Vec N8 c) !(Vec N8 c) !(M '[N6, N6, N6] c) !(Vec N24 c)
+  -- ^ Set the colors from the grey scale (as well as the standard colors,
+  -- extended colors, and color cube).
   deriving (Eq, Show, Functor, Foldable)
 
-type N24 = N8 + N8 + N8
-
-pattern EmptyV :: VecT 'Z f c
-pattern EmptyV = ØV
-
+-- | Convert a 'Palette' to a list of colors.  This is helpful for debugging.
 paletteToList :: Palette c -> [c]
 paletteToList = Data.Foldable.toList
 
@@ -143,8 +136,8 @@ defaultLightColours :: (Ord b, Floating b) => Vec N8 (Colour b)
 defaultLightColours = coloursFromBits 192 63
 
 -- | Specify a colour cube with one colour vector for its displacement and three
---   colour vectors for its edges. Produces a uniform 6x6x6 grid bounded by
---   and orthognal to the faces.
+-- colour vectors for its edges. Produces a uniform 6x6x6 grid bounded by
+-- and orthognal to the faces.
 cube
   :: Fractional b => Colour b -> Vec N3 (Colour b) -> M [N6, N6, N6] (Colour b)
 cube d (I i :* I j :* I k :* ØV) = mgen_ $ \(x :< y :< z :< Ø) ->
@@ -254,103 +247,9 @@ defaultColourConfig = ColourConfig
   , palette = NoPalette
   }
 
--- }}}
-
--- --< VecT operations >-- {{{
--- These should be upstreamed.
-
--- --< Misc >-- {{{
-
-onHead :: (f a -> f a) -> VecT ('S n) f a -> VecT ('S n) f a
-onHead f (a :* as) = f a :* as
-
-take' :: IFin ('S n) m -> VecT n f a -> VecT m f a
-take' = \case
-  IFS n -> onTail (take' n) \\ n
-  IFZ   -> const EmptyV
-
-drop' :: Nat m -> VecT (m + n) f a -> VecT n f a
-drop' = \case
-  S_ n -> drop' n . tail'
-  Z_   -> id
-
-asM :: (M ms a -> M ns a) -> (Matrix ms a -> Matrix ns a)
-asM f = getMatrix . f . M
-
-mIndex :: Prod Fin ns -> M ns a -> a
-mIndex = \case
-  i :< is -> mIndex is . onMatrix (index i)
-  Ø       -> getI . getMatrix
-
-deIndex :: IFin n m -> Fin n
-deIndex = \case
-  IFS n -> FS (deIndex n)
-  IFZ   -> FZ
-
--- }}}
-
--- --< Update/Set at index >-- {{{
-
-vUpdateAt :: Fin n -> (f a -> f a) -> VecT n f a -> VecT n f a
-vUpdateAt = \case
-  FS m -> onTail . vUpdateAt m
-  FZ   -> onHead
-
-vSetAt :: Fin n -> f a -> VecT n f a -> VecT n f a
-vSetAt n = vUpdateAt n . const
-
-vSetAt' :: Fin n -> a -> Vec n a -> Vec n a
-vSetAt' n = vSetAt n . I
-
-mUpdateAt :: Prod Fin ns -> (a -> a) -> M ns a -> M ns a
-mUpdateAt = \case
-  n :< ns -> onMatrix . vUpdateAt n . asM . mUpdateAt ns
-  Ø       -> (<$>)
-
-mSetAt :: Prod Fin ns -> a -> M ns a -> M ns a
-mSetAt ns = mUpdateAt ns . const
-
--- }}}
-
--- --< Update/Set over range >-- {{{
-
-data Range n l m = Range (IFin ('S n) l) (IFin ('S n) (l + m))
-  deriving (Show, Eq)
-
-instance (Known (IFin ('S n)) l, Known (IFin ('S n)) (l + m))
-  => Known (Range n l) m where
-  type KnownC (Range n l) m
-    = (Known (IFin ('S n)) l, Known (IFin ('S n)) (l + m))
-  known = Range known known
-
-updateRange :: Range n l m -> (Fin m -> f a -> f a) -> VecT n f a -> VecT n f a
-updateRange = \case
-  Range  IFZ     IFZ    -> \_ -> id
-  Range (IFS l) (IFS m) -> \f -> onTail (updateRange (Range l m) f) \\ m
-  Range  IFZ    (IFS m) -> \f -> onTail (updateRange (Range IFZ m) $ f . FS)
-                               . onHead (f FZ) \\ m
-
-setRange :: Range n l m -> VecT m f a -> VecT n f a -> VecT n f a
-setRange r nv = updateRange r (\i _ -> index i nv)
-
-updateSubmatrix
-  :: (ns ~ Fsts3 nlms, ms ~ Thds3 nlms)
-  => Prod (Uncur3 Range) nlms -> (Prod Fin ms -> a -> a) -> M ns a -> M ns a
-updateSubmatrix = \case
-  Ø              -> \f -> (f Ø <$>)
-  Uncur3 r :< rs -> \f -> onMatrix . updateRange r $ \i ->
-    asM . updateSubmatrix rs $ f . (i :<)
-
-setSubmatrix
-  :: (ns ~ Fsts3 nlms, ms ~ Thds3 nlms)
-  => Prod (Uncur3 Range) nlms -> M ms a -> M ns a -> M ns a
-setSubmatrix rs sm = updateSubmatrix rs $ \is _ -> mIndex is sm
-
--- }}}
-
--- }}}
-
--- --< Scrollbar >-- {{{
+---------------
+-- Scrollbar --
+---------------
 
 data ShowScrollbar
   = ShowScrollbarNever
@@ -358,9 +257,9 @@ data ShowScrollbar
   | ShowScrollbarIfNeeded
   deriving (Eq, Show)
 
--- }}}
-
--- --< TabBar >-- {{{
+------------
+-- Tabbar --
+------------
 
 data ShowTabBar
   = ShowTabBarNever
@@ -368,9 +267,9 @@ data ShowTabBar
   | ShowTabBarIfNeeded
   deriving (Eq, Show)
 
--- }}}
-
--- --< TMConfig >-- {{{
+--------------
+-- TMConfig --
+--------------
 
 data TMConfig = TMConfig
   { fontConfig :: !FontConfig
@@ -411,6 +310,3 @@ defaultTMConfig =
     , showTabBar = ShowTabBarIfNeeded
     , cursorBlinkMode = CursorBlinkModeOn
     }
-
--- }}}
-
