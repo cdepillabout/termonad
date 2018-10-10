@@ -7,7 +7,7 @@ import Termonad.Prelude hiding ((\\), index)
 import Control.Lens (makeLensesFor, makePrisms)
 import Data.Colour (Colour, affineCombo)
 import Data.Colour.Names (black)
-import Data.Colour.SRGB (sRGB24)
+import Data.Colour.SRGB (sRGB24, sRGB24show)
 import qualified Data.Foldable
 import GI.Vte (CursorBlinkMode(CursorBlinkModeOn))
 
@@ -122,6 +122,15 @@ data Palette c
 paletteToList :: Palette c -> [c]
 paletteToList = Data.Foldable.toList
 
+-- | Create a vector of colors based on input bits.
+--
+-- This is used to derive 'defaultStandardColours' and 'defaultLightColours'.
+--
+-- >>> coloursFromBits 192 0 == defaultStandardColours
+-- True
+--
+-- >>> coloursFromBits 192 63 == defaultLightColours
+-- True
 coloursFromBits :: (Ord b, Floating b) => Word8 -> Word8 -> Vec N8 (Colour b)
 coloursFromBits scale offset = vgen_ $ I . (sRGB24 <$> cmp 0 <*> cmp 1 <*> cmp 2)
   where
@@ -129,11 +138,22 @@ coloursFromBits scale offset = vgen_ $ I . (sRGB24 <$> cmp 0 <*> cmp 1 <*> cmp 2
     bit m i = i `div` (2 ^ m) `mod` 2
     cmp i = (offset +) . (scale *) . fromIntegral . bit i . fin
 
+-- |
+--
+-- >>> showColourVec defaultStandardColours
+-- ["#000000","#c00000","#00c000","#c0c000","#0000c0","#c000c0","#00c0c0","#c0c0c0"]
 defaultStandardColours :: (Ord b, Floating b) => Vec N8 (Colour b)
 defaultStandardColours = coloursFromBits 192 0
 
+-- |
+--
+-- >>> showColourVec defaultLightColours
+-- ["#3f3f3f","#ff3f3f","#3fff3f","#ffff3f","#3f3fff","#ff3fff","#3fffff","#ffffff"]
 defaultLightColours :: (Ord b, Floating b) => Vec N8 (Colour b)
 defaultLightColours = coloursFromBits 192 63
+
+showColourVec :: forall n. Vec n (Colour Double) -> [String]
+showColourVec = fmap sRGB24show . Data.Foldable.toList
 
 -- | Specify a colour cube with one colour vector for its displacement and three
 -- colour vectors for its edges. Produces a uniform 6x6x6 grid bounded by
