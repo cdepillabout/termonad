@@ -394,6 +394,15 @@ data ColourConfig c = ColourConfig
   , palette :: !(Palette c)
   } deriving (Eq, Show, Functor)
 
+defaultColourConfig :: (Ord b, Floating b) => ColourConfig (Colour b)
+defaultColourConfig = ColourConfig
+  { cursorFgColour = Unset
+  , cursorBgColour = Unset
+  , foregroundColour = sRGB24 192 192 192
+  , backgroundColour = black
+  , palette = NoPalette
+  }
+
 $(makeLensesFor
     [ ("cursorFgColour", "lensCursorFgColour")
     , ("cursorBgColour", "lensCursorBgColour")
@@ -403,15 +412,6 @@ $(makeLensesFor
     ]
     ''ColourConfig
  )
-
-defaultColourConfig :: (Ord b, Floating b) => ColourConfig (Colour b)
-defaultColourConfig = ColourConfig
-  { cursorFgColour = Unset
-  , cursorBgColour = Unset
-  , foregroundColour = sRGB24 192 192 192
-  , backgroundColour = black
-  , palette = NoPalette
-  }
 
 ---------------
 -- Scrollbar --
@@ -449,20 +449,6 @@ data TMConfig = TMConfig
   , cursorBlinkMode :: !CursorBlinkMode
   } deriving (Eq, Show)
 
-$(makeLensesFor
-    [ ("fontConfig", "lensFontConfig")
-    , ("showScrollbar", "lensShowScrollbar")
-    , ("colourConfig", "lensColourConfig")
-    , ("scrollbackLen", "lensScrollbackLen")
-    , ("confirmExit", "lensConfirmExit")
-    , ("wordCharExceptions", "lensWordCharExceptions")
-    , ("showMenu", "lensShowMenu")
-    , ("showTabBar", "lensShowTabBar")
-    , ("cursorBlinkMode", "lensCursorBlinkMode")
-    ]
-    ''TMConfig
- )
-
 defaultTMConfig :: TMConfig
 defaultTMConfig =
   TMConfig
@@ -476,3 +462,17 @@ defaultTMConfig =
     , showTabBar = ShowTabBarIfNeeded
     , cursorBlinkMode = CursorBlinkModeOn
     }
+
+$(makeLensesFor
+    [ ("fontConfig", "lensFontConfig")
+    , ("showScrollbar", "lensShowScrollbar")
+    , ("colourConfig", "lensColourConfig")
+    , ("scrollbackLen", "lensScrollbackLen")
+    , ("confirmExit", "lensConfirmExit")
+    , ("wordCharExceptions", "lensWordCharExceptions")
+    , ("showMenu", "lensShowMenu")
+    , ("showTabBar", "lensShowTabBar")
+    , ("cursorBlinkMode", "lensCursorBlinkMode")
+    ]
+    ''TMConfig
+ )
