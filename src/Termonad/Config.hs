@@ -12,7 +12,24 @@ import qualified Data.Foldable
 import GI.Vte (CursorBlinkMode(CursorBlinkModeOn))
 
 import Termonad.Config.Vec
-  (Fin, I(I), M, N3, N24, N6, N8, Prod((:<), Ø), Vec, VecT((:*), ØV), fin, mgen_, vgen_)
+  ( Fin
+  , I(I)
+  , Length
+  , M(M)
+  , Matrix
+  , N24
+  , N3
+  , N6
+  , N8
+  , Prod((:<), Ø)
+  , Vec
+  , VecT((:*), ØV)
+  , fin
+  , known
+  , mgen_
+  , ppMatrix'
+  , vgen_
+  )
 
 -----------------
 -- Font Config --
@@ -148,14 +165,14 @@ coloursFromBits scale offset = vgen_ createElem
     bit :: Int -> Int -> Int
     bit m i = i `div` (2 ^ m) `mod` 2
 
--- |
+-- | A 'Vec' of standard colors.  Default value when used in 'BasicPalette'.
 --
 -- >>> showColourVec defaultStandardColours
 -- ["#000000","#c00000","#00c000","#c0c000","#0000c0","#c000c0","#00c0c0","#c0c0c0"]
 defaultStandardColours :: (Ord b, Floating b) => Vec N8 (Colour b)
 defaultStandardColours = coloursFromBits 192 0
 
--- |
+-- | A 'Vec' of extended (light) colors.  Default value when used in 'ExtendedPalette'.
 --
 -- >>> showColourVec defaultLightColours
 -- ["#3f3f3f","#ff3f3f","#3fff3f","#ffff3f","#3f3fff","#ff3fff","#3fffff","#ffffff"]
@@ -170,18 +187,33 @@ showColourVec = fmap sRGB24show . Data.Foldable.toList
 -- colour vectors for its edges. Produces a uniform 6x6x6 grid bounded by
 -- and orthognal to the faces.
 cube
-  :: Fractional b => Colour b -> Vec N3 (Colour b) -> M [N6, N6, N6] (Colour b)
+  :: Fractional b => Colour b -> Vec N3 (Colour b) -> M '[N6, N6, N6] (Colour b)
 cube d (I i :* I j :* I k :* ØV) = mgen_ $ \(x :< y :< z :< Ø) ->
   affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] black
   where coef n = fromIntegral (fin n) / 5
 
-defaultColourCube :: (Ord b, Floating b) => M [N6, N6, N6] (Colour b)
+-- | A matrix of a 6 x 6 x 6 color cube. Default value when used in 'ColourCubePalette'.
+--
+-- >>> putStrLn $ pack $ showColourCube defaultColourCube
+-- foobarbaz
+defaultColourCube :: (Ord b, Floating b) => M '[N6, N6, N6] (Colour b)
 defaultColourCube = mgen_ $ \(x :< y :< z :< Ø) -> sRGB24 (cmp x) (cmp y) (cmp z)
   where
     cmp i =
       let i' = fromIntegral (fin i)
       in signum i' * 55 + 40 * i'
 
+-- | Helper function for showing all the colors in a color cube.
+--
+-- TODO: rewrite this function so it actually looks good.
+showColourCube :: forall n m o. M '[n, m, o] (Colour Double) -> String
+showColourCube (M (matrix :: Matrix '[n, m, o] (Colour Double))) =
+  ppMatrix' (known :: Length '[n, m, o]) (fmap sRGB24show matrix :: Matrix '[n, m, o] String) ""
+
+-- | A 'Vec' of a grey scale.  Default value when used in 'FullPalette'.
+--
+-- >>> showColourVec defaultGreyscale
+-- ["#080808","#121212","#1c1c1c","#262626","#303030","#3a3a3a","#444444","#4e4e4e","#585858","#626262","#6c6c6c","#767676","#808080","#8a8a8a","#949494","#9e9e9e","#a8a8a8","#b2b2b2","#bcbcbc","#c6c6c6","#d0d0d0","#dadada","#e4e4e4","#eeeeee"]
 defaultGreyscale :: (Ord b, Floating b) => Vec N24 (Colour b)
 defaultGreyscale = vgen_ $ \n -> I $
   let l = 8 + 10 * fromIntegral (fin n)

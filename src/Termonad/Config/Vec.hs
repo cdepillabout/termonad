@@ -4,7 +4,9 @@
 module Termonad.Config.Vec
   ( Fin
   , I(I)
-  , M
+  , Length
+  , M(M)
+  , Matrix
   , N3
   , N24
   , N6
@@ -13,23 +15,37 @@ module Termonad.Config.Vec
   , Vec
   , VecT((:*), ØV)
   , fin
+  , known
   , mgen_
+  , ppMatrix'
   , vgen_
   ) where
 
 import Termonad.Prelude hiding ((\\), index)
 
 import Data.Type.Combinator (I(..), Uncur3(..))
-import Data.Type.Vector
-  (VecT(..), Vec, M(..), vgen_, mgen_, onTail, tail', index , Matrix, onMatrix)
-import Data.Type.Product (Prod(..))
 import Data.Type.Fin (Fin(..), fin)
 import Data.Type.Fin.Indexed (IFin(..))
+import Data.Type.Length (Length)
 import Data.Type.Nat (Nat(..))
+import Data.Type.Product (Prod(..))
+import Data.Type.Vector
+  ( M(M, getMatrix)
+  , Matrix
+  , Vec
+  , VecT(..)
+  , index
+  , mgen_
+  , onMatrix
+  , onTail
+  , ppMatrix'
+  , tail'
+  , vgen_
+  )
+import Type.Class.Known (Known(KnownC, known))
 import Type.Class.Witness ((\\))
-import Type.Class.Known (Known(..))
-import Type.Family.Nat (N(..), N3, N6, N8, type (+))
 import Type.Family.List (Fsts3, Thds3)
+import Type.Family.Nat (N(..), N3, N6, N8, type (+))
 
 ----------------------
 -- Orphan Instances --
