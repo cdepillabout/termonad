@@ -10,13 +10,12 @@ import Data.Colour.Names (black)
 import Data.Colour.SRGB (sRGB24, sRGB24show)
 import qualified Data.Foldable
 import GI.Vte (CursorBlinkMode(CursorBlinkModeOn))
+import Text.Show (showString)
 
 import Termonad.Config.Vec
   ( Fin
   , I(I)
-  , Length
   , M(M)
-  , Matrix
   , N24
   , N3
   , N6
@@ -25,9 +24,7 @@ import Termonad.Config.Vec
   , Vec
   , VecT((:*), ØV)
   , fin
-  , known
   , mgen_
-  , ppMatrix'
   , vgen_
   )
 
@@ -97,15 +94,16 @@ $(makeLensesFor
 
 
 -- | This is the color palette to use for the terminal. Each data constructor
--- lets you set progressively more colors.  These colors are used in
--- <https://en.wikipedia.org/wiki/ANSI_escape_code#Colors ANSI escape codes>.
+-- lets you set progressively more colors.  These colors are used by the
+-- terminal to render
+-- <https://en.wikipedia.org/wiki/ANSI_escape_code#Colors ANSI escape color codes>.
 --
 -- There are 256 total terminal colors. 'BasicPalette' lets you set the first 8,
 -- 'ExtendedPalette' lets you set the first 16, 'ColourCubePalette' lets you set
 -- the first 232, and 'FullPalette' lets you set all 256.
 --
 -- The first 8 colors codes are the standard colors. The next 8 are the
--- high-intensity colors. The next 216 are a full color cube. The last 24 are a
+-- extended (light) colors. The next 216 are a full color cube. The last 24 are a
 -- grey scale.
 --
 -- The following image gives an idea of what each individual color looks like:
@@ -119,6 +117,8 @@ $(makeLensesFor
 -- 'defaultColourCube', and 'defaultGreyscale' as a starting point to
 -- customize the colors. The only time you'd need to use a constructor other
 -- than 'NoPalette' is when you want to customize the default colors.
+-- That is to say, using 'FullPalette' with all the defaults should give you the
+-- same result as using 'NoPalette'.
 data Palette c
   = NoPalette
   -- ^ Don't set any colors and just use the default from VTE.  This is a black
@@ -148,6 +148,8 @@ paletteToList = Data.Foldable.toList
 --
 -- >>> coloursFromBits 192 63 == defaultLightColours
 -- True
+--
+-- In general, as an end-user, you shouldn't need to use this.
 coloursFromBits :: forall b. (Ord b, Floating b) => Word8 -> Word8 -> Vec N8 (Colour b)
 coloursFromBits scale offset = vgen_ createElem
   where
@@ -165,14 +167,14 @@ coloursFromBits scale offset = vgen_ createElem
     bit :: Int -> Int -> Int
     bit m i = i `div` (2 ^ m) `mod` 2
 
--- | A 'Vec' of standard colors.  Default value when used in 'BasicPalette'.
+-- | A 'Vec' of standard colors.  Default value for 'BasicPalette'.
 --
 -- >>> showColourVec defaultStandardColours
 -- ["#000000","#c00000","#00c000","#c0c000","#0000c0","#c000c0","#00c0c0","#c0c0c0"]
 defaultStandardColours :: (Ord b, Floating b) => Vec N8 (Colour b)
 defaultStandardColours = coloursFromBits 192 0
 
--- | A 'Vec' of extended (light) colors.  Default value when used in 'ExtendedPalette'.
+-- | A 'Vec' of extended (light) colors.  Default value for 'ExtendedPalette'.
 --
 -- >>> showColourVec defaultLightColours
 -- ["#3f3f3f","#ff3f3f","#3fff3f","#ffff3f","#3f3fff","#ff3fff","#3fffff","#ffffff"]
@@ -192,25 +194,120 @@ cube d (I i :* I j :* I k :* ØV) = mgen_ $ \(x :< y :< z :< Ø) ->
   affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] black
   where coef n = fromIntegral (fin n) / 5
 
--- | A matrix of a 6 x 6 x 6 color cube. Default value when used in 'ColourCubePalette'.
+-- | A matrix of a 6 x 6 x 6 color cube. Default value for 'ColourCubePalette'.
 --
 -- >>> putStrLn $ pack $ showColourCube defaultColourCube
--- foobarbaz
+-- [ [ #000000, #00005f, #000087, #0000af, #0000d7, #0000ff
+--   , #005f00, #005f5f, #005f87, #005faf, #005fd7, #005fff
+--   , #008700, #00875f, #008787, #0087af, #0087d7, #0087ff
+--   , #00af00, #00af5f, #00af87, #00afaf, #00afd7, #00afff
+--   , #00d700, #00d75f, #00d787, #00d7af, #00d7d7, #00d7ff
+--   , #00ff00, #00ff5f, #00ff87, #00ffaf, #00ffd7, #00ffff
+--   ]
+-- , [ #5f0000, #5f005f, #5f0087, #5f00af, #5f00d7, #5f00ff
+--   , #5f5f00, #5f5f5f, #5f5f87, #5f5faf, #5f5fd7, #5f5fff
+--   , #5f8700, #5f875f, #5f8787, #5f87af, #5f87d7, #5f87ff
+--   , #5faf00, #5faf5f, #5faf87, #5fafaf, #5fafd7, #5fafff
+--   , #5fd700, #5fd75f, #5fd787, #5fd7af, #5fd7d7, #5fd7ff
+--   , #5fff00, #5fff5f, #5fff87, #5fffaf, #5fffd7, #5fffff
+--   ]
+-- , [ #870000, #87005f, #870087, #8700af, #8700d7, #8700ff
+--   , #875f00, #875f5f, #875f87, #875faf, #875fd7, #875fff
+--   , #878700, #87875f, #878787, #8787af, #8787d7, #8787ff
+--   , #87af00, #87af5f, #87af87, #87afaf, #87afd7, #87afff
+--   , #87d700, #87d75f, #87d787, #87d7af, #87d7d7, #87d7ff
+--   , #87ff00, #87ff5f, #87ff87, #87ffaf, #87ffd7, #87ffff
+--   ]
+-- , [ #af0000, #af005f, #af0087, #af00af, #af00d7, #af00ff
+--   , #af5f00, #af5f5f, #af5f87, #af5faf, #af5fd7, #af5fff
+--   , #af8700, #af875f, #af8787, #af87af, #af87d7, #af87ff
+--   , #afaf00, #afaf5f, #afaf87, #afafaf, #afafd7, #afafff
+--   , #afd700, #afd75f, #afd787, #afd7af, #afd7d7, #afd7ff
+--   , #afff00, #afff5f, #afff87, #afffaf, #afffd7, #afffff
+--   ]
+-- , [ #d70000, #d7005f, #d70087, #d700af, #d700d7, #d700ff
+--   , #d75f00, #d75f5f, #d75f87, #d75faf, #d75fd7, #d75fff
+--   , #d78700, #d7875f, #d78787, #d787af, #d787d7, #d787ff
+--   , #d7af00, #d7af5f, #d7af87, #d7afaf, #d7afd7, #d7afff
+--   , #d7d700, #d7d75f, #d7d787, #d7d7af, #d7d7d7, #d7d7ff
+--   , #d7ff00, #d7ff5f, #d7ff87, #d7ffaf, #d7ffd7, #d7ffff
+--   ]
+-- , [ #ff0000, #ff005f, #ff0087, #ff00af, #ff00d7, #ff00ff
+--   , #ff5f00, #ff5f5f, #ff5f87, #ff5faf, #ff5fd7, #ff5fff
+--   , #ff8700, #ff875f, #ff8787, #ff87af, #ff87d7, #ff87ff
+--   , #ffaf00, #ffaf5f, #ffaf87, #ffafaf, #ffafd7, #ffafff
+--   , #ffd700, #ffd75f, #ffd787, #ffd7af, #ffd7d7, #ffd7ff
+--   , #ffff00, #ffff5f, #ffff87, #ffffaf, #ffffd7, #ffffff
+--   ]
+-- ]
 defaultColourCube :: (Ord b, Floating b) => M '[N6, N6, N6] (Colour b)
 defaultColourCube = mgen_ $ \(x :< y :< z :< Ø) -> sRGB24 (cmp x) (cmp y) (cmp z)
   where
+    cmp :: Fin N6 -> Word8
     cmp i =
       let i' = fromIntegral (fin i)
       in signum i' * 55 + 40 * i'
 
--- | Helper function for showing all the colors in a color cube.
---
--- TODO: rewrite this function so it actually looks good.
-showColourCube :: forall n m o. M '[n, m, o] (Colour Double) -> String
-showColourCube (M (matrix :: Matrix '[n, m, o] (Colour Double))) =
-  ppMatrix' (known :: Length '[n, m, o]) (fmap sRGB24show matrix :: Matrix '[n, m, o] String) ""
+-- | Helper function for showing all the colors in a color cube. This is used
+-- for debugging.
+showColourCube :: M '[N6, N6, N6] (Colour Double) -> String
+showColourCube (M matrix) =
+  -- TODO: This function will only work with a 6x6x6 matrix, but it could be
+  -- generalized to work with any Rank-3 matrix.
+  let itemList = Data.Foldable.toList matrix
+  in showSColourCube itemList ""
+  where
+    showSColourCube :: [Colour Double] -> String -> String
+    showSColourCube itemList =
+      showString "[ " .
+      showSquare 0 itemList .
+      showString ", " .
+      showSquare 1 itemList .
+      showString ", " .
+      showSquare 2 itemList .
+      showString ", " .
+      showSquare 3 itemList .
+      showString ", " .
+      showSquare 4 itemList .
+      showString ", " .
+      showSquare 5 itemList .
+      showString "]"
 
--- | A 'Vec' of a grey scale.  Default value when used in 'FullPalette'.
+    showSquare :: Int -> [Colour Double] -> String -> String
+    showSquare i colours =
+      showString "[ " .
+      showRow i 0 colours .
+      showString ", " .
+      showRow i 1 colours .
+      showString ", " .
+      showRow i 2 colours .
+      showString ", " .
+      showRow i 3 colours .
+      showString ", " .
+      showRow i 4 colours .
+      showString ", " .
+      showRow i 5 colours .
+      showString "]\n"
+
+    showRow :: Int -> Int -> [Colour Double] -> String -> String
+    showRow i j colours =
+      showCol (headEx $ drop (i * 36 + j * 6 + 0) colours) .
+      showString ", " .
+      showCol (headEx $ drop (i * 36 + j * 6 + 1) colours) .
+      showString ", " .
+      showCol (headEx $ drop (i * 36 + j * 6 + 2) colours) .
+      showString ", " .
+      showCol (headEx $ drop (i * 36 + j * 6 + 3) colours) .
+      showString ", " .
+      showCol (headEx $ drop (i * 36 + j * 6 + 4) colours) .
+      showString ", " .
+      showCol (headEx $ drop (i * 36 + j * 6 + 5) colours) .
+      showString "\n  "
+
+    showCol :: Colour Double -> String -> String
+    showCol col str = sRGB24show col <> str
+
+-- | A 'Vec' of a grey scale.  Default value for 'FullPalette'.
 --
 -- >>> showColourVec defaultGreyscale
 -- ["#080808","#121212","#1c1c1c","#262626","#303030","#3a3a3a","#444444","#4e4e4e","#585858","#626262","#6c6c6c","#767676","#808080","#8a8a8a","#949494","#9e9e9e","#a8a8a8","#b2b2b2","#bcbcbc","#c6c6c6","#d0d0d0","#dadada","#e4e4e4","#eeeeee"]
@@ -239,7 +336,7 @@ whenSet = \case
 -- | NB: Currently due to issues either with VTE or the bindings generated for
 -- Haskell, background colour cannot be set independently of the palette.
 -- The @backgroundColour@ field will be ignored and the 0th colour in the
--- palette (usually black) will be used as the background colour.
+-- palette (by default black) will be used as the background colour.
 --
 -- Termonad will behave differently depending on the combination
 -- 'cursorFgColour' and 'cursorBgColour' being 'Set' vs. 'Unset'.
@@ -265,14 +362,14 @@ whenSet = \case
 --   background will be the color you have 'Set', while the cursor foreground
 --   will be green.
 --
---   This is completely usable, but is slightly annoying if you place the
---   cursor over a letter with the same foreground color as the cursor because
---   the letter will not be readable.  For instance, imagine you have set your
---   cursor background color to red, and somewhere on the screen there is a
---   letter with a black background and a red foreground.  If you move your
---   cursor over the letter, the background of the cursor will be red (as you
---   have set), and the cursor foreground will be red (to match the original
---   foreground color of the letter), but this will make it so you can't
+--   This is completely usable, but is slightly annoying if you place the cursor
+--   over a letter with the same foreground color as the cursor's background
+--   color, because the letter will not be readable. For instance, imagine you
+--   have set your cursor background color to red, and somewhere on the screen
+--   there is a letter with a black background and a red foreground. If you move
+--   your cursor over the letter, the background of the cursor will be red (as
+--   you have set), and the cursor foreground will be red (to match the original
+--   foreground color of the letter). This will make it so you can't
 --   actually read the letter, because the foreground and background are both
 --   red.
 --
