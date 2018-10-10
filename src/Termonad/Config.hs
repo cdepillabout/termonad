@@ -4,8 +4,6 @@
 
 module Termonad.Config where
 
--- --< Imports >-- {{{
-
 import Termonad.Prelude hiding ((\\), index)
 
 import Control.Lens (makeLensesFor, makePrisms)
@@ -27,9 +25,10 @@ import Type.Family.List (Fsts3, Thds3)
 import qualified Data.Foldable
 import GI.Vte (CursorBlinkMode(CursorBlinkModeOn))
 
--- }}}
+----------------------
+-- Orphan Instances --
+----------------------
 
--- --< Orphan instances >-- {{{
 -- These should eventually be provided by type-combinators.
 
 deriving instance Functor  (Matrix ns) => Functor  (M ns)
@@ -49,9 +48,9 @@ instance Known (IFin n) m => Known (IFin ('S n)) ('S m) where
   type KnownC (IFin ('S n)) ('S m) = Known (IFin n) m
   known = IFS known
 
--- }}}
-
--- --< FontConfig >-- {{{
+-----------------
+-- Font Config --
+-----------------
 
 -- | The font size for the Termonad terminal.  There are two ways to set the
 -- fontsize, corresponding to the two different ways to set the font size in
@@ -109,9 +108,9 @@ $(makeLensesFor
     ''FontConfig
  )
 
--- }}}
-
--- --< ColourConfig >-- {{{
+-------------------
+-- Colour Config --
+-------------------
 
 data Palette c
   = NoPalette
@@ -143,8 +142,8 @@ defaultLightColours :: (Ord b, Floating b) => Vec N8 (Colour b)
 defaultLightColours = coloursFromBits 192 63
 
 -- | Specify a colour cube with one colour vector for its displacement and three
---   colour vectors for its edges. Produces a uniform 6x6x6 grid bounded by
---   and orthognal to the faces.
+-- colour vectors for its edges. Produces a uniform 6x6x6 grid bounded by
+-- and orthognal to the faces.
 cube
   :: Fractional b => Colour b -> Vec N3 (Colour b) -> M [N6, N6, N6] (Colour b)
 cube d (I i :* I j :* I k :* ØV) = mgen_ $ \(x :< y :< z :< Ø) ->
@@ -254,12 +253,12 @@ defaultColourConfig = ColourConfig
   , palette = NoPalette
   }
 
--- }}}
+--------------------------
+-- Misc VecT Operations --
+--------------------------
 
--- --< VecT operations >-- {{{
--- These should be upstreamed.
-
--- --< Misc >-- {{{
+-- These are waiting to be upstreamed at
+-- https://github.com/kylcarte/type-combinators/pull/11.
 
 onHead :: (f a -> f a) -> VecT ('S n) f a -> VecT ('S n) f a
 onHead f (a :* as) = f a :* as
@@ -287,10 +286,6 @@ deIndex = \case
   IFS n -> FS (deIndex n)
   IFZ   -> FZ
 
--- }}}
-
--- --< Update/Set at index >-- {{{
-
 vUpdateAt :: Fin n -> (f a -> f a) -> VecT n f a -> VecT n f a
 vUpdateAt = \case
   FS m -> onTail . vUpdateAt m
@@ -309,10 +304,6 @@ mUpdateAt = \case
 
 mSetAt :: Prod Fin ns -> a -> M ns a -> M ns a
 mSetAt ns = mUpdateAt ns . const
-
--- }}}
-
--- --< Update/Set over range >-- {{{
 
 data Range n l m = Range (IFin ('S n) l) (IFin ('S n) (l + m))
   deriving (Show, Eq)
@@ -346,11 +337,9 @@ setSubmatrix
   => Prod (Uncur3 Range) nlms -> M ms a -> M ns a -> M ns a
 setSubmatrix rs sm = updateSubmatrix rs $ \is _ -> mIndex is sm
 
--- }}}
-
--- }}}
-
--- --< Scrollbar >-- {{{
+---------------
+-- Scrollbar --
+---------------
 
 data ShowScrollbar
   = ShowScrollbarNever
@@ -358,9 +347,9 @@ data ShowScrollbar
   | ShowScrollbarIfNeeded
   deriving (Eq, Show)
 
--- }}}
-
--- --< TabBar >-- {{{
+------------
+-- Tabbar --
+------------
 
 data ShowTabBar
   = ShowTabBarNever
@@ -368,9 +357,9 @@ data ShowTabBar
   | ShowTabBarIfNeeded
   deriving (Eq, Show)
 
--- }}}
-
--- --< TMConfig >-- {{{
+--------------
+-- TMConfig --
+--------------
 
 data TMConfig = TMConfig
   { fontConfig :: !FontConfig
@@ -411,6 +400,3 @@ defaultTMConfig =
     , showTabBar = ShowTabBarIfNeeded
     , cursorBlinkMode = CursorBlinkModeOn
     }
-
--- }}}
-
