@@ -92,7 +92,6 @@ $(makeLensesFor
 -- Colour Config --
 -------------------
 
-
 -- | This is the color palette to use for the terminal. Each data constructor
 -- lets you set progressively more colors.  These colors are used by the
 -- terminal to render
@@ -324,10 +323,17 @@ defaultGreyscale = vgen_ $ \n -> I $
 -- An example of this is 'cursorFgColour' and 'cursorBgColour'.  By default,
 -- 'cursorFgColour' and 'cursorBgColour' are both 'Unset'.  However, when
 -- 'cursorBgColour' is 'Set', 'cursorFgColour' defaults to the color of the text
--- underneath.  There is no way to represent this by 'Set'ting 'cursorFgColour'.
+-- underneath.  There is no way to represent this by setting 'cursorFgColour'.
 data Option a = Unset | Set !a
   deriving (Show, Read, Eq, Ord, Functor, Foldable)
 
+-- | Run a function over the value contained in an 'Option'. Return 'mempty'
+-- when 'Option' is 'Unset'.
+--
+-- >>> whenSet (Set [1,2,3]) (++ [4,5,6]) :: [Int]
+-- [1,2,3,4,5,6]
+-- >>> whenSet Unset (++ [4,5,6]) :: [Int]
+-- []
 whenSet :: Monoid m => Option a -> (a -> m) -> m
 whenSet = \case
   Unset -> \_ -> mempty
