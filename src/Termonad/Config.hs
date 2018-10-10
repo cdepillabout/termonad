@@ -12,7 +12,7 @@ import qualified Data.Foldable
 import GI.Vte (CursorBlinkMode(CursorBlinkModeOn))
 
 import Termonad.Config.Vec
-  (I(I), M, N3, N24, N6, N8, Prod((:<), Ø), Vec, VecT((:*), ØV), fin, mgen_, vgen_)
+  (Fin, I(I), M, N3, N24, N6, N8, Prod((:<), Ø), Vec, VecT((:*), ØV), fin, mgen_, vgen_)
 
 -----------------
 -- Font Config --
@@ -131,12 +131,22 @@ paletteToList = Data.Foldable.toList
 --
 -- >>> coloursFromBits 192 63 == defaultLightColours
 -- True
-coloursFromBits :: (Ord b, Floating b) => Word8 -> Word8 -> Vec N8 (Colour b)
-coloursFromBits scale offset = vgen_ $ I . (sRGB24 <$> cmp 0 <*> cmp 1 <*> cmp 2)
+coloursFromBits :: forall b. (Ord b, Floating b) => Word8 -> Word8 -> Vec N8 (Colour b)
+coloursFromBits scale offset = vgen_ createElem
   where
+    createElem :: Fin N8 -> I (Colour b)
+    createElem finN =
+      let red = cmp 0 finN
+          green = cmp 1 finN
+          blue = cmp 2 finN
+          color = sRGB24 red green blue
+      in I color
+
+    cmp :: Int -> Fin N8 -> Word8
+    cmp i = (offset +) . (scale *) . fromIntegral . bit i . fin
+
     bit :: Int -> Int -> Int
     bit m i = i `div` (2 ^ m) `mod` 2
-    cmp i = (offset +) . (scale *) . fromIntegral . bit i . fin
 
 -- |
 --
@@ -152,6 +162,7 @@ defaultStandardColours = coloursFromBits 192 0
 defaultLightColours :: (Ord b, Floating b) => Vec N8 (Colour b)
 defaultLightColours = coloursFromBits 192 63
 
+-- | A helper function for showing all the colors in 'Vec' of colors.
 showColourVec :: forall n. Vec n (Colour Double) -> [String]
 showColourVec = fmap sRGB24show . Data.Foldable.toList
 

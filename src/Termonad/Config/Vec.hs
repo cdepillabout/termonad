@@ -2,7 +2,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Termonad.Config.Vec
-  ( I(I)
+  ( Fin
+  , I(I)
   , M
   , N3
   , N24
