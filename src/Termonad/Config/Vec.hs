@@ -4,9 +4,7 @@
 module Termonad.Config.Vec
   ( Fin
   , I(I)
-  , Length
   , M(M)
-  , Matrix
   , N3
   , N24
   , N6
@@ -15,9 +13,7 @@ module Termonad.Config.Vec
   , Vec
   , VecT((:*), ØV)
   , fin
-  , known
   , mgen_
-  , ppMatrix'
   , vgen_
   ) where
 
