@@ -15,6 +15,7 @@ module Termonad.Config.Vec
   , fin
   , mgen_
   , vgen_
+  , vSetAt'
   ) where
 
 import Termonad.Prelude hiding ((\\), index)
