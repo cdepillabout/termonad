@@ -80,7 +80,7 @@ import GI.Vte
   , terminalSetColors
   , terminalSetColorCursor
   , terminalSetColorCursorForeground
---, terminalSetColorBackground
+  , terminalSetColorBackground
   , terminalSetColorForeground
   , terminalSetFont
   , terminalSetScrollbackLines
@@ -311,8 +311,10 @@ createTerm handleKeyPress mvarTMState = do
   let colourConf = colourConfig tmStateConfig
   terminalSetColors vteTerm Nothing Nothing . Just
     =<< traverse toRGBA (paletteToList . palette $ colourConf)
-  -- PR#28/IS#29: Setting the background colour is broken in gi-vte or VTE.
---terminalSetColorBackground vteTerm =<< toRGBA (backgroundColour colourConf)
+  -- PR#28/IS#29: Setting the background colour is broken in gi-vte or VTE.  If
+  -- this next line is called, then you are no longer able to set the
+  -- background color using the palette.
+  -- terminalSetColorBackground vteTerm =<< toRGBA (backgroundColour colourConf)
   terminalSetColorForeground vteTerm =<< toRGBA (foregroundColour colourConf)
   let optPerform setC cField = whenSet (cField colourConf) $ \c ->
         setC vteTerm . Just =<< toRGBA c

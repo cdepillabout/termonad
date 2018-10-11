@@ -339,10 +339,35 @@ whenSet = \case
   Unset -> \_ -> mempty
   Set x -> \f -> f x
 
--- | NB: Currently due to issues either with VTE or the bindings generated for
+-- | The configuration for the colors used by Termonad.
+--
+-- 'foregroundColour' and 'backgroundColour' allow you to set the color of the
+-- foreground text and background of the terminal (although see the __WARNING__
+-- below).  Most people use a black background and a light foreground for their
+-- terminal, so this is the default.
+--
+-- 'palette' allows you to set the full color palette used by the terminal.
+-- See 'Palette' for more information.
+--
+-- If you want to use a terminal with a white (or light) background and a black
+-- foreground, it may be a good idea to change some of the colors in the
+-- 'Palette' as well.
+--
+-- (__WARNING__: Currently due to issues either with VTE or the bindings generated for
 -- Haskell, background colour cannot be set independently of the palette.
 -- The @backgroundColour@ field will be ignored and the 0th colour in the
--- palette (by default black) will be used as the background colour.
+-- palette (by default black) will be used as the background colour. See
+-- <https://github.com/cdepillabout/termonad/issues/29 this issue>.
+--
+-- VTE works as follows: if you don't explicitly set a background or foreground color,
+-- it takes the 0th colour from the 'palette' to be the background color, and the 7th
+-- colour from the 'palette' to be the foreground color.  If you notice oddities with
+-- colouring in certain applications, it may be helpful to make sure that these
+-- 'palette' colours match up with the 'backgroundColour' and 'foregroundColour' you
+-- have set.)
+--
+-- 'cursorFgColour' and 'cursorBgColour' allow you to set the foreground color
+-- of the text under the cursor, as well as the color of the cursor itself.
 --
 -- Termonad will behave differently depending on the combination
 -- 'cursorFgColour' and 'cursorBgColour' being 'Set' vs. 'Unset'.
@@ -386,14 +411,23 @@ whenSet = \case
 --   background will be red and the cursor foreground will be black.
 --
 --   This is the default.
+--
+-- See 'defaultColourConfig' for the defaults for 'ColourConfig' used in Termonad.
 data ColourConfig c = ColourConfig
   { cursorFgColour :: !(Option c)
   , cursorBgColour :: !(Option c)
   , foregroundColour :: !c
-  , backgroundColour :: !c
+  , backgroundColour :: !c  -- ^ See the __WARNING__ above.
   , palette :: !(Palette c)
   } deriving (Eq, Show, Functor)
 
+-- | Default setting for a 'ColourConfig'.
+--
+-- >>> let fgGrey = sRGB24 192 192 192
+-- >>> let bgBlack = sRGB24 0 0 0
+-- >>> let defCC = ColourConfig { cursorFgColour = Unset, cursorBgColour = Unset, foregroundColour = fgGrey, backgroundColour = bgBlack, palette = NoPalette }
+-- >>> defaultColourConfig == defCC
+-- True
 defaultColourConfig :: (Ord b, Floating b) => ColourConfig (Colour b)
 defaultColourConfig = ColourConfig
   { cursorFgColour = Unset
