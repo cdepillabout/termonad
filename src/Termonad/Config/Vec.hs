@@ -1,5 +1,5 @@
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans -Wno-unused-top-binds -Wno-unused-imports #-}
 
 module Termonad.Config.Vec
   ( Fin
@@ -10,10 +10,12 @@ module Termonad.Config.Vec
   , N6
   , N8
   , Prod((:<), Ø)
+  , Range
   , Vec
-  , VecT((:*), ØV)
+  , VecT((:*), ØV, EmptyV)
   , fin
   , mgen_
+  , setSubmatrix
   , vgen_
   , vSetAt'
   ) where

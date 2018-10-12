@@ -38,10 +38,13 @@ library
   exposed-modules:     Termonad
                      , Termonad.App
                      , Termonad.Config
+                     , Termonad.Config.Colour
+                     , Termonad.Config.Extension
                      , Termonad.Config.Vec
                      , Termonad.FocusList
                      , Termonad.Gtk
                      , Termonad.Keys
+                     , Termonad.Lenses
                      , Termonad.Prelude
                      , Termonad.Term
                      , Termonad.Types
