@@ -311,9 +311,15 @@ data ShowTabBar
 -- ConfigExtension --
 ---------------------
 
-data ConfigHooks = ConfigHooks
-  { createTermHook :: TMState -> Terminal -> IO ()
-  }
+-- | Hooks into certain termonad operations and VTE events. Used to modify
+--   termonad's behaviour in order to implement new functionality. Fields should
+--   have sane @Semigroup@ and @Monoid@ instances so that config extensions can
+--   be combined uniformly and new hooks can be added without incident.
+data ConfigHooks = ConfigHooks {
+  -- | Produce an IO action to run on creation of new @Terminal@, given @TMState@
+  --   and the @Terminal@ in question.
+  createTermHook :: TMState -> Terminal -> IO ()
+}
 
 instance Semigroup ConfigHooks where
   ConfigHooks a <> ConfigHooks b
@@ -323,18 +329,31 @@ instance Monoid ConfigHooks where
   mappend = (<>)
   mempty = ConfigHooks mempty
 
+-- | A class for data types that can be sent to and caught by config extensions.
 class Typeable m => Message m
 
+-- | The @ConfigExtension@ class can be used to extend termonad from your
+--   configuration file. A data type holding the desired configuration options
+--   can be made a @ConfigExtension@ instance by declaring how to produce the
+--   correct set of 'ConfigHooks' from those options, then the new options can be
+--   used by adding them to your 'TMConfig' with '<+>'.
+--
+--   Optionally the extended capabilities can include runtime interaction if
+--   messages are defined and the @message@ class method is implemented.
 class ConfigExtension g where
 
+  -- | Produce hooks from config options.
   hooks :: g -> ConfigHooks
 
+  -- | Catch messages and act on them, returning a potentially changed config.
   message :: Message m => TMState -> m -> g -> IO g
   message _ _ g = pure g
 
 instance ConfigExtension () where
   hooks () = mempty
 
+-- | An existential data type over config extensions. Is used internally by
+--   @TMConfig@ and needed neither by the end user nor the extension implementor.
 data SomeConfigExtension = forall g. ConfigExtension g => SomeConfigExtension g
 
 instance Show SomeConfigExtension where
