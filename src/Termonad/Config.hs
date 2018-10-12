@@ -9,12 +9,13 @@ module Termonad.Config
   , Option(..)
   , ShowScrollbar(..)
   , ShowTabBar(..)
+  , CursorBlinkMode(..)
   ) where
 
 import Termonad.Prelude hiding ((\\), index)
 import Termonad.Types
 
-import GI.Vte (CursorBlinkMode(CursorBlinkModeOn))
+import GI.Vte (CursorBlinkMode(..))
 
 -- | The default 'FontSize' used if not specified.
 --

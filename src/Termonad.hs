@@ -1,12 +1,8 @@
 module Termonad
   ( defaultMain
-  , pattern (:+)
-  , CursorBlinkMode(..)
+  , start
   , module Config
   ) where
 
-import Termonad.App (defaultMain)
+import Termonad.App (defaultMain, start)
 import Termonad.Config as Config
-
-import Data.Type.Vector (pattern (:+))
-import GI.Vte (CursorBlinkMode(..))

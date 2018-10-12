@@ -12,7 +12,7 @@ module Termonad.Config.Vec
   , Prod((:<), Ø)
   , Range
   , Vec
-  , VecT((:*), ØV, EmptyV)
+  , VecT((:+), (:*), ØV, EmptyV)
   , fin
   , mgen_
   , setSubmatrix
@@ -33,6 +33,7 @@ import Data.Type.Vector
   , Matrix
   , Vec
   , VecT(..)
+  , pattern (:+)
   , index
   , mgen_
   , onMatrix
