@@ -4,7 +4,7 @@ module Termonad.App where
 import Termonad.Prelude
 
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
-import Control.Lens ((&), (^.), (.~))
+import Control.Lens ((&), (.~), (^.), firstOf)
 import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
 import GI.Gio
   ( ApplicationFlags(ApplicationFlagsFlagsNone)
@@ -70,43 +70,68 @@ import GI.Pango
   , fontDescriptionSetAbsoluteSize
   )
 import GI.Vte
-  ( terminalCopyClipboard
+  ( Terminal
+  , terminalCopyClipboard
   , terminalPasteClipboard
   )
 
 import Paths_termonad (getDataFileName)
-import Termonad.Config
-  ( FontConfig(fontFamily, fontSize)
-  , FontSize(FontSizePoints, FontSizeUnits)
-  , TMConfig
-  , lensFontConfig
+
+import Termonad.Lenses
+  ( lensFontConfig
   , lensConfirmExit
-  , lensShowMenu
-  )
-import Termonad.FocusList (findFL, moveFromToFL, updateFocusFL)
-import Termonad.Gtk (appNew, objFromBuildUnsafe)
-import Termonad.Keys (handleKeyPress)
-import Termonad.Term (createTerm, relabelTabs, termExitFocused, setShowTabs)
-import Termonad.Types
-  ( TMNotebookTab
-  , TMState
-  , TMState'(TMState)
-  , UserRequestedExit(UserRequestedExit, UserDidNotRequestExit)
-  , getFocusedTermFromState
-  , getUserRequestedExit
   , lensTMNotebookTabs
   , lensTMNotebookTabTerm
   , lensTMStateApp
   , lensTMStateNotebook
   , lensTMStateConfig
+  , lensTMStateUserReqExit
   , lensTerm
+  , lensShowMenu
+  )
+import Termonad.FocusList (findFL, moveFromToFL, updateFocusFL, focusItemGetter)
+import Termonad.Gtk (appNew, objFromBuildUnsafe)
+import Termonad.Keys (handleKeyPress)
+import Termonad.Term (createTerm, relabelTabs, termExitFocused, setShowTabs)
+import Termonad.Types
+  ( FontConfig(fontFamily, fontSize)
+  , FontSize(FontSizePoints, FontSizeUnits)
+  , TMConfig
+  , TMNotebookTab
+  , TMState
+  , TMState'(TMState)
+  , UserRequestedExit(UserRequestedExit, UserDidNotRequestExit)
   , newEmptyTMState
-  , setUserRequestedExit
   , tmNotebookTabTermContainer
   , tmNotebookTabs
   , tmStateNotebook
   )
 import Termonad.XML (interfaceText, menuText)
+
+getFocusedTermFromState :: TMState -> IO (Maybe Terminal)
+getFocusedTermFromState mvarTMState = do
+  withMVar
+    mvarTMState
+    ( pure .
+      firstOf
+        ( lensTMStateNotebook .
+          lensTMNotebookTabs .
+          focusItemGetter .
+          traverse .
+          lensTMNotebookTabTerm .
+          lensTerm
+        )
+    )
+
+setUserRequestedExit :: TMState -> IO ()
+setUserRequestedExit mvarTMState = do
+  modifyMVar_ mvarTMState $ \tmState -> do
+    pure $ tmState & lensTMStateUserReqExit .~ UserRequestedExit
+
+getUserRequestedExit :: TMState -> IO UserRequestedExit
+getUserRequestedExit mvarTMState = do
+  tmState <- readMVar mvarTMState
+  pure $ tmState ^. lensTMStateUserReqExit
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do

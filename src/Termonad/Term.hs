@@ -3,6 +3,19 @@
 module Termonad.Term where
 
 import Termonad.Prelude
+import Termonad.Lenses
+  ( lensShowScrollbar
+  , lensShowTabBar
+  , lensConfirmExit
+  , lensTerm
+  , lensTMNotebookTabLabel
+  , lensTMNotebookTabs
+  , lensTMNotebookTabTerm
+  , lensTMNotebookTabTermContainer
+  , lensTMStateApp
+  , lensTMStateConfig
+  , lensTMStateNotebook
+  )
 
 import Control.Lens ((^.), (&), (.~), set, to)
 import Data.Colour.SRGB (Colour, RGB(RGB), toSRGB)
@@ -77,11 +90,6 @@ import GI.Vte
   , terminalGetWindowTitle
   , terminalNew
   , terminalSetCursorBlinkMode
-  , terminalSetColors
-  , terminalSetColorCursor
-  , terminalSetColorCursorForeground
-  , terminalSetColorBackground
-  , terminalSetColorForeground
   , terminalSetFont
   , terminalSetScrollbackLines
   , terminalSpawnSync
@@ -91,32 +99,18 @@ import System.FilePath ((</>))
 import System.Directory (getSymbolicLinkTarget)
 import System.Environment (lookupEnv)
 
-import Termonad.Config
-  ( ShowScrollbar(..)
-  , ShowTabBar(..)
-  , TMConfig(scrollbackLen, wordCharExceptions, colourConfig, cursorBlinkMode)
-  , ColourConfig(..)
-  , lensShowScrollbar
-  , lensShowTabBar
-  , lensConfirmExit
-  , paletteToList
-  , whenSet
-  )
 import Termonad.FocusList (appendFL, deleteFL, getFLFocusItem)
 import Termonad.Types
-  ( TMNotebookTab
+  ( ShowScrollbar(..)
+  , ShowTabBar(..)
+  , TMConfig(scrollbackLen, wordCharExceptions, cursorBlinkMode, extension)
+  , TMNotebookTab
   , TMState
   , TMState'(TMState, tmStateAppWin, tmStateConfig, tmStateFontDesc, tmStateNotebook)
   , TMTerm
+  , ConfigExtension(hooks)
+  , ConfigHooks(createTermHook)
   , createTMNotebookTab
-  , lensTerm
-  , lensTMNotebookTabLabel
-  , lensTMNotebookTabs
-  , lensTMNotebookTabTerm
-  , lensTMNotebookTabTermContainer
-  , lensTMStateApp
-  , lensTMStateConfig
-  , lensTMStateNotebook
   , newTMTerm
   , pid
   , tmNotebook
@@ -308,18 +302,6 @@ createTerm handleKeyPress mvarTMState = do
   terminalSetFont vteTerm (Just tmStateFontDesc)
   terminalSetWordCharExceptions vteTerm $ wordCharExceptions tmStateConfig
   terminalSetScrollbackLines vteTerm (fromIntegral (scrollbackLen tmStateConfig))
-  let colourConf = colourConfig tmStateConfig
-  terminalSetColors vteTerm Nothing Nothing . Just
-    =<< traverse toRGBA (paletteToList . palette $ colourConf)
-  -- PR#28/IS#29: Setting the background colour is broken in gi-vte or VTE.  If
-  -- this next line is called, then you are no longer able to set the
-  -- background color using the palette.
-  -- terminalSetColorBackground vteTerm =<< toRGBA (backgroundColour colourConf)
-  terminalSetColorForeground vteTerm =<< toRGBA (foregroundColour colourConf)
-  let optPerform setC cField = whenSet (cField colourConf) $ \c ->
-        setC vteTerm . Just =<< toRGBA c
-  optPerform terminalSetColorCursor cursorBgColour
-  optPerform terminalSetColorCursorForeground cursorFgColour
   terminalSetCursorBlinkMode vteTerm (cursorBlinkMode tmStateConfig)
   widgetShow vteTerm
   -- Should probably use GI.Vte.Functions.getUserShell, but contrary to its
@@ -368,4 +350,5 @@ createTerm handleKeyPress mvarTMState = do
   widgetGrabFocus vteTerm
   windowSetFocus tmStateAppWin (Just vteTerm)
   assertInvariantTMState mvarTMState
+  createTermHook (hooks $ extension tmStateConfig) mvarTMState vteTerm
   pure tmTerm

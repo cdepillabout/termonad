@@ -1,11 +1,9 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Termonad.Types where
 
 import Termonad.Prelude
 
-import Control.Lens ((&), (.~), (^.), firstOf, makeLensesFor)
 import Data.Unique (Unique, hashUnique, newUnique)
 import GI.Gtk
   ( Application
@@ -20,12 +18,11 @@ import GI.Gtk
   , notebookGetNPages
   )
 import GI.Pango (FontDescription)
-import GI.Vte (Terminal)
+import GI.Vte (Terminal, CursorBlinkMode)
 import Text.Pretty.Simple (pPrint)
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
-import Termonad.Config (TMConfig)
-import Termonad.FocusList (FocusList, emptyFL, focusItemGetter, singletonFL, getFLFocusItem, focusListLen)
+import Termonad.FocusList (FocusList, emptyFL, singletonFL, getFLFocusItem, focusListLen)
 import Termonad.Gtk (widgetEq)
 
 data TMTerm = TMTerm
@@ -49,14 +46,6 @@ instance Show TMTerm where
       showsPrec (d + 1) (hashUnique unique) .
       showString "}"
 
-$(makeLensesFor
-    [ ("term", "lensTerm")
-    , ("pid", "lensPid")
-    , ("unique", "lensUnique")
-    ]
-    ''TMTerm
- )
-
 data TMNotebookTab = TMNotebookTab
   { tmNotebookTabTermContainer :: !ScrolledWindow
   , tmNotebookTabTerm :: !TMTerm
@@ -78,14 +67,6 @@ instance Show TMNotebookTab where
       showString "(GI.GTK.Label)" .
       showString "}"
 
-$(makeLensesFor
-    [ ("tmNotebookTabTermContainer", "lensTMNotebookTabTermContainer")
-    , ("tmNotebookTabTerm", "lensTMNotebookTabTerm")
-    , ("tmNotebookTabLabel", "lensTMNotebookTabLabel")
-    ]
-    ''TMNotebookTab
- )
-
 data TMNotebook = TMNotebook
   { tmNotebook :: !Notebook
   , tmNotebookTabs :: !(FocusList TMNotebookTab)
@@ -102,13 +83,6 @@ instance Show TMNotebook where
       showString "tmNotebookTabs = " .
       showsPrec (d + 1) tmNotebookTabs .
       showString "}"
-
-$(makeLensesFor
-    [ ("tmNotebook", "lensTMNotebook")
-    , ("tmNotebookTabs", "lensTMNotebookTabs")
-    ]
-    ''TMNotebook
- )
 
 data UserRequestedExit
   = UserRequestedExit
@@ -153,17 +127,6 @@ instance Show TMState' where
       showString "tmStateUserReqExit = " .
       showsPrec (d + 1) tmStateUserReqExit .
       showString "}"
-
-$(makeLensesFor
-    [ ("tmStateApp", "lensTMStateApp")
-    , ("tmStateAppWin", "lensTMStateAppWin")
-    , ("tmStateNotebook", "lensTMStateNotebook")
-    , ("tmStateFontDesc", "lensTMStateFontDesc")
-    , ("tmStateConfig", "lensTMStateConfig")
-    , ("tmStateUserReqExit", "lensTMStateUserReqExit")
-    ]
-    ''TMState'
- )
 
 type TMState = MVar TMState'
 
@@ -262,6 +225,152 @@ traceShowMTMState :: TMState -> IO ()
 traceShowMTMState mvarTMState = do
   tmState <- readMVar mvarTMState
   print tmState
+
+------------
+-- Config --
+------------
+
+data TMConfig = TMConfig
+  { fontConfig :: !FontConfig
+  , showScrollbar :: !ShowScrollbar
+  , scrollbackLen :: !Integer
+  , confirmExit :: !Bool
+  , wordCharExceptions :: !Text
+  , showMenu :: !Bool
+  , showTabBar :: !ShowTabBar
+  , cursorBlinkMode :: !CursorBlinkMode
+  , extension :: !SomeConfigExtension
+  } deriving (Eq, Show)
+
+-- | The font size for the Termonad terminal.  There are two ways to set the
+-- fontsize, corresponding to the two different ways to set the font size in
+-- the Pango font rendering library.
+--
+-- If you're not sure which to use, try 'FontSizePoints' first and see how it
+-- looks.  It should generally correspond to font sizes you are used to from
+-- other applications.
+data FontSize
+  = FontSizePoints Int
+    -- ^ This sets the font size based on \"points\".  The conversion between a
+    -- point and an actual size depends on the system configuration and the
+    -- output device.  The function 'GI.Pango.fontDescriptionSetSize' is used
+    -- to set the font size.  See the documentation for that function for more
+    -- info.
+  | FontSizeUnits Double
+    -- ^ This sets the font size based on \"device units\".  In general, this
+    -- can be thought of as one pixel.  The function
+    -- 'GI.Pango.fontDescriptionSetAbsoluteSize' is used to set the font size.
+    -- See the documentation for that function for more info.
+  deriving (Eq, Show)
+
+-- | Settings for the font to be used in Termonad.
+data FontConfig = FontConfig
+  { fontFamily :: !Text
+    -- ^ The font family to use.  Example: @"DejaVu Sans Mono"@ or @"Source Code Pro"@
+  , fontSize :: !FontSize
+    -- ^ The font size.
+  } deriving (Eq, Show)
+
+-- | This data type represents an option that can either be 'Set' or 'Unset'.
+--
+-- This data type is used in situations where leaving an option unset results
+-- in a special state that is not representable by setting any specific value.
+--
+-- Examples of this include the 'cursorFgColour' and 'cursorBgColour' options
+-- supplied by the 'ColourConfig' @ConfigExtension@.  By default,
+-- 'cursorFgColour' and 'cursorBgColour' are both 'Unset'.  However, when
+-- 'cursorBgColour' is 'Set', 'cursorFgColour' defaults to the color of the text
+-- underneath.  There is no way to represent this by setting 'cursorFgColour'.
+data Option a = Unset | Set !a
+  deriving (Show, Read, Eq, Ord, Functor, Foldable)
+
+-- | Run a function over the value contained in an 'Option'. Return 'mempty'
+-- when 'Option' is 'Unset'.
+--
+-- >>> whenSet (Set [1,2,3]) (++ [4,5,6]) :: [Int]
+-- [1,2,3,4,5,6]
+-- >>> whenSet Unset (++ [4,5,6]) :: [Int]
+-- []
+whenSet :: Monoid m => Option a -> (a -> m) -> m
+whenSet = \case
+  Unset -> \_ -> mempty
+  Set x -> \f -> f x
+
+data ShowScrollbar
+  = ShowScrollbarNever
+  | ShowScrollbarAlways
+  | ShowScrollbarIfNeeded
+  deriving (Eq, Show)
+
+data ShowTabBar
+  = ShowTabBarNever
+  | ShowTabBarAlways
+  | ShowTabBarIfNeeded
+  deriving (Eq, Show)
+
+---------------------
+-- ConfigExtension --
+---------------------
+
+-- | Hooks into certain termonad operations and VTE events. Used to modify
+--   termonad's behaviour in order to implement new functionality. Fields should
+--   have sane @Semigroup@ and @Monoid@ instances so that config extensions can
+--   be combined uniformly and new hooks can be added without incident.
+data ConfigHooks = ConfigHooks {
+  -- | Produce an IO action to run on creation of new @Terminal@, given @TMState@
+  --   and the @Terminal@ in question.
+  createTermHook :: TMState -> Terminal -> IO ()
+}
+
+instance Semigroup ConfigHooks where
+  ConfigHooks a <> ConfigHooks b
+    = ConfigHooks (a <> b)
+
+instance Monoid ConfigHooks where
+  mappend = (<>)
+  mempty = ConfigHooks mempty
+
+-- | A class for data types that can be sent to and caught by config extensions.
+class Typeable m => Message m
+
+-- | The @ConfigExtension@ class can be used to extend termonad from your
+--   configuration file. A data type holding the desired configuration options
+--   can be made a @ConfigExtension@ instance by declaring how to produce the
+--   correct set of 'ConfigHooks' from those options, then the new options can be
+--   used by adding them to your 'TMConfig' with '<+>'.
+--
+--   Optionally the extended capabilities can include runtime interaction if
+--   messages are defined and the @message@ class method is implemented.
+class ConfigExtension g where
+
+  -- | Produce hooks from config options.
+  hooks :: g -> ConfigHooks
+
+  -- | Catch messages and act on them, returning a potentially changed config.
+  message :: Message m => TMState -> m -> g -> IO g
+  message _ _ g = pure g
+
+instance ConfigExtension () where
+  hooks () = mempty
+
+-- | An existential data type over config extensions. Is used internally by
+--   @TMConfig@ and needed neither by the end user nor the extension implementor.
+data SomeConfigExtension = forall g. ConfigExtension g => SomeConfigExtension g
+
+instance Show SomeConfigExtension where
+  show _ = "SomeConfigExtension"
+
+instance Eq SomeConfigExtension where
+  _ == _ = True
+
+instance ConfigExtension SomeConfigExtension where
+  hooks (SomeConfigExtension g) = hooks g
+  message mvarTMState m (SomeConfigExtension g) =
+    SomeConfigExtension <$> message mvarTMState m g
+
+----------------
+-- Invariants --
+----------------
 
 data FocusNotSameErr
   = FocusListFocusExistsButNoNotebookTabWidget
@@ -384,28 +493,3 @@ pPrintTMState :: TMState -> IO ()
 pPrintTMState mvarTMState = do
   tmState <- readMVar mvarTMState
   pPrint tmState
-
-getFocusedTermFromState :: TMState -> IO (Maybe Terminal)
-getFocusedTermFromState mvarTMState = do
-  withMVar
-    mvarTMState
-    ( pure .
-      firstOf
-        ( lensTMStateNotebook .
-          lensTMNotebookTabs .
-          focusItemGetter .
-          traverse .
-          lensTMNotebookTabTerm .
-          lensTerm
-        )
-    )
-
-setUserRequestedExit :: TMState -> IO ()
-setUserRequestedExit mvarTMState = do
-  modifyMVar_ mvarTMState $ \tmState -> do
-    pure $ tmState & lensTMStateUserReqExit .~ UserRequestedExit
-
-getUserRequestedExit :: TMState -> IO UserRequestedExit
-getUserRequestedExit mvarTMState = do
-  tmState <- readMVar mvarTMState
-  pure $ tmState ^. lensTMStateUserReqExit
