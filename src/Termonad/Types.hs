@@ -276,7 +276,8 @@ data FontConfig = FontConfig
 -- This data type is used in situations where leaving an option unset results
 -- in a special state that is not representable by setting any specific value.
 --
--- An example of this is 'cursorFgColour' and 'cursorBgColour'.  By default,
+-- Examples of this include the 'cursorFgColour' and 'cursorBgColour' options
+-- supplied by the 'ColourConfig' @ConfigExtension@.  By default,
 -- 'cursorFgColour' and 'cursorBgColour' are both 'Unset'.  However, when
 -- 'cursorBgColour' is 'Set', 'cursorFgColour' defaults to the color of the text
 -- underneath.  There is no way to represent this by setting 'cursorFgColour'.

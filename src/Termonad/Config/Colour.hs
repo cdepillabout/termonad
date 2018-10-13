@@ -41,6 +41,54 @@ import GI.Vte
 
 -- }}}
 
+-- --< Usage >-- {{{
+
+-- * Usage
+--
+-- $usage
+--
+-- To use this config extension in your termonad.hs, first import this module.
+-- Then you can simply add the new configuration options to an existing
+-- 'TMConfig' with the '<+>' operator, though note that the 'TMConfig' must come
+-- first (any other way is a type error).
+--
+-- E.g.
+--
+-- > import Termonad
+-- > import Termonad.Config.Colour
+-- > import Termonad.Config.Vec (VecT((:+), EmptyV))
+-- > import Data.Colour.SRGB (Colour, sRGB24)
+-- >
+-- > myBasicConfig :: TMConfig
+-- > myBasicConfig = defaultTMConfig
+-- >   { showScrollbar = ShowScrollbarNever
+-- >   , confirmExit = False
+-- >   , showMenu = False
+-- >   , cursorBlinkMode = CursorBlinkModeOff
+-- >   }
+-- >
+-- > myColourConfig :: ColourConfig (Colour Double)
+-- > myColourConfig = defaultColourConfig
+-- >   { cursorBgColour = Set (sRGB24 120 80 110)
+-- >   , foregroundColour = sRGB24 220 180 210
+-- >   , palette = BasicPalette myStandardColours
+-- >   } where
+-- >       myStandardColours
+-- >         =  sRGB24  40  30  20
+-- >         :+ sRGB24 180  30  20
+-- >         :+ sRGB24  40 160  20
+-- >         :+ sRGB24 180 160  20
+-- >         :+ sRGB24  40  30 120
+-- >         :+ sRGB24 180  30 120
+-- >         :+ sRGB24  40 160 120
+-- >         :+ sRGB24 180 160 120
+-- >         :+ EmptyV
+-- >
+-- > main :: IO ()
+-- > main = start (myBasicConfig <+> myColourConfig)
+
+-- }}}
+
 -- --< Colour Config >-- {{{
 
 -- | This is the color palette to use for the terminal. Each data constructor
@@ -378,7 +426,10 @@ $(makeLensesFor
 
 -- --< ConfigExtension instance >-- {{{
 
+-- | Messages for runtime interaction with the colour configuration.
 data ColourMessage
+  -- | This message can be sent to update the colours in use on the current term,
+  --   and the default colours for any new terms.
   = UpdateColours (ColourConfig (Colour Double) -> ColourConfig (Colour Double))
 
 instance Message ColourMessage
