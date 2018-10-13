@@ -2,8 +2,6 @@
 
 module Termonad.Config.Colour where
 
--- --< Imports >-- {{{
-
 import Control.Lens (makeLensesFor)
 import qualified Data.Foldable
 import Text.Show (showString)
@@ -39,9 +37,10 @@ import GI.Vte
   , terminalSetColorForeground
   )
 
--- }}}
 
--- --< Usage >-- {{{
+-----------
+-- Usage --
+-----------
 
 -- * Usage
 --
@@ -87,9 +86,9 @@ import GI.Vte
 -- > main :: IO ()
 -- > main = start (myBasicConfig <+> myColourConfig)
 
--- }}}
-
--- --< Colour Config >-- {{{
+-------------------
+-- Colour Config --
+-------------------
 
 -- | This is the color palette to use for the terminal. Each data constructor
 -- lets you set progressively more colors.  These colors are used by the
@@ -389,14 +388,22 @@ defaultGreyscale = vgen_ $ \n -> I $
 --
 -- See 'defaultColourConfig' for the defaults for 'ColourConfig' used in Termonad.
 data ColourConfig c = ColourConfig
-  { cursorFgColour :: !(Option c)
-  , cursorBgColour :: !(Option c)
-  , foregroundColour :: !c
-  , backgroundColour :: !c  -- ^ See the __WARNING__ above.
-  , palette :: !(Palette c)
+  { cursorFgColour :: !(Option c) -- ^ Foreground color of the cursor.  This is
+                                  -- the color of the text that the cursor is
+                                  -- over.
+  , cursorBgColour :: !(Option c) -- ^ Background color of the cursor.  This is
+                                  -- the color of the cursor itself.
+  , foregroundColour :: !c -- ^ Color of the default default foreground text in
+                           -- the terminal.
+  , backgroundColour :: !c -- ^ Background color for the terminal, however, See
+                           -- the __WARNING__ above.
+  , palette :: !(Palette c) -- ^ Color palette for the terminal.  See 'Palette'.
   } deriving (Eq, Show, Functor)
 
--- | Default setting for a 'ColourConfig'.
+-- | Default setting for a 'ColourConfig'.  The cursor colors are left at their
+-- default for VTE.  The foreground text for the terminal is grey and the
+-- background of the terminal is black.  The palette is left as the default for
+-- VTE.
 --
 -- >>> let fgGrey = sRGB24 192 192 192
 -- >>> let bgBlack = sRGB24 0 0 0
@@ -422,9 +429,9 @@ $(makeLensesFor
     ''ColourConfig
  )
 
--- }}}
-
--- --< ConfigExtension instance >-- {{{
+------------------------------
+-- ConfigExtension Instance --
+------------------------------
 
 -- | Messages for runtime interaction with the colour configuration.
 data ColourMessage
@@ -472,5 +479,3 @@ implementColourConfig colourConf vteTerm = do
       setRGBAGreen rgba green
       setRGBABlue rgba blue
       pure rgba
-
--- }}}
