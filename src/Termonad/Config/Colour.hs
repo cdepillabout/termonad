@@ -1,32 +1,66 @@
 {-# LANGUAGE TemplateHaskell #-}
 
+-- | Module    : Termonad.Config.Colour
+-- Description : Termonad Configuration Colour Options
+-- Copyright   : (c) Dennis Gosnell, 2018
+-- License     : BSD3
+-- Stability   : experimental
+-- Portability : POSIX
+--
+-- To use this config extension in your @~/.config/termonad/termonad.hs@, first
+-- import this module. Then you can simply add the new configuration options to
+-- an existing 'TMConfig' with the '<+>' operator, though note that the
+-- 'TMConfig' must come first (any other way is a type error).
+--
+-- E.g.
+--
+-- > import "Termonad
+-- > import "Termonad.Config.Colour"
+-- > import "Termonad.Config.Vec" ('Vec', 'VecT'((':+'), 'N8', 'EmptyV'))
+-- > import "Data.Colour.SRGB" ('Colour', 'sRGB24')
+-- >
+-- > myBasicConfig :: 'TMConfig'
+-- > myBasicConfig = 'defaultTMConfig'
+-- >   { 'showScrollbar' = 'ShowScrollbarNever'
+-- >   , 'confirmExit' = False
+-- >   , 'showMenu' = False
+-- >   , 'cursorBlinkMode' = 'CursorBlinkModeOff'
+-- >   }
+-- >
+-- > myColourConfig :: 'ColourConfig' ('Colour' Double)
+-- > myColourConfig = 'defaultColourConfig'
+-- >   { 'cursorBgColour' = 'Set' ('sRGB24' 120 80 110)
+-- >   , 'foregroundColour' = 'sRGB24' 220 180 210
+-- >   , 'palette' = 'BasicPalette' myStandardColours
+-- >   } where
+-- >       myStandardColours :: 'Vec' 'N8' ('Colour' Double)
+-- >       myStandardColours
+-- >         =  'sRGB24'  40  30  20
+-- >         ':+' 'sRGB24' 180  30  20
+-- >         ':+' 'sRGB24'  40 160  20
+-- >         ':+' 'sRGB24' 180 160  20
+-- >         ':+' 'sRGB24'  40  30 120
+-- >         ':+' 'sRGB24' 180  30 120
+-- >         ':+' 'sRGB24'  40 160 120
+-- >         ':+' 'sRGB24' 180 160 120
+-- >         ':+' 'EmptyV'
+-- >
+-- > main :: IO ()
+-- > main = start (myBasicConfig <+> myColourConfig)
+
 module Termonad.Config.Colour where
 
-import Control.Lens (makeLensesFor)
-import qualified Data.Foldable
-import Text.Show (showString)
-
 import Termonad.Prelude hiding ((\\), index)
-import Termonad.App (getFocusedTermFromState)
-import Termonad.Config.Vec
-import Termonad.Config.Extension (fromMessage)
-import Termonad.Types
-  ( Option(Unset), whenSet
-  , Message
-  , ConfigExtension(..)
-  , ConfigHooks(createTermHook)
-  )
 
+import Control.Lens (makeLensesFor)
 import Data.Colour (Colour, black, affineCombo)
 import Data.Colour.SRGB (RGB(RGB), toSRGB, sRGB24, sRGB24show)
-
+import qualified Data.Foldable
 import Data.Type.Combinator (I(..))
 import Data.Type.Fin (Fin(..), fin)
 import Data.Type.Product (Prod(..))
 import Data.Type.Vector
   (VecT(..), Vec, M(..), vgen_, mgen_)
-import Type.Family.Nat (N3, N6, N8)
-
 import GI.Gdk (RGBA, newZeroRGBA, setRGBABlue, setRGBAGreen, setRGBARed)
 import GI.Vte
   ( Terminal
@@ -36,55 +70,20 @@ import GI.Vte
 --, terminalSetColorBackground
   , terminalSetColorForeground
   )
+import Text.Show (showString)
+import Type.Family.Nat (N3, N6, N8)
 
-
------------
--- Usage --
------------
-
--- * Usage
---
--- $usage
---
--- To use this config extension in your termonad.hs, first import this module.
--- Then you can simply add the new configuration options to an existing
--- 'TMConfig' with the '<+>' operator, though note that the 'TMConfig' must come
--- first (any other way is a type error).
---
--- E.g.
---
--- > import Termonad
--- > import Termonad.Config.Colour
--- > import Termonad.Config.Vec (VecT((:+), EmptyV))
--- > import Data.Colour.SRGB (Colour, sRGB24)
--- >
--- > myBasicConfig :: TMConfig
--- > myBasicConfig = defaultTMConfig
--- >   { showScrollbar = ShowScrollbarNever
--- >   , confirmExit = False
--- >   , showMenu = False
--- >   , cursorBlinkMode = CursorBlinkModeOff
--- >   }
--- >
--- > myColourConfig :: ColourConfig (Colour Double)
--- > myColourConfig = defaultColourConfig
--- >   { cursorBgColour = Set (sRGB24 120 80 110)
--- >   , foregroundColour = sRGB24 220 180 210
--- >   , palette = BasicPalette myStandardColours
--- >   } where
--- >       myStandardColours
--- >         =  sRGB24  40  30  20
--- >         :+ sRGB24 180  30  20
--- >         :+ sRGB24  40 160  20
--- >         :+ sRGB24 180 160  20
--- >         :+ sRGB24  40  30 120
--- >         :+ sRGB24 180  30 120
--- >         :+ sRGB24  40 160 120
--- >         :+ sRGB24 180 160 120
--- >         :+ EmptyV
--- >
--- > main :: IO ()
--- > main = start (myBasicConfig <+> myColourConfig)
+import Termonad.App (getFocusedTermFromState)
+import Termonad.Config.Vec
+import Termonad.Config.Extension (fromMessage)
+import Termonad.Types
+  ( ConfigExtension(..)
+  , ConfigHooks(createTermHook)
+  , Message
+  , Option(Unset)
+  , TMState
+  , whenSet
+  )
 
 -------------------
 -- Colour Config --
@@ -442,10 +441,11 @@ data ColourMessage
 instance Message ColourMessage
 
 instance ConfigExtension (ColourConfig (Colour Double)) where
-
+  hooks :: ColourConfig (Colour Double) -> ConfigHooks
   hooks colourConf = mempty
     { createTermHook = \_ vteTerm -> implementColourConfig colourConf vteTerm }
 
+  message :: Message m => TMState -> m -> ColourConfig (Colour Double) -> IO (ColourConfig (Colour Double))
   message mvarTMState m colourConf = case fromMessage m of
     Nothing -> do
       putStrLn "ColourExtension: Failed to catch message."
