@@ -442,10 +442,11 @@ data ColourMessage
 instance Message ColourMessage
 
 instance ConfigExtension (ColourConfig (Colour Double)) where
-
+  hooks :: ColourConfig (Colour Double) -> ConfigHooks
   hooks colourConf = mempty
     { createTermHook = \_ vteTerm -> implementColourConfig colourConf vteTerm }
 
+  message :: Message m => TMState -> m -> ColourConfig (Colour Double) -> IO g
   message mvarTMState m colourConf = case fromMessage m of
     Nothing -> do
       putStrLn "ColourExtension: Failed to catch message."

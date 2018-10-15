@@ -350,8 +350,12 @@ class ConfigExtension g where
   message :: Message m => TMState -> m -> g -> IO g
   message _ _ g = pure g
 
-instance ConfigExtension () where
-  hooks () = mempty
+-- | A datatype to use in 'defaultConfigExtension'.  This is used as a default
+-- extension that does nothing.  It is used as the base for other extensions.
+data NoExtensions = NoExtensions deriving Show
+
+instance ConfigExtension NoExtensions where
+  hooks NoExtensions = mempty
 
 -- | An existential data type over config extensions. Is used internally by
 --   @TMConfig@ and needed neither by the end user nor the extension implementor.
@@ -367,6 +371,9 @@ instance ConfigExtension SomeConfigExtension where
   hooks (SomeConfigExtension g) = hooks g
   message mvarTMState m (SomeConfigExtension g) =
     SomeConfigExtension <$> message mvarTMState m g
+
+defaultConfigExtension :: SomeConfigExtension
+defaultConfigExtension = SomeConfigExtension NoExtensions
 
 ----------------
 -- Invariants --
