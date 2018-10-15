@@ -407,6 +407,10 @@ showAboutDialog app = do
 appStartup :: Application -> IO ()
 appStartup _app = pure ()
 
+-- | Run Termonad with the given 'TMConfig'.
+--
+-- Do not perform any of the recompilation operations that the 'defaultMain'
+-- function does.
 start :: TMConfig -> IO ()
 start tmConfig = do
   -- app <- appNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
@@ -416,6 +420,62 @@ start tmConfig = do
   void $ onApplicationActivate app (appActivate tmConfig app)
   void $ applicationRun app Nothing
 
+-- | Run Termonad with the given 'TMConfig'.
+--
+-- This function will check if there is a @~/.config/termonad/termonad.hs@ file
+-- and a @~/.cache/termonad/termonad-linux-x86_64@ binary.  Termonad will
+-- perform different actions based on whether or not these two files exist.
+--
+-- Here are the four different possible actions based on the existence of these
+-- two files.
+--
+-- - @~/.config/termonad/termonad.hs@ exists, @~/.cache/termonad/termonad-linux-x86_64@ exists
+--
+--   The timestamps of these two files are checked.  If the
+--   @~/.config/termonad/termonad.hs@ file has been modified after the
+--   @~/.cache/termonad/termonad-linux-x86_64@ binary, then Termonad will use
+--   GHC to recompile the @~/.config/termonad/termonad.hs@ file, producing a
+--   new binary at @~/.cache/termonad/termonad-linux-x86_64@.  This new binary
+--   will be re-executed.  The 'TMConfig' passed to this 'defaultMain' will be
+--   effectively thrown away.
+--
+--   If GHC fails to recompile the @~/.config/termonad/termonad.hs@ file, then
+--   Termonad will just execute 'start' with the 'TMConfig' passed in.
+--
+--   If the @~/.cache/termonad/termonad-linux-x86_64@ binary has been modified
+--   after the @~/.config/termonad/termonad.hs@ file, then Termonad will
+--   re-exec the @~/.cache/termonad/termonad-linux-x86_64@ binary.  The
+--   'TMConfig' passed to this 'defaultMain' will be effectively thrown away.
+--
+-- - @~/.config/termonad/termonad.hs@ exists, @~/.cache/termonad/termonad-linux-x86_64@ does not exist
+--
+--   Termonad will use GHC to recompile the @~/.config/termonad/termonad.hs@
+--   file, producing a new binary at @~/.cache/termonad/termonad-linux-x86_64@.
+--   This new binary will be re-executed.  The 'TMConfig' passed to this
+--   'defaultMain' will be effectively thrown away.
+--
+--   If GHC fails to recompile the @~/.config/termonad/termonad.hs@ file, then
+--   Termonad will just execute 'start' with the 'TMConfig' passed in.
+--
+-- - @~/.config/termonad/termonad.hs@ does not exist, @~/.cache/termonad/termonad-linux-x86_64@ exists
+--
+--   Termonad will ignore the @~/.cache/termonad/termonad-linux-x86_64@ binary
+--   and just run 'start' with the 'TMConfig' passed to this function.
+--
+-- - @~/.config/termonad/termonad.hs@ does not exist, @~/.cache/termonad/termonad-linux-x86_64@ does not exist
+--
+--   Termonad will run 'start' with the 'TMConfig' passed to this function.
+--
+-- Other notes:
+--
+-- 1. That the locations of @~/.config/termonad/termonad.hs@ and
+--    @~/.cache/termonad/termonad-linux-x86_64@ may differ depending on your
+--    system.
+--
+-- 2. In your own @~/.config/termonad/termonad.hs@ file, you can use either
+--    'defaultMain' or 'start'.  As long as you always execute the system-wide
+--    @termonad@ binary (instead of the binary produced as
+--    @~/.cache/termonad/termonad-linux-x86_64@), the effect should be the same.
 defaultMain :: TMConfig -> IO ()
 defaultMain tmConfig = do
   let params =
