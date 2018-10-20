@@ -58,13 +58,19 @@ $(makeLensesFor
     , ("showMenu", "lensShowMenu")
     , ("showTabBar", "lensShowTabBar")
     , ("cursorBlinkMode", "lensCursorBlinkMode")
-    , ("extension", "lensExtension")
     ]
-    ''TMConfig
+    ''ConfigOptions
  )
 
 $(makeLensesFor
     [ ("createTermHook", "lensCreateTermHook")
     ]
     ''ConfigHooks
+ )
+
+$(makeLensesFor
+    [ ("options", "lensOptions")
+    , ("hooks", "lensHooks")
+    ]
+    ''TMConfig
  )
