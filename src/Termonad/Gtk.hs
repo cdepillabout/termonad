@@ -4,7 +4,7 @@ module Termonad.Gtk where
 
 import Termonad.Prelude
 
-import Data.GI.Base (ManagedPtr(ManagedPtr))
+import Data.GI.Base (ManagedPtr, withManagedPtr)
 import GHC.Stack (HasCallStack)
 import GI.Gdk
   ( GObject
@@ -53,6 +53,9 @@ appNew appName appFlags = do
 -- happen if they are actually the same thing.
 widgetEq :: (MonadIO m, IsWidget a, IsWidget b) => a -> b -> m Bool
 widgetEq a b = do
-  (Widget (ManagedPtr ptrA _)) <- toWidget a
-  (Widget (ManagedPtr ptrB _)) <- toWidget b
-  pure $ ptrA == ptrB
+  Widget managedPtrA <- toWidget a
+  Widget managedPtrB <- toWidget b
+  liftIO $
+    withManagedPtr managedPtrA $ \ptrA ->
+      withManagedPtr managedPtrB $ \ptrB ->
+        pure (ptrA == ptrB)

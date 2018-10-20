@@ -64,7 +64,7 @@ library
                      , gi-gtk >= 3.0.24
                      , gi-pango
                      , gi-vte >= 2.91.19
-                     , haskell-gi-base
+                     , haskell-gi-base >= 0.21.2
                      , lens
                      , pretty-simple
                      , QuickCheck
