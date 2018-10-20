@@ -14,7 +14,7 @@
 #
 # $ nix-build .nix-helpers/termonad-with-packages.nix
 #
-# (This is the same as just calling `nix-build` on the `default.nix` file.)
+# (This is the same as just calling `nix-build` on the `../default.nix` file.)
 #
 # This produces a `result` directory that contains the `termonad` exectuable as
 # `result/bin/termonad`.

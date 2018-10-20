@@ -1,30 +1,15 @@
 # This is the shell file specified in the stack.yaml file.
-# This forces stack to use ghc-8.0.2 and stack-lts-9.yaml to compile termonad.
+# This runs stack commands in an environment created with nix.
 
 let
+  # recent version of nixpkgs as of 2018-10-17
   nixpkgsTarball = builtins.fetchTarball {
-    # 17.09 (this works)
-    #url = "https://github.com/NixOS/nixpkgs/archive/39cd40f7bea40116ecb756d46a687bfd0d2e550e.tar.gz";
-    #sha256 = "0kpx4h9p1lhjbn1gsil111swa62hmjs9g93xmsavfiki910s73sh";
-
-    # 18.03
-    url = "https://github.com/NixOS/nixpkgs/archive/120b013e0c082d58a5712cde0a7371ae8b25a601.tar.gz";
-    sha256 = "0hk4y2vkgm1qadpsm4b0q1vxq889jhxzjx3ragybrlwwg54mzp4f";
-
-    # recent version of nixpkgs as of 2018-07-25 (this only seems to sometimes work...?))
-    #url = "https://github.com/NixOS/nixpkgs/archive/4ccaa7de8eb34a0bb140f109a0e88095480118eb.tar.gz";
-    #sha256 = "0szbxfrzmlmxrgkqz5wnfgmsjp82vaddgz7mhdz7jj0jhd0hza4i";
+    url = "https://github.com/NixOS/nixpkgs/archive/6a23e11e658b7a7a77f1b61d30d64153b46bc852.tar.gz";
+    sha256 = "03n4bacfk1bbx3v0cx8xcgcmz44l0knswzh7hwih9nx0hj3x41yc";
   };
 
+  # Fixes for individual packages.  Currently none needed.
   pkgFixes = self: pkgs: {
-    # GTK+-3 needs some patches to be able to be compiled on Darwin. This has
-    # already been merged into the most recent nixpkgs, but since we are using
-    # an old version, the problem still exists.  This can be removed when we
-    # start using the most recent version of nixpkgs.
-    # https://github.com/cdepillabout/termonad/pull/42
-    gtk3 = pkgs.gtk3.overrideDerivation (oldattrs: {
-      patches = oldattrs.patches ++ [ ./patches/gdk.patch ];
-    } );
   };
 
   nixpkgs = import nixpkgsTarball {
@@ -40,13 +25,14 @@ haskell.lib.buildStackProject {
   name = "termonad";
   buildInputs = [
     cairo
+    git
     gnome3.vte
     gobjectIntrospection
     gtk3
     zlib
   ];
-  ghc = haskell.compiler.ghc802;
+  ghc = haskell.compiler.ghc843;
   extraArgs = [
-    "--stack-yaml stack-lts-9.yaml"
+    "--stack-yaml stack-lts-12.yaml"
   ];
 }

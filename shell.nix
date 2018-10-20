@@ -28,19 +28,22 @@
 
 let
   nixpkgs = (import .nix-helpers/nixpkgs.nix { inherit compiler; });
-  hspkgs = nixpkgs.haskellPackages;
-  env = hspkgs.termonad.env;
-  nbis = with hspkgs; [ cabal-install ghcid open-haddock ];
+  termonadEnv = nixpkgs.haskellPackages.termonad.env;
+  nativeBuildTools = with nixpkgs.haskellPackages; [ cabal-install ghcid open-haddock ];
 in
 
 if indexTermonad
   then
-    env.overrideAttrs (oa: { nativeBuildInputs = oa.nativeBuildInputs ++ nbis ++
-      [ (hspkgs.ghcWithHoogle (p: [ p.termonad ])) ];
+    termonadEnv.overrideAttrs (oldAttrs: {
+      nativeBuildInputs =
+        oldAttrs.nativeBuildInputs ++
+        nativeBuildTools ++
+        [ (nixpkgs.haskellPackages.ghcWithHoogle (haskellPackages: with haskellPackages; [ termonad ]))
+        ];
     })
   else
-    hspkgs.shellFor {
+    nixpkgs.haskellPackages.shellFor {
       withHoogle = true;
-      packages = p: [ p.termonad ];
-      nativeBuildInputs = env.nativeBuildInputs ++ nbis;
+      packages = haskellPackages: [ haskellPackages.termonad ];
+      nativeBuildInputs = termonadEnv.nativeBuildInputs ++ nativeBuildTools;
     }

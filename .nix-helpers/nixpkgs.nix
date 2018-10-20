@@ -6,21 +6,41 @@
 { compiler ? "ghc843" }:
 
 let
+  # recent version of nixpkgs as of 2018-10-17
   nixpkgsTarball = builtins.fetchTarball {
-    # recent version of nixpkgs as of 2018-07-29
-    url = "https://github.com/NixOS/nixpkgs/archive/a2c6dbe370160ffea5537f64dda04489184c5ce1.tar.gz";
-    sha256 = "1x993g9343yv5wyp29i6vskdcc3rl42xipv79nwmmrj8ay2yhh3b";
+    url = "https://github.com/NixOS/nixpkgs/archive/6a23e11e658b7a7a77f1b61d30d64153b46bc852.tar.gz";
+    sha256 = "03n4bacfk1bbx3v0cx8xcgcmz44l0knswzh7hwih9nx0hj3x41yc";
   };
 
-  set-gi-vte-version = _: {
-    version = "2.91.19";
-    sha256 = "1hnhidjr7jh7i826lj6kdn264i592sfl5kwvymnpiycmcb37dd4y";
-  };
-
-  set-gi-gtk-version = _: {
-    version = "3.0.24";
-    sha256 = "14cyj1acxs39avciyzqqb1qa5dr4my8rv3mfwv1kv92wa9a5i97v";
-  };
+  # The ./termonad.nix derivation has been generated with `cabal2nix`.
+  # It can be updated with the following command:
+  #
+  # ```sh
+  # $ cabal2nix .. > termonad.nix
+  # ```
+  #
+  # Below, we override some default values in the ./termonad.nix derivation.  This
+  # allows us to directly use the ./termonad.nix generated with cabal2nix
+  # without having to manually change things in that file.
+  termonadOverride = stdenvLib: gnome3: haskellCallPackage: overrideCabal:
+    let
+      termonad = haskellCallPackage ./termonad.nix {
+        inherit (gnome3) gtk3;
+      };
+    in
+    overrideCabal termonad (oldAttrs: {
+      # For some reason the doctests fail when running with nix.
+      # https://github.com/cdepillabout/termonad/issues/15
+      doCheck = false;
+      # Filter some unnecessary files from the src.
+      src =
+        builtins.filterSource
+          (path: type: with stdenvLib;
+            ! elem (baseNameOf path) [ ".git" "result" ".stack-work" ] &&
+            ! any (flip hasPrefix (baseNameOf path)) [ "dist" ".ghc" ]
+          )
+          ./..;
+    });
 
   overrideTC = lib: compiler == "ghcHEAD" ||
     lib.strings.toInt (lib.strings.removePrefix "ghc" compiler) > 822;
@@ -31,16 +51,11 @@ let
         gi-gdk = doHaddock hsuper.gi-gdk;
         gi-gio = doHaddock hsuper.gi-gio;
         gi-glib = doHaddock hsuper.gi-glib;
-        gi-gtk = doHaddock (overrideCabal hsuper.gi-gtk set-gi-gtk-version);
+        gi-gtk = doHaddock hsuper.gi-gtk;
         gi-pango = doHaddock hsuper.gi-pango;
-        gi-vte = let
-          g3-vte = addPkgconfigDepend
-            (hsuper.gi-vte.override { vte = super.gnome3.vte; })
-            super.gnome3.gtk;
-        in doHaddock (overrideCabal g3-vte set-gi-vte-version);
-        termonad = hself.callPackage ./termonad.nix {
-          inherit (self.gnome3) gtk3;
-        };
+        gi-vte = doHaddock hsuper.gi-vte;
+        termonad = termonadOverride self.stdenv.lib self.gnome3 hself.callPackage self.haskell.lib.overrideCabal;
+        # This is a tool to use to easily open haddocks in the browser.
         open-haddock = hsuper.open-haddock.overrideAttrs (oa: {
           src = super.fetchFromGitHub {
             owner = "jml";
