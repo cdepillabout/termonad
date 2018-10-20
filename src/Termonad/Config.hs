@@ -32,21 +32,25 @@
 --
 -- If you want to write your own extension, see "Termonad.Config.Extension".
 
-module Termonad.Config (
-  -- * Main Config Data Type
-  TMConfig(..),
-  defaultTMConfig,
+module Termonad.Config
+  ( -- * Main Config Data Type
+    TMConfig(..)
+  , defaultTMConfig
+  , ConfigOptions(..)
+  , defaultConfigOptions
+  , ConfigHooks(..)
+  , defaultConfigHooks
   -- * Fonts
-  FontSize(..),
-  defaultFontSize,
-  FontConfig(..),
-  defaultFontConfig,
+  , FontSize(..)
+  , defaultFontSize
+  , FontConfig(..)
+  , defaultFontConfig
   -- * Misc
-  Option(..),
-  ShowScrollbar(..),
-  ShowTabBar(..),
-  CursorBlinkMode(..)
-) where
+  , Option(..)
+  , ShowScrollbar(..)
+  , ShowTabBar(..)
+  , CursorBlinkMode(..)
+  ) where
 
 import Termonad.Prelude hiding ((\\), index)
 
