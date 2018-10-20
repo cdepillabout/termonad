@@ -322,13 +322,18 @@ data ConfigHooks = ConfigHooks {
   createTermHook :: TMState -> Terminal -> IO ()
 }
 
-instance Semigroup ConfigHooks where
-  ConfigHooks a <> ConfigHooks b
-    = ConfigHooks (a <> b)
+-- | Default values for the 'ConfigHooks'.
+--
+-- - The default function for 'createTermHook' is 'defaultCreateTermHook'.
+defaultConfigHooks :: ConfigHooks
+defaultConfigHooks =
+  ConfigHooks
+    { createTermHook = defaultCreateTermHook
+    }
 
-instance Monoid ConfigHooks where
-  mappend = (<>)
-  mempty = ConfigHooks mempty
+-- | Default value for 'createTermHook'.  Does nothing.
+defaultCreateTermHook :: TMState -> Terminal -> IO ()
+defaultCreateTermHook _ _ = pure ()
 
 -- | A class for data types that can be sent to and caught by config extensions.
 class Typeable m => Message m
@@ -355,7 +360,7 @@ class ConfigExtension g where
 data NoExtensions = NoExtensions deriving Show
 
 instance ConfigExtension NoExtensions where
-  hooks NoExtensions = mempty
+  hooks NoExtensions = defaultConfigHooks
 
 -- | An existential data type over config extensions. Is used internally by
 --   @TMConfig@ and needed neither by the end user nor the extension implementor.

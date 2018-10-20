@@ -33,11 +33,11 @@ fromMessage = cast
 --   interpreted atomically with respect to the supplied @TMState@ MVar (so long
 --   as it has no other producers).
 sendMessage :: Message m => TMState -> m -> IO ()
-sendMessage mvarTMState m = do
+sendMessage mvarTMState myMessage = do
   tmState <- takeMVar mvarTMState
   let confExtension = tmState ^. lensTMStateConfig . lensExtension
   messageMVar <- newMVar tmState
-  confExtension' <- message messageMVar m confExtension
+  confExtension' <- message messageMVar myMessage confExtension
   let tmState' = tmState & lensTMStateConfig . lensExtension .~ confExtension'
   putMVar mvarTMState tmState'
 
@@ -48,7 +48,16 @@ data Both g1 g2 = Both !g1 !g2
 instance (ConfigExtension g1, ConfigExtension g2) => ConfigExtension (Both g1 g2) where
 
   hooks :: Both g1 g2 -> ConfigHooks
-  hooks (Both g1 g2) = hooks g1 <> hooks g2
+  hooks (Both g1 g2) =
+    let configHooksG1 = hooks g1
+        configHooksG2 = hooks g2
+    in
+    ConfigHooks
+      { createTermHook =
+          \tmState terminal -> do
+            createTermHook configHooksG1 tmState terminal
+            createTermHook configHooksG2 tmState terminal
+      }
 
   message :: Message m => TMState -> m -> Both g1 g2 -> IO (Both g1 g2)
   message mvarTMState m (Both g1 g2) =

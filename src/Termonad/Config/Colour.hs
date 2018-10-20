@@ -82,6 +82,7 @@ import Termonad.Types
   , Message
   , Option(Unset)
   , TMState
+  , defaultConfigHooks
   , whenSet
   )
 
@@ -442,7 +443,7 @@ instance Message ColourMessage
 
 instance ConfigExtension (ColourConfig (Colour Double)) where
   hooks :: ColourConfig (Colour Double) -> ConfigHooks
-  hooks colourConf = mempty
+  hooks colourConf = defaultConfigHooks
     { createTermHook = \_ vteTerm -> implementColourConfig colourConf vteTerm }
 
   message :: Message m => TMState -> m -> ColourConfig (Colour Double) -> IO (ColourConfig (Colour Double))
