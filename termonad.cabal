@@ -39,7 +39,6 @@ library
                      , Termonad.App
                      , Termonad.Config
                      , Termonad.Config.Colour
-                     , Termonad.Config.Extension
                      , Termonad.Config.Vec
                      , Termonad.FocusList
                      , Termonad.Gtk

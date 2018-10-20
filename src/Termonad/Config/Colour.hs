@@ -52,7 +52,7 @@ module Termonad.Config.Colour where
 
 import Termonad.Prelude hiding ((\\), index)
 
-import Control.Lens (makeLensesFor)
+import Control.Lens ((%~), makeLensesFor)
 import Data.Colour (Colour, black, affineCombo)
 import Data.Colour.SRGB (RGB(RGB), toSRGB, sRGB24, sRGB24show)
 import qualified Data.Foldable
@@ -73,16 +73,12 @@ import GI.Vte
 import Text.Show (showString)
 import Type.Family.Nat (N3, N6, N8)
 
-import Termonad.App (getFocusedTermFromState)
 import Termonad.Config.Vec
-import Termonad.Config.Extension (fromMessage)
+import Termonad.Lenses (lensCreateTermHook, lensHooks)
 import Termonad.Types
-  ( ConfigExtension(..)
-  , ConfigHooks(createTermHook)
-  , Message
-  , Option(Unset)
+  ( Option(Unset)
+  , TMConfig
   , TMState
-  , defaultConfigHooks
   , whenSet
   )
 
@@ -433,33 +429,14 @@ $(makeLensesFor
 -- ConfigExtension Instance --
 ------------------------------
 
--- | Messages for runtime interaction with the colour configuration.
-data ColourMessage
-  -- | This message can be sent to update the colours in use on the current term,
-  --   and the default colours for any new terms.
-  = UpdateColours (ColourConfig (Colour Double) -> ColourConfig (Colour Double))
+data ColourExtension = ColourExtension
+  { colourExtConf :: MVar (ColourConfig (Colour Double))
+  , colourExtCreateTermHook :: TMState -> Terminal -> IO ()
+  }
 
-instance Message ColourMessage
-
-instance ConfigExtension (ColourConfig (Colour Double)) where
-  hooks :: ColourConfig (Colour Double) -> ConfigHooks
-  hooks colourConf = defaultConfigHooks
-    { createTermHook = \_ vteTerm -> implementColourConfig colourConf vteTerm }
-
-  message :: Message m => TMState -> m -> ColourConfig (Colour Double) -> IO (ColourConfig (Colour Double))
-  message mvarTMState m colourConf = case fromMessage m of
-    Nothing -> do
-      putStrLn "ColourExtension: Failed to catch message."
-      pure colourConf
-    Just (UpdateColours f) -> do
-      putStrLn "ColourExtension: Caught UpdateColours message."
-      let colourConf' = f colourConf
-      mTerm <- getFocusedTermFromState mvarTMState
-      whenJust mTerm (implementColourConfig colourConf')
-      pure colourConf'
-
-implementColourConfig :: ColourConfig (Colour Double) -> Terminal -> IO ()
-implementColourConfig colourConf vteTerm = do
+colourHook :: MVar (ColourConfig (Colour Double)) -> TMState -> Terminal -> IO ()
+colourHook mvarColourConf _ vteTerm = do
+  colourConf <- readMVar mvarColourConf
   terminalSetColors vteTerm Nothing Nothing . Just
     =<< traverse toRGBA (paletteToList . palette $ colourConf)
   -- PR#28/IS#29: Setting the background colour is broken in gi-vte or VTE.  If
@@ -480,3 +457,37 @@ implementColourConfig colourConf vteTerm = do
       setRGBAGreen rgba green
       setRGBABlue rgba blue
       pure rgba
+
+createColourExtension :: ColourConfig (Colour Double) -> IO ColourExtension
+createColourExtension conf = do
+  mvarConf <- newMVar conf
+  pure $
+    ColourExtension
+      { colourExtConf = mvarConf
+      , colourExtCreateTermHook = colourHook mvarConf
+      }
+
+createDefColourExtension :: IO ColourExtension
+createDefColourExtension = createColourExtension defaultColourConfig
+
+addColourExtension :: ColourConfig (Colour Double) -> TMConfig -> IO TMConfig
+addColourExtension colConf tmConf = do
+  ColourExtension _ newHook <- createColourExtension colConf
+  let newTMConf = tmConf & lensHooks . lensCreateTermHook %~ addColourHook newHook
+  pure newTMConf
+
+addDefColourExtension :: TMConfig -> IO TMConfig
+addDefColourExtension = addColourExtension defaultColourConfig
+
+-- | This function shows how to combine 'createTermHook's.
+--
+-- This first runs the old hook, followed by the new hook.
+addColourHook
+  :: (TMState -> Terminal -> IO ()) -- ^ New hook
+  -> (TMState -> Terminal -> IO ()) -- ^ Old hook
+  -> TMState
+  -> Terminal
+  -> IO ()
+addColourHook newHook oldHook tmState term = do
+  oldHook tmState term
+  newHook tmState term

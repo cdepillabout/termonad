@@ -76,18 +76,18 @@ import GI.Vte
   )
 
 import Paths_termonad (getDataFileName)
-
 import Termonad.Lenses
-  ( lensFontConfig
-  , lensConfirmExit
-  , lensTMNotebookTabs
+  ( lensConfirmExit
+  , lensFontConfig
+  , lensOptions
+  , lensShowMenu
   , lensTMNotebookTabTerm
+  , lensTMNotebookTabs
   , lensTMStateApp
-  , lensTMStateNotebook
   , lensTMStateConfig
+  , lensTMStateNotebook
   , lensTMStateUserReqExit
   , lensTerm
-  , lensShowMenu
   )
 import Termonad.FocusList (findFL, moveFromToFL, updateFocusFL, focusItemGetter)
 import Termonad.Gtk (appNew, objFromBuildUnsafe)
@@ -180,7 +180,7 @@ setupScreenStyle = do
 createFontDesc :: TMConfig -> IO FontDescription
 createFontDesc tmConfig = do
   fontDesc <- fontDescriptionNew
-  let fontConf = tmConfig ^. lensFontConfig
+  let fontConf = tmConfig ^. lensOptions . lensFontConfig
   fontDescriptionSetFamily fontDesc (fontFamily fontConf)
   case fontSize fontConf of
     FontSizePoints points ->
@@ -220,7 +220,7 @@ updateFLTabPos mvarTMState oldPos newPos =
 exit :: (ResponseType -> IO a) -> TMState -> IO a
 exit handleResponse mvarTMState = do
   tmState <- readMVar mvarTMState
-  let confirm = tmState ^. lensTMStateConfig ^. lensConfirmExit
+  let confirm = tmState ^. lensTMStateConfig . lensOptions . lensConfirmExit
   handleResponse =<< if confirm
     then exitWithConfirmationDialog mvarTMState
     else pure ResponseTypeYes
@@ -369,7 +369,7 @@ setupTermonad tmConfig app win builder = do
   void $ onSimpleActionActivate aboutAction (const $ showAboutDialog app)
   actionMapAddAction app aboutAction
 
-  when (tmConfig ^. lensShowMenu) $ do
+  when (tmConfig ^. lensOptions . lensShowMenu) $ do
     menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
     menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
     applicationSetMenubar app (Just menuModel)

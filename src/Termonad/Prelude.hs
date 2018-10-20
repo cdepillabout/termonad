@@ -5,6 +5,7 @@ module Termonad.Prelude
   , whenJust
   ) where
 
+import Control.Lens as X ((&))
 import ClassyPrelude as X
 import Data.Proxy as X
 

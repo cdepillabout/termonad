@@ -18,7 +18,7 @@ import GI.Gtk
   , notebookGetNPages
   )
 import GI.Pango (FontDescription)
-import GI.Vte (Terminal, CursorBlinkMode)
+import GI.Vte (Terminal, CursorBlinkMode(CursorBlinkModeOn))
 import Text.Pretty.Simple (pPrint)
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
@@ -230,18 +230,6 @@ traceShowMTMState mvarTMState = do
 -- Config --
 ------------
 
-data TMConfig = TMConfig
-  { fontConfig :: !FontConfig
-  , showScrollbar :: !ShowScrollbar
-  , scrollbackLen :: !Integer
-  , confirmExit :: !Bool
-  , wordCharExceptions :: !Text
-  , showMenu :: !Bool
-  , showTabBar :: !ShowTabBar
-  , cursorBlinkMode :: !CursorBlinkMode
-  , extension :: !SomeConfigExtension
-  } deriving (Eq, Show)
-
 -- | The font size for the Termonad terminal.  There are two ways to set the
 -- fontsize, corresponding to the two different ways to set the font size in
 -- the Pango font rendering library.
@@ -263,6 +251,13 @@ data FontSize
     -- See the documentation for that function for more info.
   deriving (Eq, Show)
 
+-- | The default 'FontSize' used if not specified.
+--
+-- >>> defaultFontSize
+-- FontSizePoints 12
+defaultFontSize :: FontSize
+defaultFontSize = FontSizePoints 12
+
 -- | Settings for the font to be used in Termonad.
 data FontConfig = FontConfig
   { fontFamily :: !Text
@@ -270,6 +265,17 @@ data FontConfig = FontConfig
   , fontSize :: !FontSize
     -- ^ The font size.
   } deriving (Eq, Show)
+
+-- | The default 'FontConfig' to use if not specified.
+--
+-- >>> defaultFontConfig == FontConfig {fontFamily = "Monospace", fontSize = defaultFontSize}
+-- True
+defaultFontConfig :: FontConfig
+defaultFontConfig =
+  FontConfig
+    { fontFamily = "Monospace"
+    , fontSize = defaultFontSize
+    }
 
 -- | This data type represents an option that can either be 'Set' or 'Unset'.
 --
@@ -308,8 +314,64 @@ data ShowTabBar
   | ShowTabBarIfNeeded
   deriving (Eq, Show)
 
+data ConfigOptions = ConfigOptions
+  { fontConfig :: !FontConfig
+  , showScrollbar :: !ShowScrollbar
+  , scrollbackLen :: !Integer
+  , confirmExit :: !Bool
+  , wordCharExceptions :: !Text
+  , showMenu :: !Bool
+  , showTabBar :: !ShowTabBar
+  , cursorBlinkMode :: !CursorBlinkMode
+  } deriving (Eq, Show)
+
+-- | The default 'ConfigOptions'.
+--
+-- >>> :{
+--   let defConfOpt =
+--         ConfigOptions
+--           { fontConfig = defaultFontConfig
+--           , showScrollbar = ShowScrollbarIfNeeded
+--           , scrollbackLen = 10000
+--           , confirmExit = True
+--           , wordCharExceptions = "-#%&+,./=?@\\_~\183:"
+--           , showMenu = True
+--           , showTabBar = ShowTabBarIfNeeded
+--           , cursorBlinkMode = CursorBlinkModeOn
+--           }
+--   in defaultConfigOptions == defConfOpt
+-- :}
+-- True
+defaultConfigOptions :: ConfigOptions
+defaultConfigOptions =
+  ConfigOptions
+    { fontConfig = defaultFontConfig
+    , showScrollbar = ShowScrollbarIfNeeded
+    , scrollbackLen = 10000
+    , confirmExit = True
+    , wordCharExceptions = "-#%&+,./=?@\\_~\183:"
+    , showMenu = True
+    , showTabBar = ShowTabBarIfNeeded
+    , cursorBlinkMode = CursorBlinkModeOn
+    }
+
+data TMConfig = TMConfig
+  { options :: !ConfigOptions
+  , hooks :: !ConfigHooks
+  } deriving Show
+
+-- | The default 'TMConfig'.
+--
+-- 'options' is 'defaultConfigOptions' and 'hooks' is 'defaultConfigHooks'.
+defaultTMConfig :: TMConfig
+defaultTMConfig =
+  TMConfig
+    { options = defaultConfigOptions
+    , hooks = defaultConfigHooks
+    }
+
 ---------------------
--- ConfigExtension --
+-- ConfigHooks --
 ---------------------
 
 -- | Hooks into certain termonad operations and VTE events. Used to modify
@@ -321,6 +383,13 @@ data ConfigHooks = ConfigHooks {
   --   and the @Terminal@ in question.
   createTermHook :: TMState -> Terminal -> IO ()
 }
+
+instance Show ConfigHooks where
+  showsPrec :: Int -> ConfigHooks -> ShowS
+  showsPrec _ _ =
+    showString "ConfigHooks {" .
+    showString "createTermHook = <function>" .
+    showString "}"
 
 -- | Default values for the 'ConfigHooks'.
 --
@@ -334,51 +403,6 @@ defaultConfigHooks =
 -- | Default value for 'createTermHook'.  Does nothing.
 defaultCreateTermHook :: TMState -> Terminal -> IO ()
 defaultCreateTermHook _ _ = pure ()
-
--- | A class for data types that can be sent to and caught by config extensions.
-class Typeable m => Message m
-
--- | The @ConfigExtension@ class can be used to extend termonad from your
---   configuration file. A data type holding the desired configuration options
---   can be made a @ConfigExtension@ instance by declaring how to produce the
---   correct set of 'ConfigHooks' from those options, then the new options can be
---   used by adding them to your 'TMConfig' with '<+>'.
---
---   Optionally the extended capabilities can include runtime interaction if
---   messages are defined and the @message@ class method is implemented.
-class ConfigExtension g where
-
-  -- | Produce hooks from config options.
-  hooks :: g -> ConfigHooks
-
-  -- | Catch messages and act on them, returning a potentially changed config.
-  message :: Message m => TMState -> m -> g -> IO g
-  message _ _ g = pure g
-
--- | A datatype to use in 'defaultConfigExtension'.  This is used as a default
--- extension that does nothing.  It is used as the base for other extensions.
-data NoExtensions = NoExtensions deriving Show
-
-instance ConfigExtension NoExtensions where
-  hooks NoExtensions = defaultConfigHooks
-
--- | An existential data type over config extensions. Is used internally by
---   @TMConfig@ and needed neither by the end user nor the extension implementor.
-data SomeConfigExtension = forall g. ConfigExtension g => SomeConfigExtension g
-
-instance Show SomeConfigExtension where
-  show _ = "SomeConfigExtension"
-
-instance Eq SomeConfigExtension where
-  _ == _ = True
-
-instance ConfigExtension SomeConfigExtension where
-  hooks (SomeConfigExtension g) = hooks g
-  message mvarTMState m (SomeConfigExtension g) =
-    SomeConfigExtension <$> message mvarTMState m g
-
-defaultConfigExtension :: SomeConfigExtension
-defaultConfigExtension = SomeConfigExtension NoExtensions
 
 ----------------
 -- Invariants --
