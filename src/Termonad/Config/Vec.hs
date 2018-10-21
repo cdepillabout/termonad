@@ -500,6 +500,13 @@ myMat3 = mgen'' sing f
     f :: HList Fin '[N2, N3] -> Int
     f (HListCons f1 (HListCons f2 EmptyHList)) = fin f1 * 3 + fin f2
 
+mgen_ :: SingI ns => (HList Fin ns -> a) -> Matrix ns a
+mgen_ = mgen'' sing
+
+mindex :: HList Fin ns -> Matrix ns a -> a
+mindex EmptyHList (Matrix a) = a
+mindex (HListCons i is) (Matrix vec) = mindex is $ Matrix (vindex i vec)
+
 ----------------------
 -- Matrix Instances --
 ----------------------
@@ -520,6 +527,19 @@ instance SingI ns => Data.Foldable.Foldable (Matrix ns) where
 
   toList :: Matrix ns a -> [a]
   toList = toListMatrix (sing @_ @ns)
+
+instance SingI ns => Distributive (Matrix ns) where
+  distribute :: Functor f => f (Matrix ns a) -> Matrix ns (f a)
+  distribute = distributeRep
+
+instance SingI ns => Representable (Matrix ns) where
+  type Rep (Matrix ns) = HList Fin ns
+
+  tabulate :: (HList Fin ns -> a) -> Matrix ns a
+  tabulate = mgen_
+
+  index :: Matrix ns a -> HList Fin ns -> a
+  index = flip mindex
 
 instance Num a => Num (Matrix '[] a) where
   Matrix a + Matrix b = Matrix (a + b)
