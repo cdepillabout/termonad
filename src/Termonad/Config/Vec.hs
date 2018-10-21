@@ -312,41 +312,16 @@ type family MatrixTF (ns :: [Peano]) (a :: Type) :: Type where
   MatrixTF '[] a = a
   MatrixTF (n ': ns) a = Vec n (Matrix ns a)
 
--- data MatrixTFSym1 (l :: TyFun
---                       [a6989586621679682896] a6989586621679682896)
---   = forall a1 (arg :: [a1]).
---     SameKind (Apply HeadSym0 arg) (HeadSym1 arg) =>
---     Data.Singletons.Prelude.List.HeadSym0KindInference
---   	-- Defined in ‘Data.Singletons.Prelude.List’
--- type instance Apply HeadSym0 l = Head l
---   	-- Defined in ‘Data.Singletons.Prelude.List’
-    --
-    --
-
--- type role MapSym0 phantom
-
--- data MapSym0 (l :: TyFun
---                      (TyFun a6989586621679662939 b6989586621679662940 -> *)
---                      (TyFun [a6989586621679662939] [b6989586621679662940] -> *))
---   = forall a1 b1 (arg :: TyFun a1 b1 -> *).
---     SameKind (Apply MapSym0 arg) (MapSym1 arg) =>
---     Data.Singletons.Prelude.Base.MapSym0KindInference
-
--- type instance Apply MapSym0 l = MapSym1 l
-
--- type role MapSym1 phantom phantom
-
--- data MapSym1 (l :: TyFun a b -> Type) (l1 :: TyFun [a] [b])
---   = forall (arg :: [a]).  SameKind (Apply (MapSym1 l) arg) (MapSym2 l arg) => MapSym1KindInference
-
--- type instance Apply (MapSym1 l1) l2 = Map l1 l2
-
-
 newtype Matrix ns a = Matrix
   { unMatrix :: MatrixTF ns a
   } deriving anyclass (MonoFoldable)
 
 type instance Element (Matrix ns a) = a
+
+
+---------------------------------
+-- Defunctionalization Symbols --
+---------------------------------
 
 type MatrixTFSym2 (ns :: [Peano]) (t :: Type) = (MatrixTF ns t :: Type)
 
@@ -364,6 +339,9 @@ type instance Apply MatrixTFSym0 l = MatrixTFSym1 l
 
 type role MatrixTFSym1 phantom phantom
 
+----------------------
+-- Matrix Functions --
+----------------------
 
 eqSingMatrix :: forall (peanos :: [Peano]) (a :: Type). Eq a => Sing peanos -> Matrix peanos a -> Matrix peanos a -> Bool
 eqSingMatrix = compareSingMatrix (==) True (&&)
@@ -411,6 +389,10 @@ toListMatrix SNil (Matrix a) = [a]
 toListMatrix (SCons SZ _) (Matrix EmptyVec) = []
 toListMatrix (SCons (SS peanoSingle) moreN) (Matrix (VecCons a moreA)) =
   toListMatrix moreN a <> toListMatrix (SCons peanoSingle moreN) (Matrix moreA)
+
+----------------------
+-- Matrix Instances --
+----------------------
 
 deriving instance (Eq (MatrixTF ns a)) => Eq (Matrix ns a)
 
