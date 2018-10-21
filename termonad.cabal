@@ -74,8 +74,10 @@ library
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
   default-extensions:  DataKinds
                      , DefaultSignatures
+                     , DeriveAnyClass
                      , DeriveFoldable
                      , DeriveFunctor
+                     , DerivingStrategies
                      , EmptyCase
                      , ExistentialQuantification
                      , FlexibleContexts

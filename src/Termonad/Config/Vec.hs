@@ -25,6 +25,7 @@ module Termonad.Config.Vec
 
 import Termonad.Prelude hiding ((\\), index)
 
+import qualified Data.Foldable as Data.Foldable
 import Data.Kind (Type)
 import Data.Singletons.Prelude
 import Data.Singletons.Prelude.Num
@@ -287,6 +288,7 @@ infixr 6 :<
 data Vec (n :: Peano) :: Type -> Type where
   EmptyVec :: Vec 'Z a
   VecCons :: !a -> !(Vec n a) -> Vec ('S n) a
+  deriving anyclass MonoFoldable
 
 deriving instance Eq a => Eq (Vec n a)
 deriving instance Ord a => Ord (Vec n a)
@@ -294,6 +296,8 @@ deriving instance Show a => Show (Vec n a)
 
 deriving instance Functor (Vec n)
 deriving instance Foldable (Vec n)
+
+type instance Element (Vec n a) = a
 
 -- | Infix operator for 'VecCons'.
 pattern (:*) :: (a :: Type) -> Vec n a -> Vec ('S n) a
@@ -320,13 +324,14 @@ type family MatrixTF (ns :: [Peano]) (a :: Type) :: Type where
     --
 
 -- type role MapSym0 phantom
+
 -- data MapSym0 (l :: TyFun
 --                      (TyFun a6989586621679662939 b6989586621679662940 -> *)
 --                      (TyFun [a6989586621679662939] [b6989586621679662940] -> *))
 --   = forall a1 b1 (arg :: TyFun a1 b1 -> *).
 --     SameKind (Apply MapSym0 arg) (MapSym1 arg) =>
 --     Data.Singletons.Prelude.Base.MapSym0KindInference
---   	-- Defined in ‘Data.Singletons.Prelude.Base’
+
 -- type instance Apply MapSym0 l = MapSym1 l
 
 -- type role MapSym1 phantom phantom
@@ -336,20 +341,29 @@ type family MatrixTF (ns :: [Peano]) (a :: Type) :: Type where
 
 -- type instance Apply (MapSym1 l1) l2 = Map l1 l2
 
-type role MatrixTFSym1 phantom phantom
+
+newtype Matrix ns a = Matrix
+  { unMatrix :: MatrixTF ns a
+  } deriving anyclass (MonoFoldable)
+
+type instance Element (Matrix ns a) = a
+
+type MatrixTFSym2 (ns :: [Peano]) (t :: Type) = (MatrixTF ns t :: Type)
 
 data MatrixTFSym1 (ns :: [Peano]) (z :: TyFun Type Type)
   = forall (arg :: Type).  SameKind (Apply (MatrixTFSym1 ns) arg) (MatrixTFSym2 ns arg) => MatrixTFSym1KindInference
 
--- type family Apply (f :: k1 ~> k2) (x :: k1) :: k2
-
 type instance Apply (MatrixTFSym1 l1) l2 = MatrixTF l1 l2
 
--- type MapSym2 (t :: TyFun a b -> Type) (t1 :: [a]) = Map t t1 :: [b]
+type role MatrixTFSym0 phantom
 
-type MatrixTFSym2 (ns :: [Peano]) (t :: Type) = (MatrixTF ns t :: Type)
+data MatrixTFSym0 (l :: TyFun [Peano] (Type ~> Type))
+  = forall (arg :: [Peano]).  SameKind (Apply MatrixTFSym0 arg) (MatrixTFSym1 arg) => MatrixTFSym0KindInference
 
-newtype Matrix ns a = Matrix { unMatrix :: MatrixTF ns a }
+type instance Apply MatrixTFSym0 l = MatrixTFSym1 l
+
+type role MatrixTFSym1 phantom phantom
+
 
 eqSingMatrix :: forall (peanos :: [Peano]) (a :: Type). Eq a => Sing peanos -> Matrix peanos a -> Matrix peanos a -> Bool
 eqSingMatrix = compareSingMatrix (==) True (&&)
@@ -388,9 +402,15 @@ fmapSingMatrix (SCons (SS peanoSingle) moreN) f (Matrix (VecCons a moreA)) =
 consMatrix :: Matrix ns a -> Matrix (n ': ns) a -> Matrix ('S n ': ns) a
 consMatrix papa (Matrix dada) = Matrix $ VecCons papa dada
 
--- instance (Eq a, SingI ns) => Eq (Matrix ns a) where
---   (==) :: Matrix ns a -> Matrix ns a -> Bool
---   (==) = eqSingMatrix (sing @_ @ns)
+toListMatrix ::
+     forall (peanos :: [Peano]) (a :: Type).
+     Sing peanos
+  -> Matrix peanos a
+  -> [a]
+toListMatrix SNil (Matrix a) = [a]
+toListMatrix (SCons SZ _) (Matrix EmptyVec) = []
+toListMatrix (SCons (SS peanoSingle) moreN) (Matrix (VecCons a moreA)) =
+  toListMatrix moreN a <> toListMatrix (SCons peanoSingle moreN) (Matrix moreA)
 
 deriving instance (Eq (MatrixTF ns a)) => Eq (Matrix ns a)
 
@@ -404,5 +424,17 @@ deriving instance (Ord (MatrixTF ns a)) => Ord (Matrix ns a)
 --   fmap :: (a -> b) -> Matrix ns a -> Matrix ns b
 --   fmap = fmapSingMatrix (sing @_ @ns)
 
-deriving instance Functor  (MatrixTFSym1 ns) => Functor  (Matrix ns)
--- deriving instance Foldable (MatrixTF ns) => Foldable (M ns)
+instance SingI ns => Functor (Matrix ns) where
+  fmap :: (a -> b) -> Matrix ns a -> Matrix ns b
+  fmap = fmapSingMatrix (sing @_ @ns)
+
+instance SingI ns => Data.Foldable.Foldable (Matrix ns) where
+  foldr :: (a -> b -> b) -> b -> Matrix ns a -> b
+  foldr comb b = Data.Foldable.foldr comb b . toListMatrix (sing @_ @ns)
+
+  toList :: Matrix ns a -> [a]
+  toList = toListMatrix (sing @_ @ns)
+
+instance Num a => Num (Matrix '[] a) where
+  fromInteger :: Integer -> Matrix '[] a
+  fromInteger = Matrix . fromInteger
