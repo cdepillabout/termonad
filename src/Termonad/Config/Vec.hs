@@ -195,6 +195,42 @@ $(singletons [d|
   multPeano Z _ = Z
   multPeano (S a) b = addPeano (multPeano a b) b
 
+  n0 :: Peano
+  n0 = Z
+
+  n1 :: Peano
+  n1 = S n0
+
+  n2 :: Peano
+  n2 = S n1
+
+  n3 :: Peano
+  n3 = S n2
+
+  n4 :: Peano
+  n4 = S n3
+
+  n5 :: Peano
+  n5 = S n4
+
+  n6 :: Peano
+  n6 = S n5
+
+  n7 :: Peano
+  n7 = S n6
+
+  n8 :: Peano
+  n8 = S n7
+
+  n9 :: Peano
+  n9 = S n8
+
+  n10 :: Peano
+  n10 = S n9
+
+  n24 :: Peano
+  n24 = multPeano n4 n6
+
   -- fromIntegerPeano :: Integer -> Peano
   -- fromIntegerPeano n = if n <= 0 then Z else S (fromIntegerPeano (n - 1))
 
@@ -215,35 +251,109 @@ $(singletons [d|
 
     fromInteger _ = error "fromInteger for Peano not supported"
 
+
   |])
 
--- instance Num Peano where
---   (+) = addPeano
+---------
+-- Fin --
+---------
 
---   (-) = subtractPeano
+data Fin :: Peano -> Type where
+  FZ :: forall (n :: Peano). Fin ('S n)
+  FS :: forall (n :: Peano). !(Fin n) -> Fin ('S n)
 
---   (*) = multPeano
+deriving instance Eq (Fin n)
+deriving instance Ord (Fin n)
+deriving instance Show (Fin n)
 
---   abs = id
+----------
+-- Prod --
+----------
 
---   signum Z = Z
---   signum (S _) = S Z
+data Prod :: [Type] -> Type where
+  EmptyProd :: Prod '[]
+  ProdCons :: forall (a :: Type) (as :: [Type]). !a -> !(Prod as) -> Prod (a ': as)
 
-  -- fromInteger = fromIntegerPeano
+-- | Infix operator for 'ProdCons.
+pattern (:<) :: (a :: Type) -> Prod as -> Prod (a ': as)
+pattern a :< prod = ProdCons a prod
+infixr 6 :<
 
 ---------
 -- Vec --
 ---------
 
-test :: Peano
-test = addPeano Z Z
-
 data Vec (n :: Peano) :: Type -> Type where
   EmptyVec :: Vec 'Z a
   VecCons :: !a -> !(Vec n a) -> Vec ('S n) a
 
--- | Infix operator for 'VecCons'.
-(*:) :: a -> Vec n a -> Vec ('S n) a
-(*:) = VecCons
+deriving instance Eq a => Eq (Vec n a)
+deriving instance Ord a => Ord (Vec n a)
+deriving instance Show a => Show (Vec n a)
 
-infixr 4 *:
+deriving instance Functor (Vec n)
+deriving instance Foldable (Vec n)
+
+-- | Infix operator for 'VecCons'.
+pattern (:*) :: (a :: Type) -> Vec n a -> Vec ('S n) a
+pattern a :* vec = VecCons a vec
+infixr 6 :*
+
+------------
+-- Matrix --
+------------
+
+type family MatrixTF (ns :: [Peano]) (a :: Type) :: Type where
+  MatrixTF '[] a = a
+  MatrixTF (n ': ns) a = Vec n (Matrix ns a)
+
+newtype Matrix ns a = Matrix { unMatrix :: MatrixTF ns a }
+
+eqMatrix :: forall (peanos :: [Peano]) (a :: Type). Eq a => Sing peanos -> Matrix peanos a -> Matrix peanos a -> Bool
+eqMatrix = compareMatrix (==) True (&&)
+
+ordMatrix :: forall (peanos :: [Peano]) (a :: Type). Ord a => Sing peanos -> Matrix peanos a -> Matrix peanos a -> Ordering
+ordMatrix = compareMatrix compare EQ f
+  where
+    f :: Ordering -> Ordering -> Ordering
+    f EQ o = o
+    f o _ = o
+
+compareMatrix ::
+     forall (peanos :: [Peano]) (a :: Type) (c :: Type)
+   . (a -> a -> c)
+  -> c
+  -> (c -> c -> c)
+  -> Sing peanos
+  -> Matrix peanos a
+  -> Matrix peanos a
+  -> c
+compareMatrix f _ _ SNil (Matrix a) (Matrix b) = f a b
+compareMatrix _ empt _ (SCons SZ _) (Matrix EmptyVec) (Matrix EmptyVec) = empt
+compareMatrix f empt combine (SCons (SS peanoSingle) moreN) (Matrix (VecCons a moreA)) (Matrix (VecCons b moreB)) =
+  combine
+    (compareMatrix f empt combine moreN a b)
+    (compareMatrix f empt combine (SCons peanoSingle moreN) (Matrix moreA) (Matrix moreB))
+
+fmapMatrix :: forall (peanos :: [Peano]) (a :: Type) (b ::Type). Sing peanos -> (a -> b) -> Matrix peanos a -> Matrix peanos b
+fmapMatrix SNil f (Matrix a) = Matrix $ f a
+fmapMatrix (SCons SZ _) _ (Matrix EmptyVec) = Matrix EmptyVec
+fmapMatrix (SCons (SS peanoSingle) moreN) f (Matrix (VecCons a moreA)) =
+  let matA = fmapMatrix moreN f a
+      matB = fmapMatrix (SCons peanoSingle moreN) f (Matrix moreA)
+  in matrixCons matA matB
+
+matrixCons :: Matrix ns a -> Matrix (n ': ns) a -> Matrix ('S n ': ns) a
+matrixCons papa (Matrix dada) = Matrix $ VecCons papa dada
+
+instance (Eq a, SingI ns) => Eq (Matrix ns a) where
+  (==) :: Matrix ns a -> Matrix ns a -> Bool
+  (==) = eqMatrix (sing @_ @ns)
+
+instance (Ord a, SingI ns) => Ord (Matrix ns a) where
+  compare :: Matrix ns a -> Matrix ns a -> Ordering
+  compare = ordMatrix (sing @_ @ns)
+
+instance SingI ns => Functor (Matrix ns) where
+  fmap :: (a -> b) -> Matrix ns a -> Matrix ns b
+  fmap = fmapMatrix (sing @_ @ns)

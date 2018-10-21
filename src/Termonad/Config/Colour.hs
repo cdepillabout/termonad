@@ -56,11 +56,11 @@ import Control.Lens ((%~), makeLensesFor)
 import Data.Colour (Colour, black, affineCombo)
 import Data.Colour.SRGB (RGB(RGB), toSRGB, sRGB24, sRGB24show)
 import qualified Data.Foldable
-import Data.Type.Combinator (I(..))
-import Data.Type.Fin (Fin(..), fin)
-import Data.Type.Product (Prod(..))
-import Data.Type.Vector
-  (VecT(..), Vec, M(..), vgen_, mgen_)
+-- import Data.Type.Combinator (I(..))
+-- import Data.Type.Fin (Fin(..), fin)
+-- import Data.Type.Product (Prod(..))
+-- import Data.Type.Vector
+--   (VecT(..), Vec, M(..), vgen_, mgen_)
 import GI.Gdk (RGBA, newZeroRGBA, setRGBABlue, setRGBAGreen, setRGBARed)
 import GI.Vte
   ( Terminal
@@ -71,7 +71,7 @@ import GI.Vte
   , terminalSetColorForeground
   )
 import Text.Show (showString)
-import Type.Family.Nat (N3, N6, N8)
+-- import Type.Family.Nat (N3, N6, N8)
 
 import Termonad.Config.Vec
 import Termonad.Lenses (lensCreateTermHook, lensHooks)
@@ -120,10 +120,10 @@ data Palette c
   -- ^ Set the colors from the standard colors.
   | ExtendedPalette !(Vec N8 c) !(Vec N8 c)
   -- ^ Set the colors from the extended (light) colors (as well as standard colors).
-  | ColourCubePalette !(Vec N8 c) !(Vec N8 c) !(M '[N6, N6, N6] c)
+  | ColourCubePalette !(Vec N8 c) !(Vec N8 c) !(Matrix '[N6, N6, N6] c)
   -- ^ Set the colors from the color cube (as well as the standard colors and
   -- extended colors).
-  | FullPalette !(Vec N8 c) !(Vec N8 c) !(M '[N6, N6, N6] c) !(Vec N24 c)
+  | FullPalette !(Vec N8 c) !(Vec N8 c) !(Matrix '[N6, N6, N6] c) !(Vec N24 c)
   -- ^ Set the colors from the grey scale (as well as the standard colors,
   -- extended colors, and color cube).
   deriving (Eq, Show, Functor, Foldable)
@@ -146,13 +146,13 @@ paletteToList = Data.Foldable.toList
 coloursFromBits :: forall b. (Ord b, Floating b) => Word8 -> Word8 -> Vec N8 (Colour b)
 coloursFromBits scale offset = vgen_ createElem
   where
-    createElem :: Fin N8 -> I (Colour b)
+    createElem :: Fin N8 -> Colour b
     createElem finN =
       let red = cmp 0 finN
           green = cmp 1 finN
           blue = cmp 2 finN
           color = sRGB24 red green blue
-      in I color
+      in color
 
     cmp :: Int -> Fin N8 -> Word8
     cmp i = (offset +) . (scale *) . fromIntegral . bit i . fin
@@ -181,11 +181,11 @@ showColourVec = fmap sRGB24show . Data.Foldable.toList
 -- | Specify a colour cube with one colour vector for its displacement and three
 -- colour vectors for its edges. Produces a uniform 6x6x6 grid bounded by
 -- and orthognal to the faces.
-cube
-  :: Fractional b => Colour b -> Vec N3 (Colour b) -> M '[N6, N6, N6] (Colour b)
-cube d (I i :* I j :* I k :* ØV) = mgen_ $ \(x :< y :< z :< Ø) ->
-  affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] black
-  where coef n = fromIntegral (fin n) / 5
+-- cube
+--   :: Fractional b => Colour b -> Vec N3 (Colour b) -> Matrix '[N6, N6, N6] (Colour b)
+-- cube d (i :* j :* k :* EmptyVec) = mgen_ $ \(x :< y :< z :< EmptyProd) ->
+--   affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] black
+--   where coef n = fromIntegral (fin n) / 5
 
 -- | A matrix of a 6 x 6 x 6 color cube. Default value for 'ColourCubePalette'.
 --
@@ -233,8 +233,8 @@ cube d (I i :* I j :* I k :* ØV) = mgen_ $ \(x :< y :< z :< Ø) ->
 --   , #ffff00, #ffff5f, #ffff87, #ffffaf, #ffffd7, #ffffff
 --   ]
 -- ]
-defaultColourCube :: (Ord b, Floating b) => M '[N6, N6, N6] (Colour b)
-defaultColourCube = mgen_ $ \(x :< y :< z :< Ø) -> sRGB24 (cmp x) (cmp y) (cmp z)
+defaultColourCube :: (Ord b, Floating b) => Matrix '[N6, N6, N6] (Colour b)
+defaultColourCube = mgen_ $ \(x :< y :< z :< EmptyProd) -> sRGB24 (cmp x) (cmp y) (cmp z)
   where
     cmp :: Fin N6 -> Word8
     cmp i =
@@ -243,8 +243,8 @@ defaultColourCube = mgen_ $ \(x :< y :< z :< Ø) -> sRGB24 (cmp x) (cmp y) (cmp 
 
 -- | Helper function for showing all the colors in a color cube. This is used
 -- for debugging.
-showColourCube :: M '[N6, N6, N6] (Colour Double) -> String
-showColourCube (M matrix) =
+showColourCube :: Matrix '[N6, N6, N6] (Colour Double) -> String
+showColourCube matrix =
   -- TODO: This function will only work with a 6x6x6 matrix, but it could be
   -- generalized to work with any Rank-3 matrix.
   let itemList = Data.Foldable.toList matrix
