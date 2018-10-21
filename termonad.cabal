@@ -50,11 +50,13 @@ library
                      , Termonad.XML
   other-modules:       Paths_termonad
   build-depends:       base >= 4.7 && < 5
+                     , adjunctions
                      , classy-prelude
                      , colour
                      , constraints
                      , data-default
                      , directory >= 1.3.1.0
+                     , distributive
                      , dyre
                      , filepath
                      , gi-gdk

@@ -25,7 +25,9 @@ module Termonad.Config.Vec
 
 import Termonad.Prelude hiding ((\\), index)
 
+import Data.Distributive (Distributive(distribute))
 import qualified Data.Foldable as Data.Foldable
+import Data.Functor.Rep (Representable(..), distributeRep)
 import Data.Kind (Type)
 import Data.Singletons.Prelude
 import Data.Singletons.Prelude.List
@@ -328,6 +330,19 @@ deriving instance Show a => Show (Vec n a)
 deriving instance Functor (Vec n)
 deriving instance Foldable (Vec n)
 
+instance SingI n => Distributive (Vec n) where
+  distribute :: Functor f => f (Vec n a) -> Vec n (f a)
+  distribute = distributeRep
+
+instance SingI n => Representable (Vec n) where
+  type Rep (Vec n) = Fin n
+
+  tabulate :: (Fin n -> a) -> Vec n a
+  tabulate = vgen_
+
+  index :: Vec n a -> Fin n -> a
+  index = flip vindex
+
 type instance Element (Vec n a) = a
 
 -- | Infix operator for 'VecCons'.
@@ -341,6 +356,10 @@ vgen_ = vgen sing
 vgen :: SPeano n -> (Fin n -> a) -> Vec n a
 vgen SZ _ = EmptyVec
 vgen (SS n) f = f FZ :* vgen n (f . FS)
+
+vindex :: Fin n -> Vec n a -> a
+vindex FZ (VecCons a _) = a
+vindex (FS n) (VecCons _ vec) = vindex n vec
 
 ------------
 -- Matrix --
