@@ -1,3 +1,4 @@
+{-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeInType #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -307,19 +308,60 @@ type family MatrixTF (ns :: [Peano]) (a :: Type) :: Type where
   MatrixTF '[] a = a
   MatrixTF (n ': ns) a = Vec n (Matrix ns a)
 
+-- data MatrixTFSym1 (l :: TyFun
+--                       [a6989586621679682896] a6989586621679682896)
+--   = forall a1 (arg :: [a1]).
+--     SameKind (Apply HeadSym0 arg) (HeadSym1 arg) =>
+--     Data.Singletons.Prelude.List.HeadSym0KindInference
+--   	-- Defined in ‘Data.Singletons.Prelude.List’
+-- type instance Apply HeadSym0 l = Head l
+--   	-- Defined in ‘Data.Singletons.Prelude.List’
+    --
+    --
+
+-- type role MapSym0 phantom
+-- data MapSym0 (l :: TyFun
+--                      (TyFun a6989586621679662939 b6989586621679662940 -> *)
+--                      (TyFun [a6989586621679662939] [b6989586621679662940] -> *))
+--   = forall a1 b1 (arg :: TyFun a1 b1 -> *).
+--     SameKind (Apply MapSym0 arg) (MapSym1 arg) =>
+--     Data.Singletons.Prelude.Base.MapSym0KindInference
+--   	-- Defined in ‘Data.Singletons.Prelude.Base’
+-- type instance Apply MapSym0 l = MapSym1 l
+
+-- type role MapSym1 phantom phantom
+
+-- data MapSym1 (l :: TyFun a b -> Type) (l1 :: TyFun [a] [b])
+--   = forall (arg :: [a]).  SameKind (Apply (MapSym1 l) arg) (MapSym2 l arg) => MapSym1KindInference
+
+-- type instance Apply (MapSym1 l1) l2 = Map l1 l2
+
+type role MatrixTFSym1 phantom phantom
+
+data MatrixTFSym1 (ns :: [Peano]) (z :: TyFun Type Type)
+  = forall (arg :: Type).  SameKind (Apply (MatrixTFSym1 ns) arg) (MatrixTFSym2 ns arg) => MatrixTFSym1KindInference
+
+-- type family Apply (f :: k1 ~> k2) (x :: k1) :: k2
+
+type instance Apply (MatrixTFSym1 l1) l2 = MatrixTF l1 l2
+
+-- type MapSym2 (t :: TyFun a b -> Type) (t1 :: [a]) = Map t t1 :: [b]
+
+type MatrixTFSym2 (ns :: [Peano]) (t :: Type) = (MatrixTF ns t :: Type)
+
 newtype Matrix ns a = Matrix { unMatrix :: MatrixTF ns a }
 
-eqMatrix :: forall (peanos :: [Peano]) (a :: Type). Eq a => Sing peanos -> Matrix peanos a -> Matrix peanos a -> Bool
-eqMatrix = compareMatrix (==) True (&&)
+eqSingMatrix :: forall (peanos :: [Peano]) (a :: Type). Eq a => Sing peanos -> Matrix peanos a -> Matrix peanos a -> Bool
+eqSingMatrix = compareSingMatrix (==) True (&&)
 
-ordMatrix :: forall (peanos :: [Peano]) (a :: Type). Ord a => Sing peanos -> Matrix peanos a -> Matrix peanos a -> Ordering
-ordMatrix = compareMatrix compare EQ f
+ordSingMatrix :: forall (peanos :: [Peano]) (a :: Type). Ord a => Sing peanos -> Matrix peanos a -> Matrix peanos a -> Ordering
+ordSingMatrix = compareSingMatrix compare EQ f
   where
     f :: Ordering -> Ordering -> Ordering
     f EQ o = o
     f o _ = o
 
-compareMatrix ::
+compareSingMatrix ::
      forall (peanos :: [Peano]) (a :: Type) (c :: Type)
    . (a -> a -> c)
   -> c
@@ -328,32 +370,39 @@ compareMatrix ::
   -> Matrix peanos a
   -> Matrix peanos a
   -> c
-compareMatrix f _ _ SNil (Matrix a) (Matrix b) = f a b
-compareMatrix _ empt _ (SCons SZ _) (Matrix EmptyVec) (Matrix EmptyVec) = empt
-compareMatrix f empt combine (SCons (SS peanoSingle) moreN) (Matrix (VecCons a moreA)) (Matrix (VecCons b moreB)) =
+compareSingMatrix f _ _ SNil (Matrix a) (Matrix b) = f a b
+compareSingMatrix _ empt _ (SCons SZ _) (Matrix EmptyVec) (Matrix EmptyVec) = empt
+compareSingMatrix f empt combine (SCons (SS peanoSingle) moreN) (Matrix (VecCons a moreA)) (Matrix (VecCons b moreB)) =
   combine
-    (compareMatrix f empt combine moreN a b)
-    (compareMatrix f empt combine (SCons peanoSingle moreN) (Matrix moreA) (Matrix moreB))
+    (compareSingMatrix f empt combine moreN a b)
+    (compareSingMatrix f empt combine (SCons peanoSingle moreN) (Matrix moreA) (Matrix moreB))
 
-fmapMatrix :: forall (peanos :: [Peano]) (a :: Type) (b ::Type). Sing peanos -> (a -> b) -> Matrix peanos a -> Matrix peanos b
-fmapMatrix SNil f (Matrix a) = Matrix $ f a
-fmapMatrix (SCons SZ _) _ (Matrix EmptyVec) = Matrix EmptyVec
-fmapMatrix (SCons (SS peanoSingle) moreN) f (Matrix (VecCons a moreA)) =
-  let matA = fmapMatrix moreN f a
-      matB = fmapMatrix (SCons peanoSingle moreN) f (Matrix moreA)
-  in matrixCons matA matB
+fmapSingMatrix :: forall (peanos :: [Peano]) (a :: Type) (b ::Type). Sing peanos -> (a -> b) -> Matrix peanos a -> Matrix peanos b
+fmapSingMatrix SNil f (Matrix a) = Matrix $ f a
+fmapSingMatrix (SCons SZ _) _ (Matrix EmptyVec) = Matrix EmptyVec
+fmapSingMatrix (SCons (SS peanoSingle) moreN) f (Matrix (VecCons a moreA)) =
+  let matA = fmapSingMatrix moreN f a
+      matB = fmapSingMatrix (SCons peanoSingle moreN) f (Matrix moreA)
+  in consMatrix matA matB
 
-matrixCons :: Matrix ns a -> Matrix (n ': ns) a -> Matrix ('S n ': ns) a
-matrixCons papa (Matrix dada) = Matrix $ VecCons papa dada
+consMatrix :: Matrix ns a -> Matrix (n ': ns) a -> Matrix ('S n ': ns) a
+consMatrix papa (Matrix dada) = Matrix $ VecCons papa dada
 
-instance (Eq a, SingI ns) => Eq (Matrix ns a) where
-  (==) :: Matrix ns a -> Matrix ns a -> Bool
-  (==) = eqMatrix (sing @_ @ns)
+-- instance (Eq a, SingI ns) => Eq (Matrix ns a) where
+--   (==) :: Matrix ns a -> Matrix ns a -> Bool
+--   (==) = eqSingMatrix (sing @_ @ns)
 
-instance (Ord a, SingI ns) => Ord (Matrix ns a) where
-  compare :: Matrix ns a -> Matrix ns a -> Ordering
-  compare = ordMatrix (sing @_ @ns)
+deriving instance (Eq (MatrixTF ns a)) => Eq (Matrix ns a)
 
-instance SingI ns => Functor (Matrix ns) where
-  fmap :: (a -> b) -> Matrix ns a -> Matrix ns b
-  fmap = fmapMatrix (sing @_ @ns)
+-- instance (Ord a, SingI ns) => Ord (Matrix ns a) where
+--   compare :: Matrix ns a -> Matrix ns a -> Ordering
+--   compare = ordSingMatrix (sing @_ @ns)
+
+deriving instance (Ord (MatrixTF ns a)) => Ord (Matrix ns a)
+
+-- instance SingI ns => Functor (Matrix ns) where
+--   fmap :: (a -> b) -> Matrix ns a -> Matrix ns b
+--   fmap = fmapSingMatrix (sing @_ @ns)
+
+deriving instance Functor  (MatrixTFSym1 ns) => Functor  (Matrix ns)
+-- deriving instance Foldable (MatrixTF ns) => Foldable (M ns)
