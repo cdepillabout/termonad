@@ -234,7 +234,7 @@ showColourVec = fmap sRGB24show . Data.Foldable.toList
 --   ]
 -- ]
 defaultColourCube :: (Ord b, Floating b) => Matrix '[N6, N6, N6] (Colour b)
-defaultColourCube = mgen_ $ \(x :< y :< z :< EmptyProd) -> sRGB24 (cmp x) (cmp y) (cmp z)
+defaultColourCube = mgen_ $ \(x :< y :< z :< EmptyHList) -> sRGB24 (cmp x) (cmp y) (cmp z)
   where
     cmp :: Fin N6 -> Word8
     cmp i =
@@ -305,7 +305,7 @@ showColourCube matrix =
 -- >>> showColourVec defaultGreyscale
 -- ["#080808","#121212","#1c1c1c","#262626","#303030","#3a3a3a","#444444","#4e4e4e","#585858","#626262","#6c6c6c","#767676","#808080","#8a8a8a","#949494","#9e9e9e","#a8a8a8","#b2b2b2","#bcbcbc","#c6c6c6","#d0d0d0","#dadada","#e4e4e4","#eeeeee"]
 defaultGreyscale :: (Ord b, Floating b) => Vec N24 (Colour b)
-defaultGreyscale = vgen_ $ \n -> I $
+defaultGreyscale = vgen_ $ \n ->
   let l = 8 + 10 * fromIntegral (fin n)
   in sRGB24 l l l
 
