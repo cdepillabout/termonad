@@ -475,6 +475,11 @@ mgen'' (SCons (n :: SPeano foo) (ns' :: Sing oaoa)) f =
     byebye :: Fin foo -> HList Fin oaoa -> a
     byebye faaa = f . HListCons faaa
 
+myMat3 :: Matrix '[N2, N3] Int
+myMat3 = mgen'' sing f
+  where
+    f :: HList Fin '[N2, N3] -> Int
+    f (HListCons f1 (HListCons f2 EmptyHList)) = fin f1 * 3 + fin f2
 
 ----------------------
 -- Matrix Instances --
