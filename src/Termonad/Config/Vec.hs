@@ -28,10 +28,12 @@ import Termonad.Prelude hiding ((\\), index)
 import qualified Data.Foldable as Data.Foldable
 import Data.Kind (Type)
 import Data.Singletons.Prelude
+import Data.Singletons.Prelude.List
 import Data.Singletons.Prelude.Num
 import Data.Singletons.Prelude.Show
 import Data.Singletons.TypeLits
 import Data.Singletons.TH
+import Unsafe.Coerce (unsafeCoerce)
 
 -- import Data.Type.Combinator (I(..), Uncur3(..))
 -- import Data.Type.Fin (Fin(..), fin)
@@ -268,6 +270,19 @@ deriving instance Eq (Fin n)
 deriving instance Ord (Fin n)
 deriving instance Show (Fin n)
 
+fin :: Fin n -> Int
+fin FZ = 0
+fin (FS x) = succ $ fin x
+
+-- data instance Sing z where
+--   SNil :: Sing '[]
+--   SCons :: forall a (n1 :: a) (n2 :: [a]).
+--            (Sing n1) -> (Sing n2) -> Sing (n1 : n2)
+
+data instance Sing (z :: Fin n) where
+  SFZ :: Sing 'FZ
+  SFS :: Sing x -> Sing ('FS x)
+
 ----------
 -- Prod --
 ----------
@@ -277,8 +292,24 @@ data Prod :: [Type] -> Type where
   ProdCons :: forall (a :: Type) (as :: [Type]). !a -> !(Prod as) -> Prod (a ': as)
 
 -- | Infix operator for 'ProdCons.
-pattern (:<) :: (a :: Type) -> Prod as -> Prod (a ': as)
-pattern a :< prod = ProdCons a prod
+pattern (:<<) :: (a :: Type) -> Prod as -> Prod (a ': as)
+pattern a :<< prod = ProdCons a prod
+infixr 6 :<<
+
+curry' :: l ~ (a ': as) => (Prod l -> r) -> a -> Prod as -> r
+curry' f a as = f $ ProdCons a as
+
+-----------
+-- HList --
+-----------
+
+data HList :: (k -> Type) -> [k] -> Type where
+  EmptyHList :: HList f '[]
+  HListCons :: forall (f :: k -> Type) (a :: k) (as :: [k]). f a -> HList f as -> HList f (a ': as)
+
+-- | Infix operator for 'HListCons'.
+pattern (:<) :: (f a :: Type) -> HList f as -> HList f (a ': as)
+pattern fa :< hlist = HListCons fa hlist
 infixr 6 :<
 
 ---------
@@ -304,6 +335,13 @@ pattern (:*) :: (a :: Type) -> Vec n a -> Vec ('S n) a
 pattern a :* vec = VecCons a vec
 infixr 6 :*
 
+vgen_ :: SingI n => (Fin n -> a) -> Vec n a
+vgen_ = vgen sing
+
+vgen :: SPeano n -> (Fin n -> a) -> Vec n a
+vgen SZ _ = EmptyVec
+vgen (SS n) f = f FZ :* vgen n (f . FS)
+
 ------------
 -- Matrix --
 ------------
@@ -318,7 +356,6 @@ newtype Matrix ns a = Matrix
   deriving anyclass (MonoFoldable)
 
 type instance Element (Matrix ns a) = a
-
 
 ---------------------------------
 -- Defunctionalization Symbols --
@@ -390,6 +427,54 @@ toListMatrix SNil (Matrix a) = [a]
 toListMatrix (SCons SZ _) (Matrix EmptyVec) = []
 toListMatrix (SCons (SS peanoSingle) moreN) (Matrix (VecCons a moreA)) =
   toListMatrix moreN (Matrix a) <> toListMatrix (SCons peanoSingle moreN) (Matrix moreA)
+
+type family AllT (f :: Peano -> t) (ns :: [Peano]) :: [t] where
+  AllT f '[] = '[]
+  AllT f (n ': ns) = f n ': AllT f ns
+
+mgen :: forall (ns :: [Peano]) (a :: Type). Prod (AllT SPeano ns) -> (Prod (AllT Fin ns) -> a) -> Matrix ns a
+mgen EmptyProd f = Matrix $ unsafeCoerce $ f $ unsafeCoerce EmptyProd
+mgen (ProdCons n ns') f =
+  Matrix $ unsafeCoerce $ vgen (unsafeCoerce n) $ unMatrix . mgen (unsafeCoerce ns') . curry' (unsafeCoerce f)
+
+myMat :: Matrix '[N2, N3] Int
+myMat = mgen (sing :<< sing :<< EmptyProd) f
+  where
+    f :: Prod '[Fin N2, Fin N3] -> Int
+    f (ProdCons f1 (ProdCons f2 EmptyProd)) = fin f1 * 3 + fin f2
+
+lala :: forall (ns :: [Peano]). Sing ns -> Prod (AllT SPeano ns)
+lala SNil = EmptyProd
+lala (SCons n ns) = ProdCons n $ lala ns
+
+mgen' :: forall (ns :: [Peano]) (a :: Type). Sing ns -> (Prod (AllT Fin ns) -> a) -> Matrix ns a
+mgen' SNil f = Matrix $ f EmptyProd
+mgen' (SCons (n :: SPeano foo) (ns' :: Sing oaoa)) f =
+  Matrix $ (vgen (n :: SPeano foo) $ (gagaga :: Fin foo -> MatrixTF oaoa a) :: Vec foo (MatrixTF oaoa a))
+  where
+    gagaga :: Fin foo -> MatrixTF oaoa a
+    gagaga faaa = unMatrix $ (mgen' ns' $ byebye faaa :: Matrix oaoa a)
+
+    byebye :: Fin foo -> Prod (AllT Fin oaoa) -> a
+    byebye faaa = curry' f faaa
+
+myMat2 :: Matrix '[N2, N3] Int
+myMat2 = mgen' sing f
+  where
+    f :: Prod '[Fin N2, Fin N3] -> Int
+    f (ProdCons f1 (ProdCons f2 EmptyProd)) = fin f1 * 3 + fin f2
+
+mgen'' :: forall (ns :: [Peano]) (a :: Type). Sing ns -> (HList Fin ns -> a) -> Matrix ns a
+mgen'' SNil f = Matrix $ f EmptyHList
+mgen'' (SCons (n :: SPeano foo) (ns' :: Sing oaoa)) f =
+  Matrix $ (vgen n $ (gagaga :: Fin foo -> MatrixTF oaoa a) :: Vec foo (MatrixTF oaoa a))
+  where
+    gagaga :: Fin foo -> MatrixTF oaoa a
+    gagaga faaa = unMatrix $ (mgen'' ns' $ byebye faaa :: Matrix oaoa a)
+
+    byebye :: Fin foo -> HList Fin oaoa -> a
+    byebye faaa = f . HListCons faaa
+
 
 ----------------------
 -- Matrix Instances --
