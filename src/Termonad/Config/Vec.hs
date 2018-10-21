@@ -310,11 +310,12 @@ infixr 6 :*
 
 type family MatrixTF (ns :: [Peano]) (a :: Type) :: Type where
   MatrixTF '[] a = a
-  MatrixTF (n ': ns) a = Vec n (Matrix ns a)
+  MatrixTF (n ': ns) a = Vec n (MatrixTF ns a)
 
 newtype Matrix ns a = Matrix
   { unMatrix :: MatrixTF ns a
-  } deriving anyclass (MonoFoldable)
+  }
+  deriving anyclass (MonoFoldable)
 
 type instance Element (Matrix ns a) = a
 
@@ -366,19 +367,19 @@ compareSingMatrix f _ _ SNil (Matrix a) (Matrix b) = f a b
 compareSingMatrix _ empt _ (SCons SZ _) (Matrix EmptyVec) (Matrix EmptyVec) = empt
 compareSingMatrix f empt combine (SCons (SS peanoSingle) moreN) (Matrix (VecCons a moreA)) (Matrix (VecCons b moreB)) =
   combine
-    (compareSingMatrix f empt combine moreN a b)
+    (compareSingMatrix f empt combine moreN (Matrix a) (Matrix b))
     (compareSingMatrix f empt combine (SCons peanoSingle moreN) (Matrix moreA) (Matrix moreB))
 
 fmapSingMatrix :: forall (peanos :: [Peano]) (a :: Type) (b ::Type). Sing peanos -> (a -> b) -> Matrix peanos a -> Matrix peanos b
 fmapSingMatrix SNil f (Matrix a) = Matrix $ f a
 fmapSingMatrix (SCons SZ _) _ (Matrix EmptyVec) = Matrix EmptyVec
 fmapSingMatrix (SCons (SS peanoSingle) moreN) f (Matrix (VecCons a moreA)) =
-  let matA = fmapSingMatrix moreN f a
+  let matA = fmapSingMatrix moreN f (Matrix a)
       matB = fmapSingMatrix (SCons peanoSingle moreN) f (Matrix moreA)
   in consMatrix matA matB
 
 consMatrix :: Matrix ns a -> Matrix (n ': ns) a -> Matrix ('S n ': ns) a
-consMatrix papa (Matrix dada) = Matrix $ VecCons papa dada
+consMatrix (Matrix a) (Matrix as) = Matrix $ VecCons a as
 
 toListMatrix ::
      forall (peanos :: [Peano]) (a :: Type).
@@ -388,7 +389,7 @@ toListMatrix ::
 toListMatrix SNil (Matrix a) = [a]
 toListMatrix (SCons SZ _) (Matrix EmptyVec) = []
 toListMatrix (SCons (SS peanoSingle) moreN) (Matrix (VecCons a moreA)) =
-  toListMatrix moreN a <> toListMatrix (SCons peanoSingle moreN) (Matrix moreA)
+  toListMatrix moreN (Matrix a) <> toListMatrix (SCons peanoSingle moreN) (Matrix moreA)
 
 ----------------------
 -- Matrix Instances --
@@ -396,15 +397,9 @@ toListMatrix (SCons (SS peanoSingle) moreN) (Matrix (VecCons a moreA)) =
 
 deriving instance (Eq (MatrixTF ns a)) => Eq (Matrix ns a)
 
--- instance (Ord a, SingI ns) => Ord (Matrix ns a) where
---   compare :: Matrix ns a -> Matrix ns a -> Ordering
---   compare = ordSingMatrix (sing @_ @ns)
-
 deriving instance (Ord (MatrixTF ns a)) => Ord (Matrix ns a)
 
--- instance SingI ns => Functor (Matrix ns) where
---   fmap :: (a -> b) -> Matrix ns a -> Matrix ns b
---   fmap = fmapSingMatrix (sing @_ @ns)
+deriving instance (Show (MatrixTF ns a)) => Show (Matrix ns a)
 
 instance SingI ns => Functor (Matrix ns) where
   fmap :: (a -> b) -> Matrix ns a -> Matrix ns b
@@ -418,5 +413,15 @@ instance SingI ns => Data.Foldable.Foldable (Matrix ns) where
   toList = toListMatrix (sing @_ @ns)
 
 instance Num a => Num (Matrix '[] a) where
+  Matrix a + Matrix b = Matrix (a + b)
+
+  Matrix a * Matrix b = Matrix (a * b)
+
+  Matrix a - Matrix b = Matrix (a - b)
+
+  abs (Matrix a) = Matrix (abs a)
+
+  signum (Matrix a) = Matrix (signum a)
+
   fromInteger :: Integer -> Matrix '[] a
   fromInteger = Matrix . fromInteger
