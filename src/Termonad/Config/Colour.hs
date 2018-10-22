@@ -155,7 +155,7 @@ coloursFromBits scale offset = vgen_ createElem
       in color
 
     cmp :: Int -> Fin N8 -> Word8
-    cmp i = (offset +) . (scale *) . fromIntegral . bit i . fin
+    cmp i = (offset +) . (scale *) . fromIntegral . bit i . finToInt
 
     bit :: Int -> Int -> Int
     bit m i = i `div` (2 ^ m) `mod` 2
@@ -238,7 +238,7 @@ defaultColourCube = mgen_ $ \(x :< y :< z :< EmptyHList) -> sRGB24 (cmp x) (cmp 
   where
     cmp :: Fin N6 -> Word8
     cmp i =
-      let i' = fromIntegral (fin i)
+      let i' = fromIntegral (finToInt i)
       in signum i' * 55 + 40 * i'
 
 -- | Helper function for showing all the colors in a color cube. This is used
@@ -306,7 +306,7 @@ showColourCube matrix =
 -- ["#080808","#121212","#1c1c1c","#262626","#303030","#3a3a3a","#444444","#4e4e4e","#585858","#626262","#6c6c6c","#767676","#808080","#8a8a8a","#949494","#9e9e9e","#a8a8a8","#b2b2b2","#bcbcbc","#c6c6c6","#d0d0d0","#dadada","#e4e4e4","#eeeeee"]
 defaultGreyscale :: (Ord b, Floating b) => Vec N24 (Colour b)
 defaultGreyscale = vgen_ $ \n ->
-  let l = 8 + 10 * fromIntegral (fin n)
+  let l = 8 + 10 * fromIntegral (finToInt n)
   in sRGB24 l l l
 
 -- | The configuration for the colors used by Termonad.

@@ -272,9 +272,9 @@ deriving instance Eq (Fin n)
 deriving instance Ord (Fin n)
 deriving instance Show (Fin n)
 
-fin :: Fin n -> Int
-fin FZ = 0
-fin (FS x) = succ $ fin x
+finToInt :: Fin n -> Int
+finToInt FZ = 0
+finToInt (FS x) = succ $ finToInt x
 
 -- data instance Sing z where
 --   SNil :: Sing '[]
@@ -330,6 +330,15 @@ deriving instance Show a => Show (Vec n a)
 deriving instance Functor (Vec n)
 deriving instance Foldable (Vec n)
 
+instance MonoFunctor (Vec n a)
+
+instance SingI n => MonoPointed (Vec n a)
+
+instance SingI n => Applicative (Vec n) where
+  pure a = vrep_ a
+
+  (<*>) = vap ($)
+
 instance SingI n => Distributive (Vec n) where
   distribute :: Functor f => f (Vec n a) -> Vec n (f a)
   distribute = distributeRep
@@ -360,6 +369,24 @@ vgen (SS n) f = f FZ :* vgen n (f . FS)
 vindex :: Fin n -> Vec n a -> a
 vindex FZ (VecCons a _) = a
 vindex (FS n) (VecCons _ vec) = vindex n vec
+
+vecSingleton :: a -> Vec N1 a
+vecSingleton a = VecCons a EmptyVec
+
+vrep :: Sing n -> a -> Vec n a
+vrep SZ _ = EmptyVec
+vrep (SS n) a = VecCons a $ vrep n a
+
+imap :: forall n a b. (Fin n -> a -> b) -> Vec n a -> Vec n b
+imap f EmptyVec = EmptyVec
+imap f (VecCons a as) = VecCons (f FZ a) (imap (\fin vec -> f (FS fin) vec) as)
+
+vrep_ :: SingI n => a -> Vec n a
+vrep_ = vrep sing
+
+vap :: (a -> b -> c) -> Vec n a -> Vec n b -> Vec n c
+vap f EmptyVec _ = EmptyVec
+vap f (VecCons a as) (VecCons b bs) = VecCons (f a b) $ vap f as bs
 
 ------------
 -- Matrix --
@@ -460,7 +487,7 @@ myMat :: Matrix '[N2, N3] Int
 myMat = mgen (sing :<< sing :<< EmptyProd) f
   where
     f :: Prod '[Fin N2, Fin N3] -> Int
-    f (ProdCons f1 (ProdCons f2 EmptyProd)) = fin f1 * 3 + fin f2
+    f (ProdCons f1 (ProdCons f2 EmptyProd)) = finToInt f1 * 3 + finToInt f2
 
 lala :: forall (ns :: [Peano]). Sing ns -> Prod (AllT SPeano ns)
 lala SNil = EmptyProd
@@ -481,7 +508,7 @@ myMat2 :: Matrix '[N2, N3] Int
 myMat2 = mgen' sing f
   where
     f :: Prod '[Fin N2, Fin N3] -> Int
-    f (ProdCons f1 (ProdCons f2 EmptyProd)) = fin f1 * 3 + fin f2
+    f (ProdCons f1 (ProdCons f2 EmptyProd)) = finToInt f1 * 3 + finToInt f2
 
 mgen'' :: forall (ns :: [Peano]) (a :: Type). Sing ns -> (HList Fin ns -> a) -> Matrix ns a
 mgen'' SNil f = Matrix $ f EmptyHList
@@ -498,7 +525,7 @@ myMat3 :: Matrix '[N2, N3] Int
 myMat3 = mgen'' sing f
   where
     f :: HList Fin '[N2, N3] -> Int
-    f (HListCons f1 (HListCons f2 EmptyHList)) = fin f1 * 3 + fin f2
+    f (HListCons f1 (HListCons f2 EmptyHList)) = finToInt f1 * 3 + finToInt f2
 
 mgen_ :: SingI ns => (HList Fin ns -> a) -> Matrix ns a
 mgen_ = mgen'' sing
@@ -506,6 +533,50 @@ mgen_ = mgen'' sing
 mindex :: HList Fin ns -> Matrix ns a -> a
 mindex EmptyHList (Matrix a) = a
 mindex (HListCons i is) (Matrix vec) = mindex is $ Matrix (vindex i vec)
+
+mmap :: forall (ns :: [Peano]) a b. Sing ns -> (HList Fin ns -> a -> b) -> Matrix ns a -> Matrix ns b
+-- mmap ns f = go ns
+mmap SNil f (Matrix a) = Matrix (f EmptyHList a)
+mmap (SCons (n :: Sing (fefe :: Peano)) (ns :: Sing n2)) f (Matrix (VecCons (a :: MatrixTF n2 a) (as :: Vec m (MatrixTF n2 a)))) = Matrix (VecCons gogogo popopo)
+  where
+    gogogo :: MatrixTF n2 b
+    gogogo = unMatrix $ mmap ns ifif (Matrix a)
+
+    ifif :: HList Fin n2 -> a -> b
+    ifif hlist a = f (oioio hlist) a
+
+    oioio :: HList Fin n2 -> HList Fin ns
+    oioio hlist = HListCons gagaga hlist
+
+    gagaga :: Fin fefe
+    -- TODO: I don't think this is right
+    gagaga = FZ
+
+    popopo :: Vec m (MatrixTF n2 b)
+    popopo =
+      case n of
+        (SS (m :: Sing feo)) -> imap (oioi m) as
+
+    oioi :: forall (feo :: Peano). 'S feo ~ fefe => Sing feo -> Fin feo -> MatrixTF n2 a -> MatrixTF n2 b
+    oioi m fin = unMatrix . apple . Matrix
+      where
+        apple :: Matrix n2 a -> Matrix n2 b
+        apple = mmap ns boohoo
+
+        boohoo :: HList Fin n2 -> a -> b
+        boohoo hlist = f (who hlist)
+
+        who :: HList Fin n2 -> HList Fin ns
+        who = HListCons (FS fin)
+
+mmap_ :: SingI ns => (HList Fin ns -> a -> b) -> Matrix ns a -> Matrix ns b
+mmap_ = mmap sing
+
+testtest :: Matrix '[N2, N3] String
+testtest = mmap_ f (Matrix ((1 :* 2 :* 3 :* EmptyVec) :* (4 :* 5 :* 6 :* EmptyVec) :* EmptyVec))
+  where
+    f :: HList Fin '[N2, N3] -> Int -> String
+    f (HListCons finA (HListCons finB EmptyHList)) i = show (i, finToInt finA, finToInt finB)
 
 ----------------------
 -- Matrix Instances --
