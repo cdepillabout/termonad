@@ -531,49 +531,42 @@ mindex EmptyHList (Matrix a) = a
 mindex (HListCons i is) (Matrix vec) = mindex is $ Matrix (vindex i vec)
 
 mmap :: forall (ns :: [Peano]) a b. Sing ns -> (HList Fin ns -> a -> b) -> Matrix ns a -> Matrix ns b
--- mmap ns f = go ns
 mmap SNil f (Matrix a) = Matrix (f EmptyHList a)
-mmap (SCons _ _) _ (Matrix EmptyVec) = error "in mmap, there is no way to reach this case, but GHC complains about it"
-mmap (SCons (n :: Sing (fefe :: Peano)) (ns :: Sing n2)) f (Matrix (VecCons (a :: MatrixTF n2 a) (as :: Vec m (MatrixTF n2 a)))) = Matrix (VecCons gogogo popopo)
-  where
-    gogogo :: MatrixTF n2 b
-    gogogo = unMatrix $ mmap ns ifif (Matrix a)
+mmap (SCons _ ns) f (Matrix vec) =
+  Matrix
+    (imap
+      (\fin -> unMatrix . mmap ns (\hlist -> f (HListCons fin hlist)) . Matrix)
+      vec
+    )
 
-    ifif :: HList Fin n2 -> a -> b
-    ifif hlist = f (oioio hlist)
-
-    oioio :: HList Fin n2 -> HList Fin ns
-    oioio hlist = HListCons gagaga hlist
-
-    gagaga :: Fin fefe
-    -- TODO: I don't think this is right
-    gagaga = FZ
-
-    popopo :: Vec m (MatrixTF n2 b)
-    popopo =
-      case n of
-        (SS (m :: Sing feo)) -> imap (oioi m) as
-
-    oioi :: forall (feo :: Peano). 'S feo ~ fefe => Sing feo -> Fin feo -> MatrixTF n2 a -> MatrixTF n2 b
-    oioi _ fin = unMatrix . apple . Matrix
-      where
-        apple :: Matrix n2 a -> Matrix n2 b
-        apple = mmap ns boohoo
-
-        boohoo :: HList Fin n2 -> a -> b
-        boohoo hlist = f (who hlist)
-
-        who :: HList Fin n2 -> HList Fin ns
-        who = HListCons (FS fin)
 
 mmap_ :: SingI ns => (HList Fin ns -> a -> b) -> Matrix ns a -> Matrix ns b
 mmap_ = mmap sing
 
-testtest :: Matrix '[N2, N3] String
-testtest = mmap_ f (Matrix ((1 :* 2 :* 3 :* EmptyVec) :* (4 :* 5 :* 6 :* EmptyVec) :* EmptyVec))
+testtest1 :: Matrix '[N2, N3] String
+testtest1 = mmap_ f (Matrix ((1 :* 2 :* 3 :* EmptyVec) :* (4 :* 5 :* 6 :* EmptyVec) :* EmptyVec))
   where
     f :: HList Fin '[N2, N3] -> Int -> String
     f (HListCons finA (HListCons finB EmptyHList)) i = show (i, finToInt finA, finToInt finB)
+
+testtest2 :: Matrix '[N2] String
+testtest2 = mmap_ f (Matrix (1 :* 2 :* EmptyVec))
+  where
+    f :: HList Fin '[N2] -> Int -> String
+    f (HListCons finA EmptyHList) i = show (i, finToInt finA)
+
+testtest3 :: Matrix '[] String
+testtest3 = mmap_ f (Matrix 100)
+  where
+    f :: HList Fin '[] -> Int -> String
+    f EmptyHList i = show i
+
+testtest4 :: Matrix '[N0, N2] String
+testtest4 = mmap_ f (Matrix EmptyVec)
+  where
+    f :: HList Fin '[N0, N2] -> Int -> String
+    f (HListCons (finA :: Fin N0) (HListCons (_ :: Fin N2) EmptyHList)) _ =
+      case finA of {}
 
 ----------------------
 -- Matrix Instances --
