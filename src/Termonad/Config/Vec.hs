@@ -30,10 +30,6 @@ import qualified Data.Foldable as Data.Foldable
 import Data.Functor.Rep (Representable(..), distributeRep)
 import Data.Kind (Type)
 import Data.Singletons.Prelude
-import Data.Singletons.Prelude.List
-import Data.Singletons.Prelude.Num
-import Data.Singletons.Prelude.Show
-import Data.Singletons.TypeLits
 import Data.Singletons.TH
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -378,14 +374,14 @@ vrep SZ _ = EmptyVec
 vrep (SS n) a = VecCons a $ vrep n a
 
 imap :: forall n a b. (Fin n -> a -> b) -> Vec n a -> Vec n b
-imap f EmptyVec = EmptyVec
+imap _ EmptyVec = EmptyVec
 imap f (VecCons a as) = VecCons (f FZ a) (imap (\fin vec -> f (FS fin) vec) as)
 
 vrep_ :: SingI n => a -> Vec n a
 vrep_ = vrep sing
 
 vap :: (a -> b -> c) -> Vec n a -> Vec n b -> Vec n c
-vap f EmptyVec _ = EmptyVec
+vap _ EmptyVec _ = EmptyVec
 vap f (VecCons a as) (VecCons b bs) = VecCons (f a b) $ vap f as bs
 
 ------------
@@ -537,13 +533,14 @@ mindex (HListCons i is) (Matrix vec) = mindex is $ Matrix (vindex i vec)
 mmap :: forall (ns :: [Peano]) a b. Sing ns -> (HList Fin ns -> a -> b) -> Matrix ns a -> Matrix ns b
 -- mmap ns f = go ns
 mmap SNil f (Matrix a) = Matrix (f EmptyHList a)
+mmap (SCons _ _) _ (Matrix EmptyVec) = error "in mmap, there is no way to reach this case, but GHC complains about it"
 mmap (SCons (n :: Sing (fefe :: Peano)) (ns :: Sing n2)) f (Matrix (VecCons (a :: MatrixTF n2 a) (as :: Vec m (MatrixTF n2 a)))) = Matrix (VecCons gogogo popopo)
   where
     gogogo :: MatrixTF n2 b
     gogogo = unMatrix $ mmap ns ifif (Matrix a)
 
     ifif :: HList Fin n2 -> a -> b
-    ifif hlist a = f (oioio hlist) a
+    ifif hlist = f (oioio hlist)
 
     oioio :: HList Fin n2 -> HList Fin ns
     oioio hlist = HListCons gagaga hlist
@@ -558,7 +555,7 @@ mmap (SCons (n :: Sing (fefe :: Peano)) (ns :: Sing n2)) f (Matrix (VecCons (a :
         (SS (m :: Sing feo)) -> imap (oioi m) as
 
     oioi :: forall (feo :: Peano). 'S feo ~ fefe => Sing feo -> Fin feo -> MatrixTF n2 a -> MatrixTF n2 b
-    oioi m fin = unMatrix . apple . Matrix
+    oioi _ fin = unMatrix . apple . Matrix
       where
         apple :: Matrix n2 a -> Matrix n2 b
         apple = mmap ns boohoo
