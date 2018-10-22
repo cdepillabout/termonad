@@ -1,9 +1,10 @@
-{ mkDerivation, base, Cabal, cabal-doctest, classy-prelude, colour
-, constraints, data-default, directory, doctest, dyre, filepath
-, genvalidity-hspec, gi-gdk, gi-gio, gi-glib, gi-gtk, gi-pango
-, gi-vte, gtk3, haskell-gi-base, hedgehog, lens, pretty-simple
-, QuickCheck, stdenv, tasty, tasty-hedgehog, tasty-hspec
-, template-haskell, type-combinators, xml-conduit, xml-html-qq
+{ mkDerivation, adjunctions, base, Cabal, cabal-doctest
+, classy-prelude, colour, constraints, data-default, directory
+, distributive, doctest, dyre, filepath, genvalidity-hspec, gi-gdk
+, gi-gio, gi-glib, gi-gtk, gi-pango, gi-vte, gtk3, haskell-gi-base
+, hedgehog, lens, pretty-simple, QuickCheck, singletons, stdenv
+, tasty, tasty-hedgehog, tasty-hspec, template-haskell, xml-conduit
+, xml-html-qq
 }:
 mkDerivation {
   pname = "termonad";
@@ -14,10 +15,10 @@ mkDerivation {
   enableSeparateDataOutput = true;
   setupHaskellDepends = [ base Cabal cabal-doctest ];
   libraryHaskellDepends = [
-    base classy-prelude colour constraints data-default directory dyre
-    filepath gi-gdk gi-gio gi-glib gi-gtk gi-pango gi-vte
-    haskell-gi-base lens pretty-simple QuickCheck type-combinators
-    xml-conduit xml-html-qq
+    adjunctions base classy-prelude colour constraints data-default
+    directory distributive dyre filepath gi-gdk gi-gio gi-glib gi-gtk
+    gi-pango gi-vte haskell-gi-base lens pretty-simple QuickCheck
+    singletons xml-conduit xml-html-qq
   ];
   libraryPkgconfigDepends = [ gtk3 ];
   executableHaskellDepends = [ base ];
