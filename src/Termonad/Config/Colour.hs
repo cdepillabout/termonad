@@ -144,7 +144,7 @@ paletteToList = Data.Foldable.toList
 --
 -- In general, as an end-user, you shouldn't need to use this.
 coloursFromBits :: forall b. (Ord b, Floating b) => Word8 -> Word8 -> Vec N8 (Colour b)
-coloursFromBits scale offset = vgen_ createElem
+coloursFromBits scale offset = genVec_ createElem
   where
     createElem :: Fin N8 -> Colour b
     createElem finN =
@@ -305,7 +305,7 @@ showColourCube matrix =
 -- >>> showColourVec defaultGreyscale
 -- ["#080808","#121212","#1c1c1c","#262626","#303030","#3a3a3a","#444444","#4e4e4e","#585858","#626262","#6c6c6c","#767676","#808080","#8a8a8a","#949494","#9e9e9e","#a8a8a8","#b2b2b2","#bcbcbc","#c6c6c6","#d0d0d0","#dadada","#e4e4e4","#eeeeee"]
 defaultGreyscale :: (Ord b, Floating b) => Vec N24 (Colour b)
-defaultGreyscale = vgen_ $ \n ->
+defaultGreyscale = genVec_ $ \n ->
   let l = 8 + 10 * fromIntegral (finToInt n)
   in sRGB24 l l l
 

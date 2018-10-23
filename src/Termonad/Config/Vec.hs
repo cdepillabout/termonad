@@ -18,7 +18,7 @@ module Termonad.Config.Vec
   -- , fin
   -- , mgen_
   -- , setSubmatrix
-  -- , vgen_
+  -- , genVec_
   -- , vSetAt'
   -- )
     where
@@ -32,7 +32,6 @@ import Data.Kind (Type)
 import Data.Singletons.Prelude
 import Data.Singletons.TH
 import Text.Show (showParen, showString)
-import Unsafe.Coerce (unsafeCoerce)
 
 --------------------------
 -- Misc VecT Operations --
@@ -167,11 +166,6 @@ finToInt :: Fin n -> Int
 finToInt FZ = 0
 finToInt (FS x) = succ $ finToInt x
 
--- data instance Sing z where
---   SNil :: Sing '[]
---   SCons :: forall a (n1 :: a) (n2 :: [a]).
---            (Sing n1) -> (Sing n2) -> Sing (n1 : n2)
-
 data instance Sing (z :: Fin n) where
   SFZ :: Sing 'FZ
   SFS :: Sing x -> Sing ('FS x)
@@ -301,9 +295,9 @@ instance MonoFunctor (Vec n a)
 instance SingI n => MonoPointed (Vec n a)
 
 instance SingI n => Applicative (Vec n) where
-  pure a = vrep_ a
+  pure a = replaceVec_ a
 
-  (<*>) = vap ($)
+  (<*>) = apVec ($)
 
 instance SingI n => Distributive (Vec n) where
   distribute :: Functor f => f (Vec n a) -> Vec n (f a)
@@ -313,10 +307,10 @@ instance SingI n => Representable (Vec n) where
   type Rep (Vec n) = Fin n
 
   tabulate :: (Fin n -> a) -> Vec n a
-  tabulate = vgen_
+  tabulate = genVec_
 
   index :: Vec n a -> Fin n -> a
-  index = flip vindex
+  index = flip indexVec
 
 instance SingI n => Monad (Vec n) where
   (>>=) :: Vec n a -> (a -> Vec n b) -> Vec n b
@@ -329,52 +323,52 @@ pattern (:*) :: (a :: Type) -> Vec n a -> Vec ('S n) a
 pattern a :* vec = VecCons a vec
 infixr 6 :*
 
-vgen_ :: SingI n => (Fin n -> a) -> Vec n a
-vgen_ = vgen sing
+genVec_ :: SingI n => (Fin n -> a) -> Vec n a
+genVec_ = genVec sing
 
-vgen :: SPeano n -> (Fin n -> a) -> Vec n a
-vgen SZ _ = EmptyVec
-vgen (SS n) f = f FZ :* vgen n (f . FS)
+genVec :: SPeano n -> (Fin n -> a) -> Vec n a
+genVec SZ _ = EmptyVec
+genVec (SS n) f = f FZ :* genVec n (f . FS)
 
-vindex :: Fin n -> Vec n a -> a
-vindex FZ (VecCons a _) = a
-vindex (FS n) (VecCons _ vec) = vindex n vec
+indexVec :: Fin n -> Vec n a -> a
+indexVec FZ (VecCons a _) = a
+indexVec (FS n) (VecCons _ vec) = indexVec n vec
 
-vecSingleton :: a -> Vec N1 a
-vecSingleton a = VecCons a EmptyVec
+singletonVec :: a -> Vec N1 a
+singletonVec a = VecCons a EmptyVec
 
-vrep :: Sing n -> a -> Vec n a
-vrep SZ _ = EmptyVec
-vrep (SS n) a = VecCons a $ vrep n a
+replaceVec :: Sing n -> a -> Vec n a
+replaceVec SZ _ = EmptyVec
+replaceVec (SS n) a = VecCons a $ replaceVec n a
 
-imap :: forall n a b. (Fin n -> a -> b) -> Vec n a -> Vec n b
-imap _ EmptyVec = EmptyVec
-imap f (VecCons a as) = VecCons (f FZ a) (imap (\fin vec -> f (FS fin) vec) as)
+imapVec :: forall n a b. (Fin n -> a -> b) -> Vec n a -> Vec n b
+imapVec _ EmptyVec = EmptyVec
+imapVec f (VecCons a as) = VecCons (f FZ a) (imapVec (\fin vec -> f (FS fin) vec) as)
 
-vrep_ :: SingI n => a -> Vec n a
-vrep_ = vrep sing
+replaceVec_ :: SingI n => a -> Vec n a
+replaceVec_ = replaceVec sing
 
-vap :: (a -> b -> c) -> Vec n a -> Vec n b -> Vec n c
-vap _ EmptyVec _ = EmptyVec
-vap f (VecCons a as) (VecCons b bs) = VecCons (f a b) $ vap f as bs
+apVec :: (a -> b -> c) -> Vec n a -> Vec n b -> Vec n c
+apVec _ EmptyVec _ = EmptyVec
+apVec f (VecCons a as) (VecCons b bs) = VecCons (f a b) $ apVec f as bs
 
-vonHead :: (a -> a) -> Vec ('S n) a -> Vec ('S n) a
-vonHead f (VecCons a as) = VecCons (f a) as
+onHeadVec :: (a -> a) -> Vec ('S n) a -> Vec ('S n) a
+onHeadVec f (VecCons a as) = VecCons (f a) as
 
-vdrop :: Sing m -> Vec (m + n) a -> Vec n a
-vdrop SZ vec = vec
-vdrop (SS n) (VecCons _ vec) = vdrop n vec
+dropVec :: Sing m -> Vec (m + n) a -> Vec n a
+dropVec SZ vec = vec
+dropVec (SS n) (VecCons _ vec) = dropVec n vec
 
-vtake :: IFin n m -> Vec n a -> Vec m a
-vtake IFZ _ = EmptyVec
-vtake (IFS n) (VecCons a vec) = VecCons a $ vtake n vec
+takeVec :: IFin n m -> Vec n a -> Vec m a
+takeVec IFZ _ = EmptyVec
+takeVec (IFS n) (VecCons a vec) = VecCons a $ takeVec n vec
 
-vUpdateAt :: Fin n -> (a -> a) -> Vec n a -> Vec n a
-vUpdateAt FZ f (VecCons a vec)  = VecCons (f a) vec
-vUpdateAt (FS n) f (VecCons a vec)  = VecCons a $ vUpdateAt n f vec
+updateAtVec :: Fin n -> (a -> a) -> Vec n a -> Vec n a
+updateAtVec FZ f (VecCons a vec)  = VecCons (f a) vec
+updateAtVec (FS n) f (VecCons a vec)  = VecCons a $ updateAtVec n f vec
 
-vSetAt :: Fin n -> a -> Vec n a -> Vec n a
-vSetAt fin a = vUpdateAt fin (const a)
+setAtVec :: Fin n -> a -> Vec n a -> Vec n a
+setAtVec fin a = updateAtVec fin (const a)
 
 ------------
 -- Matrix --
@@ -462,103 +456,37 @@ toListMatrix (SCons SZ _) (Matrix EmptyVec) = []
 toListMatrix (SCons (SS peanoSingle) moreN) (Matrix (VecCons a moreA)) =
   toListMatrix moreN (Matrix a) <> toListMatrix (SCons peanoSingle moreN) (Matrix moreA)
 
-type family AllT (f :: Peano -> t) (ns :: [Peano]) :: [t] where
-  AllT f '[] = '[]
-  AllT f (n ': ns) = f n ': AllT f ns
-
-mgen :: forall (ns :: [Peano]) (a :: Type). Prod (AllT SPeano ns) -> (Prod (AllT Fin ns) -> a) -> Matrix ns a
-mgen EmptyProd f = Matrix $ unsafeCoerce $ f $ unsafeCoerce EmptyProd
-mgen (ProdCons n ns') f =
-  Matrix $ unsafeCoerce $ vgen (unsafeCoerce n) $ unMatrix . mgen (unsafeCoerce ns') . curry' (unsafeCoerce f)
-
-myMat :: Matrix '[N2, N3] Int
-myMat = mgen (sing :<< sing :<< EmptyProd) f
-  where
-    f :: Prod '[Fin N2, Fin N3] -> Int
-    f (ProdCons f1 (ProdCons f2 EmptyProd)) = finToInt f1 * 3 + finToInt f2
-
-lala :: forall (ns :: [Peano]). Sing ns -> Prod (AllT SPeano ns)
-lala SNil = EmptyProd
-lala (SCons n ns) = ProdCons n $ lala ns
-
-mgen' :: forall (ns :: [Peano]) (a :: Type). Sing ns -> (Prod (AllT Fin ns) -> a) -> Matrix ns a
-mgen' SNil f = Matrix $ f EmptyProd
-mgen' (SCons (n :: SPeano foo) (ns' :: Sing oaoa)) f =
-  Matrix $ (vgen (n :: SPeano foo) $ (gagaga :: Fin foo -> MatrixTF oaoa a) :: Vec foo (MatrixTF oaoa a))
+mgen ::
+     forall (ns :: [Peano]) (a :: Type).
+     Sing ns
+  -> (HList Fin ns -> a)
+  -> Matrix ns a
+mgen SNil f = Matrix $ f EmptyHList
+mgen (SCons (n :: SPeano foo) (ns' :: Sing oaoa)) f =
+  Matrix $ (genVec n $ (gagaga :: Fin foo -> MatrixTF oaoa a) :: Vec foo (MatrixTF oaoa a))
   where
     gagaga :: Fin foo -> MatrixTF oaoa a
-    gagaga faaa = unMatrix $ (mgen' ns' $ byebye faaa :: Matrix oaoa a)
-
-    byebye :: Fin foo -> Prod (AllT Fin oaoa) -> a
-    byebye faaa = curry' f faaa
-
-myMat2 :: Matrix '[N2, N3] Int
-myMat2 = mgen' sing f
-  where
-    f :: Prod '[Fin N2, Fin N3] -> Int
-    f (ProdCons f1 (ProdCons f2 EmptyProd)) = finToInt f1 * 3 + finToInt f2
-
-mgen'' :: forall (ns :: [Peano]) (a :: Type). Sing ns -> (HList Fin ns -> a) -> Matrix ns a
-mgen'' SNil f = Matrix $ f EmptyHList
-mgen'' (SCons (n :: SPeano foo) (ns' :: Sing oaoa)) f =
-  Matrix $ (vgen n $ (gagaga :: Fin foo -> MatrixTF oaoa a) :: Vec foo (MatrixTF oaoa a))
-  where
-    gagaga :: Fin foo -> MatrixTF oaoa a
-    gagaga faaa = unMatrix $ (mgen'' ns' $ byebye faaa :: Matrix oaoa a)
+    gagaga faaa = unMatrix $ (mgen ns' $ byebye faaa :: Matrix oaoa a)
 
     byebye :: Fin foo -> HList Fin oaoa -> a
     byebye faaa = f . HListCons faaa
 
-myMat3 :: Matrix '[N2, N3] Int
-myMat3 = mgen'' sing f
-  where
-    f :: HList Fin '[N2, N3] -> Int
-    f (HListCons f1 (HListCons f2 EmptyHList)) = finToInt f1 * 3 + finToInt f2
-
 mgen_ :: SingI ns => (HList Fin ns -> a) -> Matrix ns a
-mgen_ = mgen'' sing
+mgen_ = mgen sing
 
 mindex :: HList Fin ns -> Matrix ns a -> a
 mindex EmptyHList (Matrix a) = a
-mindex (HListCons i is) (Matrix vec) = mindex is $ Matrix (vindex i vec)
+mindex (HListCons i is) (Matrix vec) = mindex is $ Matrix (indexVec i vec)
 
 mmap :: forall (ns :: [Peano]) a b. Sing ns -> (HList Fin ns -> a -> b) -> Matrix ns a -> Matrix ns b
 mmap SNil f (Matrix a) = Matrix (f EmptyHList a)
-mmap (SCons _ ns) f (Matrix vec) =
-  Matrix
-    (imap
-      (\fin -> onMatrix (mmap ns (\hlist -> f (HListCons fin hlist))))
-      vec
-    )
-
+mmap (SCons _ ns) f matrix =
+  onMatrixTF
+    (imapVec (\fin -> onMatrix (mmap ns (\hlist -> f (HListCons fin hlist)))))
+    matrix
 
 mmap_ :: SingI ns => (HList Fin ns -> a -> b) -> Matrix ns a -> Matrix ns b
 mmap_ = mmap sing
-
-testtest1 :: Matrix '[N2, N3] String
-testtest1 = mmap_ f (Matrix ((1 :* 2 :* 3 :* EmptyVec) :* (4 :* 5 :* 6 :* EmptyVec) :* EmptyVec))
-  where
-    f :: HList Fin '[N2, N3] -> Int -> String
-    f (HListCons finA (HListCons finB EmptyHList)) i = show (i, finToInt finA, finToInt finB)
-
-testtest2 :: Matrix '[N2] String
-testtest2 = mmap_ f (Matrix (1 :* 2 :* EmptyVec))
-  where
-    f :: HList Fin '[N2] -> Int -> String
-    f (HListCons finA EmptyHList) i = show (i, finToInt finA)
-
-testtest3 :: Matrix '[] String
-testtest3 = mmap_ f (Matrix 100)
-  where
-    f :: HList Fin '[] -> Int -> String
-    f EmptyHList i = show i
-
-testtest4 :: Matrix '[N0, N2] String
-testtest4 = mmap_ f (Matrix EmptyVec)
-  where
-    f :: HList Fin '[N0, N2] -> Int -> String
-    f (HListCons (finA :: Fin N0) (HListCons (_ :: Fin N2) EmptyHList)) _ =
-      case finA of {}
 
 onMatrixTF :: (MatrixTF ns a -> MatrixTF ms b) -> Matrix ns a -> Matrix ms b
 onMatrixTF f (Matrix mat) = Matrix $ f mat
@@ -569,7 +497,7 @@ onMatrix f = unMatrix . f . Matrix
 mUpdateAt :: HList Fin ns -> (a -> a) -> Matrix ns a -> Matrix ns a
 mUpdateAt EmptyHList _ mat = mat
 mUpdateAt (HListCons n ns) f mat =
-  onMatrixTF (vUpdateAt n (onMatrix (mUpdateAt ns f))) mat
+  onMatrixTF (updateAtVec n (onMatrix (mUpdateAt ns f))) mat
 
 mSetAt :: HList Fin ns -> a -> Matrix ns a -> Matrix ns a
 mSetAt fins a = mUpdateAt fins (const a)
