@@ -58,7 +58,7 @@ import Text.Show (showParen, showString)
 
 -- updateSubmatrix
 --   :: (ns ~ Fsts3 nlms, ms ~ Thds3 nlms)
---   => Prod (Uncur3 Range) nlms -> (Prod Fin ms -> a -> a) -> M ns a -> M ns a
+--   => HList (Uncur3 Range) nlms -> (HList Fin ms -> a -> a) -> M ns a -> M ns a
 -- updateSubmatrix = \case
 --   Ø              -> \f -> (f Ø <$>)
 --   Uncur3 r :< rs -> \f -> onMatrix . updateRange r $ \i ->
@@ -66,7 +66,7 @@ import Text.Show (showParen, showString)
 
 -- setSubmatrix
 --   :: (ns ~ Fsts3 nlms, ms ~ Thds3 nlms)
---   => Prod (Uncur3 Range) nlms -> M ms a -> M ns a -> M ns a
+--   => HList (Uncur3 Range) nlms -> M ms a -> M ns a -> M ns a
 -- setSubmatrix rs sm = updateSubmatrix rs $ \is _ -> mIndex is sm
 
 
@@ -162,9 +162,9 @@ deriving instance Eq (Fin n)
 deriving instance Ord (Fin n)
 deriving instance Show (Fin n)
 
-finToInt :: Fin n -> Int
-finToInt FZ = 0
-finToInt (FS x) = succ $ finToInt x
+toIntFin :: Fin n -> Int
+toIntFin FZ = 0
+toIntFin (FS x) = succ $ toIntFin x
 
 data instance Sing (z :: Fin n) where
   SFZ :: Sing 'FZ
@@ -208,12 +208,12 @@ deriving instance Eq   (IFin x y)
 deriving instance Ord  (IFin x y)
 deriving instance Show (IFin x y)
 
-ifinToFin :: IFin n m -> Fin n
-ifinToFin IFZ = FZ
-ifinToFin (IFS n) = FS (ifinToFin n)
+toFinIFin :: IFin n m -> Fin n
+toFinIFin IFZ = FZ
+toFinIFin (IFS n) = FS (toFinIFin n)
 
-ifinToInt :: IFin n m -> Int
-ifinToInt = finToInt . ifinToFin
+toIntIFin :: IFin n m -> Int
+toIntIFin = toIntFin . toFinIFin
 
 data instance Sing (z :: IFin n m) where
   SIFZ :: Sing 'IFZ
@@ -244,22 +244,6 @@ instance Show (Sing n) => Show (Sing ('IFS n)) where
   showsPrec d (SIFS n) =
     showParen (d > 10) $
     showString "SIFS " . showsPrec 11 n
-
-----------
--- Prod --
-----------
-
-data Prod :: [Type] -> Type where
-  EmptyProd :: Prod '[]
-  ProdCons :: forall (a :: Type) (as :: [Type]). !a -> !(Prod as) -> Prod (a ': as)
-
--- | Infix operator for 'ProdCons.
-pattern (:<<) :: (a :: Type) -> Prod as -> Prod (a ': as)
-pattern a :<< prod = ProdCons a prod
-infixr 6 :<<
-
-curry' :: l ~ (a ': as) => (Prod l -> r) -> a -> Prod as -> r
-curry' f a as = f $ ProdCons a as
 
 -----------
 -- HList --
