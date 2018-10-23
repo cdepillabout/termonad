@@ -251,12 +251,13 @@ instance Show (Sing n) => Show (Sing ('IFS n)) where
 
 data HList :: (k -> Type) -> [k] -> Type where
   EmptyHList :: HList f '[]
-  HListCons :: forall (f :: k -> Type) (a :: k) (as :: [k]). f a -> HList f as -> HList f (a ': as)
+  (:<) :: forall (f :: k -> Type) (a :: k) (as :: [k]). f a -> HList f as -> HList f (a ': as)
+
+infixr 6 :<
 
 -- | Infix operator for 'HListCons'.
-pattern (:<) :: (f a :: Type) -> HList f as -> HList f (a ': as)
-pattern fa :< hlist = HListCons fa hlist
-infixr 6 :<
+pattern ConsHList :: (f a :: Type) -> HList f as -> HList f (a ': as)
+pattern ConsHList fa hlist = fa :< hlist
 
 ---------
 -- Vec --
@@ -266,6 +267,11 @@ data Vec (n :: Peano) :: Type -> Type where
   EmptyVec :: Vec 'Z a
   VecCons :: !a -> !(Vec n a) -> Vec ('S n) a
   deriving anyclass MonoFoldable
+
+-- | Infix operator for 'VecCons'.
+pattern (:*) :: (a :: Type) -> Vec n a -> Vec ('S n) a
+pattern a :* vec = VecCons a vec
+infixr 6 :*
 
 deriving instance Eq a => Eq (Vec n a)
 deriving instance Ord a => Ord (Vec n a)
@@ -301,11 +307,6 @@ instance SingI n => Monad (Vec n) where
   (>>=) = bindRep
 
 type instance Element (Vec n a) = a
-
--- | Infix operator for 'VecCons'.
-pattern (:*) :: (a :: Type) -> Vec n a -> Vec ('S n) a
-pattern a :* vec = VecCons a vec
-infixr 6 :*
 
 genVec_ :: SingI n => (Fin n -> a) -> Vec n a
 genVec_ = genVec sing
@@ -453,20 +454,20 @@ mgen (SCons (n :: SPeano foo) (ns' :: Sing oaoa)) f =
     gagaga faaa = unMatrix $ (mgen ns' $ byebye faaa :: Matrix oaoa a)
 
     byebye :: Fin foo -> HList Fin oaoa -> a
-    byebye faaa = f . HListCons faaa
+    byebye faaa = f . ConsHList faaa
 
 mgen_ :: SingI ns => (HList Fin ns -> a) -> Matrix ns a
 mgen_ = mgen sing
 
 mindex :: HList Fin ns -> Matrix ns a -> a
 mindex EmptyHList (Matrix a) = a
-mindex (HListCons i is) (Matrix vec) = mindex is $ Matrix (indexVec i vec)
+mindex (i :< is) (Matrix vec) = mindex is $ Matrix (indexVec i vec)
 
 mmap :: forall (ns :: [Peano]) a b. Sing ns -> (HList Fin ns -> a -> b) -> Matrix ns a -> Matrix ns b
 mmap SNil f (Matrix a) = Matrix (f EmptyHList a)
 mmap (SCons _ ns) f matrix =
   onMatrixTF
-    (imapVec (\fin -> onMatrix (mmap ns (\hlist -> f (HListCons fin hlist)))))
+    (imapVec (\fin -> onMatrix (mmap ns (\hlist -> f (ConsHList fin hlist)))))
     matrix
 
 mmap_ :: SingI ns => (HList Fin ns -> a -> b) -> Matrix ns a -> Matrix ns b
@@ -480,7 +481,7 @@ onMatrix f = unMatrix . f . Matrix
 
 mUpdateAt :: HList Fin ns -> (a -> a) -> Matrix ns a -> Matrix ns a
 mUpdateAt EmptyHList _ mat = mat
-mUpdateAt (HListCons n ns) f mat =
+mUpdateAt (n :< ns) f mat =
   onMatrixTF (updateAtVec n (onMatrix (mUpdateAt ns f))) mat
 
 mSetAt :: HList Fin ns -> a -> Matrix ns a -> Matrix ns a

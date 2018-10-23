@@ -181,11 +181,18 @@ showColourVec = fmap sRGB24show . Data.Foldable.toList
 -- | Specify a colour cube with one colour vector for its displacement and three
 -- colour vectors for its edges. Produces a uniform 6x6x6 grid bounded by
 -- and orthognal to the faces.
--- cube
---   :: Fractional b => Colour b -> Vec N3 (Colour b) -> Matrix '[N6, N6, N6] (Colour b)
--- cube d (i :* j :* k :* EmptyVec) = mgen_ $ \(x :< y :< z :< EmptyProd) ->
---   affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] black
---   where coef n = fromIntegral (fin n) / 5
+cube ::
+     forall b. Fractional b
+  => Colour b
+  -> Vec N3 (Colour b)
+  -> Matrix '[ N6, N6, N6] (Colour b)
+cube d (i :* j :* k :* EmptyVec) =
+  mgen_ $
+    \(x :< y :< z :< EmptyHList) ->
+      affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] black
+  where
+    coef :: Fin N6 -> b
+    coef fin = fromIntegral (toIntFin fin) / 5
 
 -- | A matrix of a 6 x 6 x 6 color cube. Default value for 'ColourCubePalette'.
 --
