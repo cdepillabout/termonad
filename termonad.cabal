@@ -50,11 +50,13 @@ library
                      , Termonad.XML
   other-modules:       Paths_termonad
   build-depends:       base >= 4.7 && < 5
+                     , adjunctions
                      , classy-prelude
                      , colour
                      , constraints
                      , data-default
                      , directory >= 1.3.1.0
+                     , distributive
                      , dyre
                      , filepath
                      , gi-gdk
@@ -67,12 +69,19 @@ library
                      , lens
                      , pretty-simple
                      , QuickCheck
-                     , type-combinators
+                     , singletons
                      , xml-conduit
                      , xml-html-qq
   default-language:    Haskell2010
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
   default-extensions:  DataKinds
+                     , DefaultSignatures
+                     , DeriveAnyClass
+                     , DeriveFoldable
+                     , DeriveFunctor
+                     , DerivingStrategies
+                     , EmptyCase
+                     , ExistentialQuantification
                      , FlexibleContexts
                      , FlexibleInstances
                      , GADTs
@@ -83,20 +92,18 @@ library
                      , MultiParamTypeClasses
                      , NamedFieldPuns
                      , NoImplicitPrelude
-                     , OverloadedStrings
                      , OverloadedLabels
                      , OverloadedLists
+                     , OverloadedStrings
                      , PatternSynonyms
                      , PolyKinds
                      , RankNTypes
                      , RecordWildCards
                      , ScopedTypeVariables
+                     , StandaloneDeriving
                      , TypeApplications
                      , TypeFamilies
                      , TypeOperators
-                     , DeriveFunctor
-                     , DeriveFoldable
-                     , StandaloneDeriving
   other-extensions:    TemplateHaskell
                      , UndecidableInstances
   pkgconfig-depends:   gtk+-3.0
@@ -158,18 +165,19 @@ test-suite termonad-test
   other-extensions:    TemplateHaskell
 
 executable termonad-readme
-  main-is:        README.lhs
-  hs-source-dirs: test/readme
-  build-depends:  base
-                  , markdown-unlit
-                  , termonad
-                  , colour
-  ghc-options: -pgmL markdown-unlit
+  main-is:             README.lhs
+  hs-source-dirs:      test/readme
+  build-depends:       base
+                     , markdown-unlit
+                     , termonad
+                     , colour
+  ghc-options:         -pgmL markdown-unlit
+  default-language:    Haskell2010
 
   if flag(buildreadme)
-    buildable:       True
+    buildable:         True
   else
-    buildable:       False
+    buildable:         False
 
 source-repository head
   type:     git

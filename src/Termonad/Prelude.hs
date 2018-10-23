@@ -1,5 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-
 module Termonad.Prelude
   ( module X
   , whenJust
