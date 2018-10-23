@@ -31,6 +31,7 @@ import Data.Functor.Rep (Representable(..), distributeRep)
 import Data.Kind (Type)
 import Data.Singletons.Prelude
 import Data.Singletons.TH
+import Text.Show (showParen, showString)
 import Unsafe.Coerce (unsafeCoerce)
 
 -- import Data.Type.Combinator (I(..), Uncur3(..))
@@ -82,37 +83,14 @@ import Unsafe.Coerce (unsafeCoerce)
 --   type KnownC (IFin ('S n)) ('S m) = Known (IFin n) m
 --   known = IFS known
 
----------------------------------
--- Vector Helpers for Termonad --
----------------------------------
-
--- type N24 = N8 + N8 + N8
-
--- pattern EmptyV :: VecT 'Z f c
--- pattern EmptyV = ØV
-
 --------------------------
 -- Misc VecT Operations --
 --------------------------
-
--- These are waiting to be upstreamed at
--- https://github.com/kylcarte/type-combinators/pull/11.
-
--- onHead :: (f a -> f a) -> VecT ('S n) f a -> VecT ('S n) f a
--- onHead f (a :* as) = f a :* as
 
 -- take' :: IFin ('S n) m -> VecT n f a -> VecT m f a
 -- take' = \case
 --   IFS n -> onTail (take' n) \\ n
 --   IFZ   -> const EmptyV
-
--- drop' :: Nat m -> VecT (m + n) f a -> VecT n f a
--- drop' = \case
---   S_ n -> drop' n . tail'
---   Z_   -> id
-
--- asM :: (M ms a -> M ns a) -> (Matrix ms a -> Matrix ns a)
--- asM f = getMatrix . f . M
 
 -- mIndex :: Prod Fin ns -> M ns a -> a
 -- mIndex = \case
@@ -281,6 +259,81 @@ data instance Sing (z :: Fin n) where
   SFZ :: Sing 'FZ
   SFS :: Sing x -> Sing ('FS x)
 
+instance SingI 'FZ where
+  sing = SFZ
+
+instance SingI n => SingI ('FS n) where
+  sing = SFS sing
+
+instance SingKind (Fin n) where
+  type Demote (Fin n) = Fin n
+  fromSing :: forall (a :: Fin n). Sing a -> Fin n
+  fromSing SFZ = FZ
+  fromSing (SFS fin) = FS (fromSing fin)
+
+  toSing :: Fin n -> SomeSing (Fin n)
+  toSing FZ = SomeSing SFZ
+  toSing (FS fin) =
+    case toSing fin of
+      SomeSing n -> SomeSing (SFS n)
+
+instance Show (Sing 'FZ) where
+  show SFZ = "SFZ"
+
+instance Show (Sing n) => Show (Sing ('FS n)) where
+  showsPrec d (SFS n) =
+    showParen (d > 10) $
+    showString "SFS " . showsPrec 11 n
+
+----------
+-- IFin --
+----------
+
+data IFin :: Peano -> Peano -> Type where
+  IFZ :: forall (n :: Peano). IFin ('S n) 'Z
+  IFS :: forall (n :: Peano) (m :: Peano). !(IFin n m) -> IFin ('S n) ('S m)
+
+deriving instance Eq   (IFin x y)
+deriving instance Ord  (IFin x y)
+deriving instance Show (IFin x y)
+
+ifinToFin :: IFin n m -> Fin n
+ifinToFin IFZ = FZ
+ifinToFin (IFS n) = FS (ifinToFin n)
+
+ifinToInt :: IFin n m -> Int
+ifinToInt = finToInt . ifinToFin
+
+data instance Sing (z :: IFin n m) where
+  SIFZ :: Sing 'IFZ
+  SIFS :: Sing x -> Sing ('IFS x)
+
+instance SingI 'IFZ where
+  sing = SIFZ
+
+instance SingI n => SingI ('IFS n) where
+  sing = SIFS sing
+
+instance SingKind (IFin n m) where
+  type Demote (IFin n m) = IFin n m
+  fromSing :: forall (a :: IFin n m). Sing a -> IFin n m
+  fromSing SIFZ = IFZ
+  fromSing (SIFS fin) = IFS (fromSing fin)
+
+  toSing :: IFin n m -> SomeSing (IFin n m)
+  toSing IFZ = SomeSing SIFZ
+  toSing (IFS fin) =
+    case toSing fin of
+      SomeSing n -> SomeSing (SIFS n)
+
+instance Show (Sing 'IFZ) where
+  show SIFZ = "SIFZ"
+
+instance Show (Sing n) => Show (Sing ('IFS n)) where
+  showsPrec d (SIFS n) =
+    showParen (d > 10) $
+    showString "SIFS " . showsPrec 11 n
+
 ----------
 -- Prod --
 ----------
@@ -383,6 +436,13 @@ vrep_ = vrep sing
 vap :: (a -> b -> c) -> Vec n a -> Vec n b -> Vec n c
 vap _ EmptyVec _ = EmptyVec
 vap f (VecCons a as) (VecCons b bs) = VecCons (f a b) $ vap f as bs
+
+vonHead :: (a -> a) -> Vec ('S n) a -> Vec ('S n) a
+vonHead f (VecCons a as) = VecCons (f a) as
+
+vdrop :: Sing m -> Vec (m + n) a -> Vec n a
+vdrop SZ vec = vec
+vdrop (SS n) (VecCons _ vec) = vdrop n vec
 
 ------------
 -- Matrix --
@@ -567,6 +627,12 @@ testtest4 = mmap_ f (Matrix EmptyVec)
     f :: HList Fin '[N0, N2] -> Int -> String
     f (HListCons (finA :: Fin N0) (HListCons (_ :: Fin N2) EmptyHList)) _ =
       case finA of {}
+
+onMatrixTF :: (MatrixTF ns a -> MatrixTF ms b) -> Matrix ns a -> Matrix ms b
+onMatrixTF f (Matrix mat) = Matrix $ f mat
+
+onMatrix :: (Matrix ns a -> Matrix ms b) -> MatrixTF ns a -> MatrixTF ms b
+onMatrix f = unMatrix . f . Matrix
 
 ----------------------
 -- Matrix Instances --
