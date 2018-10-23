@@ -27,48 +27,12 @@ import Termonad.Prelude hiding ((\\), index)
 
 import Data.Distributive (Distributive(distribute))
 import qualified Data.Foldable as Data.Foldable
-import Data.Functor.Rep (Representable(..), distributeRep)
+import Data.Functor.Rep (Representable(..), apRep, bindRep, distributeRep, pureRep)
 import Data.Kind (Type)
 import Data.Singletons.Prelude
 import Data.Singletons.TH
 import Text.Show (showParen, showString)
 import Unsafe.Coerce (unsafeCoerce)
-
--- import Data.Type.Combinator (I(..), Uncur3(..))
--- import Data.Type.Fin (Fin(..), fin)
--- import Data.Type.Fin.Indexed (IFin(..))
--- import Data.Type.Length (Length)
--- import Data.Type.Nat (Nat(..))
--- import Data.Type.Product (Prod(..))
--- import Data.Type.Vector
---   ( M(M, getMatrix)
---   , Matrix
---   , Vec
---   , VecT(..)
---   , pattern (:+)
---   , index
---   , mgen_
---   , onMatrix
---   , onTail
---   , ppMatrix'
---   , tail'
---   , vgen_
---   )
--- import Type.Class.Known (Known(KnownC, known))
--- import Type.Class.Witness ((\\))
--- import Type.Family.List (Fsts3, Thds3)
--- import Type.Family.Nat (N(..), N3, N6, N8, type (+))
-
-----------------------
--- Orphan Instances --
-----------------------
-
--- instance Applicative (Matrix ns) => Applicative (M ns) where
---   pure = M . pure
---   M f <*> M a = M $ f <*> a
-
--- instance Monad (Matrix ns) => Monad (M ns) where
---   M ma >>= f = M (ma >>= getMatrix . f)
 
 --------------------------
 -- Misc VecT Operations --
@@ -353,6 +317,10 @@ instance SingI n => Representable (Vec n) where
 
   index :: Vec n a -> Fin n -> a
   index = flip vindex
+
+instance SingI n => Monad (Vec n) where
+  (>>=) :: Vec n a -> (a -> Vec n b) -> Vec n b
+  (>>=) = bindRep
 
 type instance Element (Vec n a) = a
 
@@ -653,3 +621,14 @@ instance Num a => Num (Matrix '[] a) where
 
   fromInteger :: Integer -> Matrix '[] a
   fromInteger = Matrix . fromInteger
+
+instance SingI ns => Applicative (Matrix ns) where
+  pure :: a -> Matrix ns a
+  pure = pureRep
+
+  (<*>) :: Matrix ns (a -> b) -> Matrix ns a -> Matrix ns b
+  (<*>) = apRep
+
+instance SingI ns => Monad (Matrix ns) where
+  (>>=) :: Matrix ns a -> (a -> Matrix ns b) -> Matrix ns b
+  (>>=) = bindRep
