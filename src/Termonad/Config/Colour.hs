@@ -431,13 +431,15 @@ $(makeLensesFor
 -- ConfigExtension Instance --
 ------------------------------
 
+newtype ColourInternalState = ColourInternalState { unInternalState :: MVar (ColourConfig (Colour Double)) }
+
 data ColourExtension = ColourExtension
-  { colourExtConf :: MVar (ColourConfig (Colour Double))
+  { colourExtConf :: ColourInternalState
   , colourExtCreateTermHook :: TMState -> Terminal -> IO ()
   }
 
-colourHook :: MVar (ColourConfig (Colour Double)) -> TMState -> Terminal -> IO ()
-colourHook mvarColourConf _ vteTerm = do
+colourHook :: ColourInternalState -> TMState -> Terminal -> IO ()
+colourHook (ColourInternalState mvarColourConf) _ vteTerm = do
   colourConf <- readMVar mvarColourConf
   terminalSetColors vteTerm Nothing Nothing . Just
     =<< traverse toRGBA (paletteToList . palette $ colourConf)
@@ -465,8 +467,8 @@ createColourExtension conf = do
   mvarConf <- newMVar conf
   pure $
     ColourExtension
-      { colourExtConf = mvarConf
-      , colourExtCreateTermHook = colourHook mvarConf
+      { colourExtConf = ColourInternalState mvarConf
+      , colourExtCreateTermHook = colourHook (ColourInternalState mvarConf)
       }
 
 createDefColourExtension :: IO ColourExtension
