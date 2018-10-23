@@ -187,7 +187,7 @@ cube ::
   -> Vec N3 (Colour b)
   -> Matrix '[ N6, N6, N6] (Colour b)
 cube d (i :* j :* k :* EmptyVec) =
-  mgen_ $
+  genMatrix_ $
     \(x :< y :< z :< EmptyHList) ->
       affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] black
   where
@@ -241,7 +241,8 @@ cube d (i :* j :* k :* EmptyVec) =
 --   ]
 -- ]
 defaultColourCube :: (Ord b, Floating b) => Matrix '[N6, N6, N6] (Colour b)
-defaultColourCube = mgen_ $ \(x :< y :< z :< EmptyHList) -> sRGB24 (cmp x) (cmp y) (cmp z)
+defaultColourCube =
+  genMatrix_ $ \(x :< y :< z :< EmptyHList) -> sRGB24 (cmp x) (cmp y) (cmp z)
   where
     cmp :: Fin N6 -> Word8
     cmp i =
