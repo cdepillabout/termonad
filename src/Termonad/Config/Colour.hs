@@ -478,6 +478,19 @@ addColourExtension colConf tmConf = do
   let newTMConf = tmConf & lensHooks . lensCreateTermHook %~ addColourHook newHook
   pure newTMConf
 
+addColourExt :: TMConfig -> ColourExtension -> TMConfig
+addColourExt tmConf (ColourExtension _ newHook) =
+  tmConf & lensHooks . lensCreateTermHook %~ addColourHook newHook
+
+data FooExtension = FooExtension { fooExtCreateTermHook :: TMState -> Terminal -> IO () }
+
+createFooExtension :: IO FooExtension
+createFooExtension = pure $ FooExtension $ \_ _ -> pure ()
+
+addFooExt :: TMConfig -> FooExtension -> TMConfig
+addFooExt tmConf (FooExtension newHook) =
+  tmConf & lensHooks . lensCreateTermHook %~ addColourHook newHook
+
 addDefColourExtension :: TMConfig -> IO TMConfig
 addDefColourExtension = addColourExtension defaultColourConfig
 
