@@ -63,12 +63,6 @@ import Unsafe.Coerce (unsafeCoerce)
 -- Orphan Instances --
 ----------------------
 
--- These should eventually be provided by type-combinators.
--- See https://github.com/kylcarte/type-combinators/pull/11.
-
--- deriving instance Functor  (Matrix ns) => Functor  (M ns)
--- deriving instance Foldable (Matrix ns) => Foldable (M ns)
-
 -- instance Applicative (Matrix ns) => Applicative (M ns) where
 --   pure = M . pure
 --   M f <*> M a = M $ f <*> a
@@ -76,50 +70,9 @@ import Unsafe.Coerce (unsafeCoerce)
 -- instance Monad (Matrix ns) => Monad (M ns) where
 --   M ma >>= f = M (ma >>= getMatrix . f)
 
--- instance Known (IFin ('S n)) 'Z where
---   known = IFZ
-
--- instance Known (IFin n) m => Known (IFin ('S n)) ('S m) where
---   type KnownC (IFin ('S n)) ('S m) = Known (IFin n) m
---   known = IFS known
-
 --------------------------
 -- Misc VecT Operations --
 --------------------------
-
--- take' :: IFin ('S n) m -> VecT n f a -> VecT m f a
--- take' = \case
---   IFS n -> onTail (take' n) \\ n
---   IFZ   -> const EmptyV
-
--- mIndex :: Prod Fin ns -> M ns a -> a
--- mIndex = \case
---   i :< is -> mIndex is . onMatrix (index i)
---   Ø       -> getI . getMatrix
-
--- deIndex :: IFin n m -> Fin n
--- deIndex = \case
---   IFS n -> FS (deIndex n)
---   IFZ   -> FZ
-
--- vUpdateAt :: Fin n -> (f a -> f a) -> VecT n f a -> VecT n f a
--- vUpdateAt = \case
---   FS m -> onTail . vUpdateAt m
---   FZ   -> onHead
-
--- vSetAt :: Fin n -> f a -> VecT n f a -> VecT n f a
--- vSetAt n = vUpdateAt n . const
-
--- vSetAt' :: Fin n -> a -> Vec n a -> Vec n a
--- vSetAt' n = vSetAt n . I
-
--- mUpdateAt :: Prod Fin ns -> (a -> a) -> M ns a -> M ns a
--- mUpdateAt = \case
---   n :< ns -> onMatrix . vUpdateAt n . asM . mUpdateAt ns
---   Ø       -> (<$>)
-
--- mSetAt :: Prod Fin ns -> a -> M ns a -> M ns a
--- mSetAt ns = mUpdateAt ns . const
 
 -- data Range n l m = Range (IFin ('S n) l) (IFin ('S n) (l + m))
 --   deriving (Show, Eq)
@@ -444,6 +397,17 @@ vdrop :: Sing m -> Vec (m + n) a -> Vec n a
 vdrop SZ vec = vec
 vdrop (SS n) (VecCons _ vec) = vdrop n vec
 
+vtake :: IFin n m -> Vec n a -> Vec m a
+vtake IFZ _ = EmptyVec
+vtake (IFS n) (VecCons a vec) = VecCons a $ vtake n vec
+
+vUpdateAt :: Fin n -> (a -> a) -> Vec n a -> Vec n a
+vUpdateAt FZ f (VecCons a vec)  = VecCons (f a) vec
+vUpdateAt (FS n) f (VecCons a vec)  = VecCons a $ vUpdateAt n f vec
+
+vSetAt :: Fin n -> a -> Vec n a -> Vec n a
+vSetAt fin a = vUpdateAt fin (const a)
+
 ------------
 -- Matrix --
 ------------
@@ -595,7 +559,7 @@ mmap SNil f (Matrix a) = Matrix (f EmptyHList a)
 mmap (SCons _ ns) f (Matrix vec) =
   Matrix
     (imap
-      (\fin -> unMatrix . mmap ns (\hlist -> f (HListCons fin hlist)) . Matrix)
+      (\fin -> onMatrix (mmap ns (\hlist -> f (HListCons fin hlist))))
       vec
     )
 
@@ -633,6 +597,14 @@ onMatrixTF f (Matrix mat) = Matrix $ f mat
 
 onMatrix :: (Matrix ns a -> Matrix ms b) -> MatrixTF ns a -> MatrixTF ms b
 onMatrix f = unMatrix . f . Matrix
+
+mUpdateAt :: HList Fin ns -> (a -> a) -> Matrix ns a -> Matrix ns a
+mUpdateAt EmptyHList _ mat = mat
+mUpdateAt (HListCons n ns) f mat =
+  onMatrixTF (vUpdateAt n (onMatrix (mUpdateAt ns f))) mat
+
+mSetAt :: HList Fin ns -> a -> Matrix ns a -> Matrix ns a
+mSetAt fins a = mUpdateAt fins (const a)
 
 ----------------------
 -- Matrix Instances --
