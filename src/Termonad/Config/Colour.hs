@@ -56,11 +56,6 @@ import Control.Lens ((%~), makeLensesFor)
 import Data.Colour (Colour, black, affineCombo)
 import Data.Colour.SRGB (RGB(RGB), toSRGB, sRGB24, sRGB24show)
 import qualified Data.Foldable
--- import Data.Type.Combinator (I(..))
--- import Data.Type.Fin (Fin(..), fin)
--- import Data.Type.Product (Prod(..))
--- import Data.Type.Vector
---   (VecT(..), Vec, M(..), vgen_, mgen_)
 import GI.Gdk (RGBA, newZeroRGBA, setRGBABlue, setRGBAGreen, setRGBARed)
 import GI.Vte
   ( Terminal
@@ -71,7 +66,6 @@ import GI.Vte
   , terminalSetColorForeground
   )
 import Text.Show (showString)
--- import Type.Family.Nat (N3, N6, N8)
 
 import Termonad.Config.Vec
 import Termonad.Lenses (lensCreateTermHook, lensHooks)
