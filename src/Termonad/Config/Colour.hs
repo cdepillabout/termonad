@@ -486,8 +486,11 @@ addColourExt tmConf (ColourExtension _ newHook) =
 
 data FooExtension = FooExtension { fooExtCreateTermHook :: TMState -> Terminal -> IO () }
 
-createFooExtension :: IO FooExtension
-createFooExtension = pure $ FooExtension $ \_ _ -> pure ()
+createFooExtension :: ColourExtension -> IO FooExtension
+createFooExtension (ColourExtension colInternalState _) =
+  pure $ FooExtension $ \_ _ -> do
+    -- do something clever with the 'ColourInternalState' here...
+    pure ()
 
 addFooExt :: TMConfig -> FooExtension -> TMConfig
 addFooExt tmConf (FooExtension newHook) =

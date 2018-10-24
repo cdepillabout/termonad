@@ -267,7 +267,7 @@ fontConf =
 main :: IO ()
 main = do
   colExt <- createColourExtension colConf
-  fooExt <- createFooExtension
+  fooExt <- createFooExtension colExt
   let termonadConf =
         defaultTMConfig
           { options =
