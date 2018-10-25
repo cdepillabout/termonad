@@ -10,10 +10,44 @@
 -- To use this config extension in your @~/.config/termonad/termonad.hs@, first
 -- import this module. Create a new 'ColourExtension' with the 'createColourExtension' function.
 -- Then add the 'ColourExtension' to your 'TMConfig' with the 'addColourExtension' function.
--- 
+--
 -- See < this code> for a simple example.
 
-module Termonad.Config.Colour where
+module Termonad.Config.Colour
+  ( -- * Colour Config
+      ColourConfig(..)
+    , defaultColourConfig
+    -- ** Colour Config Lenses
+    , lensCursorFgColour
+    , lensCursorBgColour
+    , lensForegroundColour
+    , lensBackgroundColour
+    , lensPalette
+    -- * Colour Extension
+    , ColourExtension(..)
+    , createColourExtension
+    , createDefColourExtension
+    , addColourExtension
+    , addColourConfig
+    , colourHook
+    , addColourHook
+    -- * Palette
+    , Palette(..)
+    , defaultStandardColours
+    , defaultLightColours
+    , defaultColourCube
+    , defaultGreyscale
+    -- * Colour
+    , Colour
+    , sRGB24
+    , sRGB24show
+    -- * Debugging and Internal Methods
+    , showColourVec
+    , showColourCube
+    , paletteToList
+    , coloursFromBits
+    , cube
+  ) where
 
 import Termonad.Prelude hiding ((\\), index)
 
