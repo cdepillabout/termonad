@@ -27,10 +27,13 @@ custom-setup
                    , Cabal
                    , cabal-doctest >=1.0.2 && <1.1
 
--- This flag builds the example code from the README.md file.  It is only used
--- for testing.  It should be enabled for CI.
-flag buildreadme
-  description: Build an executable from the example from the README.md file
+-- This flag builds the example code in the example-config/ directory, as well
+-- as the example from the README.md file.  It is only used for testing.  It
+-- should be enabled for CI.
+flag buildexamples
+  description: Build an executable from the examples in the example-config/
+               directory, as well as the example from the README.md file.  This
+               is normally only used for testing.
   default:     False
 
 library
@@ -174,7 +177,19 @@ executable termonad-readme
   ghc-options:         -pgmL markdown-unlit
   default-language:    Haskell2010
 
-  if flag(buildreadme)
+  if flag(buildexamples)
+    buildable:         True
+  else
+    buildable:         False
+
+executable termonad-example-colour-extension
+  main-is:             example-config/ExampleColourExtension.hs
+  build-depends:       base
+                     , termonad
+                     , colour
+  default-language:    Haskell2010
+
+  if flag(buildexamples)
     buildable:         True
   else
     buildable:         False

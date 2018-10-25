@@ -8,47 +8,46 @@
 -- Portability : POSIX
 --
 -- To use this config extension in your @~/.config/termonad/termonad.hs@, first
--- import this module. Then you can simply add the new configuration options to
--- an existing 'TMConfig' with the '<+>' operator, though note that the
--- 'TMConfig' must come first (any other way is a type error).
+-- import this module. Create a new 'ColourExtension' with the 'createColourExtension' function.
+-- Then add the 'ColourExtension' to your 'TMConfig' with the 'addColourExtension' function.
 --
--- E.g.
---
--- > import "Termonad
--- > import "Termonad.Config.Colour"
--- > import "Termonad.Config.Vec" ('Vec', 'VecT'((':+'), 'N8', 'EmptyV'))
--- > import "Data.Colour.SRGB" ('Colour', 'sRGB24')
--- >
--- > myBasicConfig :: 'TMConfig'
--- > myBasicConfig = 'defaultTMConfig'
--- >   { 'showScrollbar' = 'ShowScrollbarNever'
--- >   , 'confirmExit' = False
--- >   , 'showMenu' = False
--- >   , 'cursorBlinkMode' = 'CursorBlinkModeOff'
--- >   }
--- >
--- > myColourConfig :: 'ColourConfig' ('Colour' Double)
--- > myColourConfig = 'defaultColourConfig'
--- >   { 'cursorBgColour' = 'Set' ('sRGB24' 120 80 110)
--- >   , 'foregroundColour' = 'sRGB24' 220 180 210
--- >   , 'palette' = 'BasicPalette' myStandardColours
--- >   } where
--- >       myStandardColours :: 'Vec' 'N8' ('Colour' Double)
--- >       myStandardColours
--- >         =  'sRGB24'  40  30  20
--- >         ':+' 'sRGB24' 180  30  20
--- >         ':+' 'sRGB24'  40 160  20
--- >         ':+' 'sRGB24' 180 160  20
--- >         ':+' 'sRGB24'  40  30 120
--- >         ':+' 'sRGB24' 180  30 120
--- >         ':+' 'sRGB24'  40 160 120
--- >         ':+' 'sRGB24' 180 160 120
--- >         ':+' 'EmptyV'
--- >
--- > main :: IO ()
--- > main = start (myBasicConfig <+> myColourConfig)
+-- See < this code> for a simple example.
 
-module Termonad.Config.Colour where
+module Termonad.Config.Colour
+  ( -- * Colour Config
+      ColourConfig(..)
+    , defaultColourConfig
+    -- ** Colour Config Lenses
+    , lensCursorFgColour
+    , lensCursorBgColour
+    , lensForegroundColour
+    , lensBackgroundColour
+    , lensPalette
+    -- * Colour Extension
+    , ColourExtension(..)
+    , createColourExtension
+    , createDefColourExtension
+    , addColourExtension
+    , addColourConfig
+    , colourHook
+    , addColourHook
+    -- * Palette
+    , Palette(..)
+    , defaultStandardColours
+    , defaultLightColours
+    , defaultColourCube
+    , defaultGreyscale
+    -- * Colour
+    , Colour
+    , sRGB24
+    , sRGB24show
+    -- * Debugging and Internal Methods
+    , showColourVec
+    , showColourCube
+    , paletteToList
+    , coloursFromBits
+    , cube
+  ) where
 
 import Termonad.Prelude hiding ((\\), index)
 
@@ -472,14 +471,15 @@ createColourExtension conf = do
 createDefColourExtension :: IO ColourExtension
 createDefColourExtension = createColourExtension defaultColourConfig
 
-addColourExtension :: ColourConfig (Colour Double) -> TMConfig -> IO TMConfig
-addColourExtension colConf tmConf = do
+addColourConfig :: TMConfig -> ColourConfig (Colour Double) -> IO TMConfig
+addColourConfig tmConf colConf = do
   ColourExtension _ newHook <- createColourExtension colConf
   let newTMConf = tmConf & lensHooks . lensCreateTermHook %~ addColourHook newHook
   pure newTMConf
 
-addDefColourExtension :: TMConfig -> IO TMConfig
-addDefColourExtension = addColourExtension defaultColourConfig
+addColourExtension :: TMConfig -> ColourExtension -> TMConfig
+addColourExtension tmConf (ColourExtension _ newHook) =
+  tmConf & lensHooks . lensCreateTermHook %~ addColourHook newHook
 
 -- | This function shows how to combine 'createTermHook's.
 --
