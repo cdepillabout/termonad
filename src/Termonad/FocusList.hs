@@ -8,8 +8,10 @@ import Termonad.Prelude
 
 import Control.Lens
 import qualified Data.Foldable as Foldable
+import qualified Data.OSTree as T
 import Test.QuickCheck
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
+
 
 -- $setup
 -- >>> :set -XFlexibleContexts
