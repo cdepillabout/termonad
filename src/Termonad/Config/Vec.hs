@@ -3,6 +3,25 @@
 {-# LANGUAGE TypeInType #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+-- | Module    : Termonad.Config.Vec
+-- Description : A small library of dependent types
+-- Copyright   : (c) Dennis Gosnell, 2018
+-- License     : BSD3
+-- Stability   : experimental
+-- Portability : POSIX
+--
+-- This is a small library of dependent types.  It provides indexed types like
+-- 'Fin', 'Vec', and 'Matrix'.
+--
+-- This is mainly used in Termonad for "Termonad.Config.Colour" to represent
+-- length-indexed colour lists.
+--
+-- This module implements a subset of the functionality from the abandoned
+-- <http://hackage.haskell.org/package/type-combinators type-combinators> library.
+-- Ideally this module would be split out to a separate package.
+-- If you're interested in working on something like this, please see
+-- <https://github.com/cdepillabout/termonad/issues/70 this issue> on Github.
+
 module Termonad.Config.Vec
   -- ( Fin
   -- , I(I)
@@ -37,6 +56,8 @@ import Text.Show (showParen, showString)
 -- Misc VecT Operations --
 --------------------------
 
+-- TODO: These could be implemented?
+
 -- data Range n l m = Range (IFin ('S n) l) (IFin ('S n) (l + m))
 --   deriving (Show, Eq)
 
@@ -68,7 +89,6 @@ import Text.Show (showParen, showString)
 --   :: (ns ~ Fsts3 nlms, ms ~ Thds3 nlms)
 --   => HList (Uncur3 Range) nlms -> M ms a -> M ns a -> M ns a
 -- setSubmatrix rs sm = updateSubmatrix rs $ \is _ -> indexMatrix is sm
-
 
 -----------
 -- Peano --
