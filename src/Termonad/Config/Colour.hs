@@ -11,7 +11,7 @@
 -- import this module. Create a new 'ColourExtension' with the 'createColourExtension' function.
 -- Then add the 'ColourExtension' to your 'TMConfig' with the 'addColourExtension' function.
 --
--- See < this code> for a simple example.
+-- See <https://github.com/cdepillabout/termonad/blob/master/example-config/ExampleColourExtension.hs this code> for a simple example.
 
 module Termonad.Config.Colour
   ( -- * Colour Config
@@ -430,11 +430,19 @@ $(makeLensesFor
 -- ConfigExtension Instance --
 ------------------------------
 
+-- | Extension that allows setting colors for terminals in Termonad.
 data ColourExtension = ColourExtension
   { colourExtConf :: MVar (ColourConfig (Colour Double))
+    -- ^ 'MVar' holding the current 'ColourConfig'.  This could potentially be
+    -- passed to other extensions or user code.  This would allow changing the
+    -- colors for new terminals in realtime.
   , colourExtCreateTermHook :: TMState -> Terminal -> IO ()
+    -- ^ The 'createTermHook' used by the 'ColourExtension'.  This sets the
+    -- colors for a new terminal based on the 'ColourConfig' in 'colourExtConf'.
   }
 
+-- | The default 'createTermHook' for 'colourExtCreateTermHook'.  Set the colors
+-- for a terminal based on the given 'ColourConfig'.
 colourHook :: MVar (ColourConfig (Colour Double)) -> TMState -> Terminal -> IO ()
 colourHook mvarColourConf _ vteTerm = do
   colourConf <- readMVar mvarColourConf
@@ -459,6 +467,9 @@ colourHook mvarColourConf _ vteTerm = do
       setRGBABlue rgba blue
       pure rgba
 
+-- | Create a 'ColourExtension' based on a given 'ColourConfig'.
+--
+-- Most users will want to use this.
 createColourExtension :: ColourConfig (Colour Double) -> IO ColourExtension
 createColourExtension conf = do
   mvarConf <- newMVar conf
@@ -468,15 +479,24 @@ createColourExtension conf = do
       , colourExtCreateTermHook = colourHook mvarConf
       }
 
+-- | Create a 'ColourExtension' based on 'defaultColourConfig'.
+--
+-- Note that this is not needed if you just want to use the default colors for
+-- Termonad.  However, if you want to pass around the 'MVar' 'ColourConfig' for
+-- extensions to use, then you may need this function.
 createDefColourExtension :: IO ColourExtension
 createDefColourExtension = createColourExtension defaultColourConfig
 
+-- | Add a given 'ColourConfig' to a 'TMConfig'.  This adds 'colourHook' to the
+-- 'createTermHook' in 'TMConfig'.
 addColourConfig :: TMConfig -> ColourConfig (Colour Double) -> IO TMConfig
 addColourConfig tmConf colConf = do
   ColourExtension _ newHook <- createColourExtension colConf
   let newTMConf = tmConf & lensHooks . lensCreateTermHook %~ addColourHook newHook
   pure newTMConf
 
+-- | This is similar to 'addColourConfig', but can be used on a
+-- 'ColourExtension' created with 'createColourExtension'.
 addColourExtension :: TMConfig -> ColourExtension -> TMConfig
 addColourExtension tmConf (ColourExtension _ newHook) =
   tmConf & lensHooks . lensCreateTermHook %~ addColourHook newHook
@@ -484,6 +504,8 @@ addColourExtension tmConf (ColourExtension _ newHook) =
 -- | This function shows how to combine 'createTermHook's.
 --
 -- This first runs the old hook, followed by the new hook.
+--
+-- This is used internally by 'addColourConfig' and 'addColourExtension'.
 addColourHook
   :: (TMState -> Terminal -> IO ()) -- ^ New hook
   -> (TMState -> Terminal -> IO ()) -- ^ Old hook
