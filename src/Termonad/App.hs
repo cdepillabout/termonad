@@ -241,6 +241,7 @@ askShouldExit mvarTMState = do
       widgetDestroy dialog
       pure $ toEnum (fromIntegral res)
 
+-- | Force Termonad to exit without asking the user whether or not to do so.
 forceQuit :: TMState -> IO ()
 forceQuit mvarTMState = do
   tmState <- readMVar mvarTMState
@@ -359,17 +360,6 @@ setupTermonad tmConfig app win builder = do
   -- If you return 'True' from this callback, then Termonad will not exit.
   -- If you return 'False' from this callback, then Termonad will continue to
   -- exit.
-  --
-  -- Why is this needed?  Well, there are two different ways to close Termonad
-  -- that we have to deal with.  The first one is when the user tries to close
-  -- Termonad by clicking @Quit@ or using their window manager to kill Termonad.
-  -- In that case, Termonad should ask the user whether they really mean to quit,
-  -- even though there are still Terminals running.  This is a safety precaution.
-  -- This is the case of 'UserDidNotRequestExit'.
-  --
-  -- The other case is when the user closes the last open tab.  In this case,
-  -- Termonad should exit but it won't ask the user.  This is the case of
-  -- 'UserRequestedExit'
   void $ onWidgetDeleteEvent win $ \_ -> do
     shouldExit <- askShouldExit mvarTMState
     pure $
