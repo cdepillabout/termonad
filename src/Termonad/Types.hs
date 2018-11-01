@@ -25,10 +25,16 @@ import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 import Termonad.FocusList (FocusList, emptyFL, singletonFL, getFLFocusItem, focusListLen)
 import Termonad.Gtk (widgetEq)
 
+-- | A wrapper around a VTE 'Terminal'.  This also stores the process ID of the
+-- process running on this terminal, as well as a 'Unique' that can be used for
+-- comparing terminals.
 data TMTerm = TMTerm
   { term :: !Terminal
+    -- ^ The actual 'Terminal'.
   , pid :: !Int
+    -- ^ The process ID of the process running in 'term'.
   , unique :: !Unique
+    -- ^ A 'Unique' for comparing different 'TMTerm' for uniqueness.
   }
 
 instance Show TMTerm where
@@ -46,10 +52,16 @@ instance Show TMTerm where
       showsPrec (d + 1) (hashUnique unique) .
       showString "}"
 
+-- | A container that holds everything in a given terminal window.  The 'term'
+-- in the 'TMTerm' is inside the 'tmNotebookTabTermContainer' 'ScrolledWindow'.
+-- The notebook tab 'Label' is also available.
 data TMNotebookTab = TMNotebookTab
   { tmNotebookTabTermContainer :: !ScrolledWindow
+    -- ^ The 'ScrolledWindow' holding the VTE 'Terminal'.
   , tmNotebookTabTerm :: !TMTerm
+    -- ^ The 'Terminal' insidie the 'ScrolledWindow'.
   , tmNotebookTabLabel :: !Label
+    -- ^ The 'Label' holding the title of the 'Terminal' in the 'Notebook' tab.
   }
 
 instance Show TMNotebookTab where
@@ -67,9 +79,13 @@ instance Show TMNotebookTab where
       showString "(GI.GTK.Label)" .
       showString "}"
 
+-- | This holds the GTK 'Notebook' containing multiple tabs of 'Terminal's.  We
+-- keep a separate list of terminals in 'tmNotebookTabs'.
 data TMNotebook = TMNotebook
   { tmNotebook :: !Notebook
+    -- ^ This is the GTK 'Notebook' that holds multiple tabs of 'Terminal's.
   , tmNotebookTabs :: !(FocusList TMNotebookTab)
+    -- ^ A 'FocusList' containing references to each individual 'TMNotebookTab'.
   }
 
 instance Show TMNotebook where
@@ -84,24 +100,12 @@ instance Show TMNotebook where
       showsPrec (d + 1) tmNotebookTabs .
       showString "}"
 
-data UserRequestedExit
-  = UserRequestedExit
-  | UserDidNotRequestExit
-  deriving (Eq, Show)
-
 data TMState' = TMState
   { tmStateApp :: !Application
   , tmStateAppWin :: !ApplicationWindow
   , tmStateNotebook :: !TMNotebook
   , tmStateFontDesc :: !FontDescription
   , tmStateConfig :: !TMConfig
-  , tmStateUserReqExit :: !UserRequestedExit
-  -- ^ This signifies whether or not the user has requested that Termonad
-  -- exit by either closing all terminals or clicking the exit button.  If so,
-  -- 'tmStateUserReqExit' should have a value of 'UserRequestedExit'.  However,
-  -- if the window manager requested Termonad to exit (probably through the user
-  -- trying to close Termonad through their window manager), then this will be
-  -- set to 'UserDidNotRequestExit'.
   }
 
 instance Show TMState' where
@@ -123,9 +127,6 @@ instance Show TMState' where
       showString ", " .
       showString "tmStateConfig = " .
       showsPrec (d + 1) tmStateConfig .
-      showString ", " .
-      showString "tmStateUserReqExit = " .
-      showsPrec (d + 1) tmStateUserReqExit .
       showString "}"
 
 type TMState = MVar TMState'
@@ -150,6 +151,16 @@ newTMTerm :: Terminal -> Int -> IO TMTerm
 newTMTerm trm pd = do
   unq <- newUnique
   pure $ createTMTerm trm pd unq
+
+getFocusedTermFromState :: TMState -> IO (Maybe Terminal)
+getFocusedTermFromState mvarTMState =
+  withMVar mvarTMState go
+  where
+    go :: TMState' -> IO (Maybe Terminal)
+    go tmState = do
+      let maybeNotebookTab =
+            getFLFocusItem $ tmNotebookTabs $ tmStateNotebook tmState
+      pure $ fmap (term . tmNotebookTabTerm) maybeNotebookTab
 
 createTMNotebookTab :: Label -> ScrolledWindow -> TMTerm -> TMNotebookTab
 createTMNotebookTab tabLabel scrollWin trm =
@@ -188,7 +199,6 @@ newTMState tmConfig app appWin note fontDesc =
       , tmStateNotebook = note
       , tmStateFontDesc = fontDesc
       , tmStateConfig = tmConfig
-      , tmStateUserReqExit = UserDidNotRequestExit
       }
 
 newEmptyTMState :: TMConfig -> Application -> ApplicationWindow -> Notebook -> FontDescription -> IO TMState
@@ -200,7 +210,6 @@ newEmptyTMState tmConfig app appWin note fontDesc =
       , tmStateNotebook = createEmptyTMNotebook note
       , tmStateFontDesc = fontDesc
       , tmStateConfig = tmConfig
-      , tmStateUserReqExit = UserDidNotRequestExit
       }
 
 newTMStateSingleTerm ::
