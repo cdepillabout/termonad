@@ -6,6 +6,7 @@ import Termonad.Prelude
 import Control.Lens (imap)
 import GI.Gdk
   ( EventKey
+  , pattern KEY_0
   , pattern KEY_1
   , pattern KEY_2
   , pattern KEY_3
@@ -71,6 +72,7 @@ keyMap =
         , KEY_7
         , KEY_8
         , KEY_9
+        , KEY_0
         ]
       altNumKeys =
         imap
