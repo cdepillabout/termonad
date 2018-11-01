@@ -123,8 +123,8 @@ getFocusedTermFromState mvarTMState = do
         )
     )
 
-setUserRequestedExit :: TMState -> IO ()
-setUserRequestedExit mvarTMState = do
+setShouldExit :: TMState -> IO ()
+setShouldExit mvarTMState = do
   modifyMVar_ mvarTMState $ \tmState -> do
     pure $ tmState & lensTMStateUserReqExit .~ UserRequestedExit
 
@@ -270,6 +270,15 @@ askShouldExit mvarTMState = do
       widgetDestroy dialog
       pure $ toEnum (fromIntegral res)
 
+-- | Quit the Termonad 'Application' and close the 'ApplicationWindow'.
+--
+-- If the 'ApplicationWindow' doesn't exist, then just call 'applicationQuit'
+-- on the Termonad 'Application'.
+--
+-- If the 'ApplicationWindow' does exist, then call 'windowClose' on the
+-- 'ApplicationWindow'.  This should cause the window destroy callback
+-- to be called on the 'ApplicationWindow', which let's the user stop Termonad
+-- from closing in some circumstances.
 quit :: TMState -> IO ()
 quit mvarTMState = do
   tmState <- readMVar mvarTMState
@@ -278,6 +287,12 @@ quit mvarTMState = do
   case maybeWin of
     Nothing -> applicationQuit app
     Just win -> windowClose win
+
+forceQuit :: TMState -> IO ()
+forceQuit mvarTMState = do
+  tmState <- readMVar mvarTMState
+  let app = tmState ^. lensTMStateApp
+  applicationQuit app
 
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
@@ -297,7 +312,7 @@ setupTermonad tmConfig app win builder = do
   void $ onNotebookPageRemoved note $ \_ _ -> do
     pages <- notebookGetNPages note
     when (pages == 0) $ do
-      setUserRequestedExit mvarTMState
+      setShouldExit mvarTMState
       quit mvarTMState
     setShowTabs tmConfig note
 
@@ -357,7 +372,7 @@ setupTermonad tmConfig app win builder = do
     shouldExit <- askShouldExit mvarTMState
     case shouldExit of
       ResponseTypeYes -> do
-        setUserRequestedExit mvarTMState
+        setShouldExit mvarTMState
         quit mvarTMState
       _ -> pure ()
   actionMapAddAction app quitAction
@@ -417,6 +432,7 @@ setupTermonad tmConfig app win builder = do
           case shouldExit of
             ResponseTypeYes -> False
             _ -> True
+
   void $ onWidgetDestroy win $ quit mvarTMState
 
   widgetShowAll win
