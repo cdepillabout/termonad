@@ -26,7 +26,7 @@ import Termonad.FocusList
   , insertFL
   , invariantFL
   , isEmptyFL
-  , lensFocusListLen
+  , lengthFL
   , lookupFL
   , removeFL
   )
@@ -53,7 +53,7 @@ genInsertFL valGen fl
       val <- valGen
       pure $ InsertFL 0 val
   | otherwise = Just $ do
-      let len = fl ^. lensFocusListLen
+      let len = lengthFL fl
       key <- int $ constant 0 len
       val <- valGen
       pure $ InsertFL key val
@@ -62,7 +62,7 @@ genRemoveFL :: FocusList a -> Maybe (Gen (Action a))
 genRemoveFL fl
   | isEmptyFL fl = Nothing
   | otherwise = Just $ do
-      let len = fl ^. lensFocusListLen
+      let len = lengthFL fl
       keyToRemove <- int $ constant 0 (len - 1)
       pure $ RemoveFL keyToRemove
 
@@ -70,7 +70,7 @@ genDeleteFL :: Show a => FocusList a -> Maybe (Gen (Action a))
 genDeleteFL fl
   | isEmptyFL fl = Nothing
   | otherwise = Just $ do
-      let len = fl ^. lensFocusListLen
+      let len = lengthFL fl
       keyForItemToDelete <- int $ constant 0 (len - 1)
       let maybeItemToDelete = lookupFL keyForItemToDelete fl
       case maybeItemToDelete of

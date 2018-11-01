@@ -22,7 +22,7 @@ import GI.Vte (Terminal, CursorBlinkMode(CursorBlinkModeOn))
 import Text.Pretty.Simple (pPrint)
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
-import Termonad.FocusList (FocusList, emptyFL, singletonFL, getFLFocusItem, focusListLen)
+import Termonad.FocusList (FocusList, emptyFL, singletonFL, getFLFocusItem, lengthFL)
 import Termonad.Gtk (widgetEq)
 
 -- | A wrapper around a VTE 'Terminal'.  This also stores the process ID of the
@@ -484,7 +484,7 @@ invariantTMState' tmState =
       let tmNote = tmNotebook $ tmStateNotebook tmState
       noteLength32 <- notebookGetNPages tmNote
       let noteLength = fromIntegral noteLength32
-          focusListLength = focusListLen $ tmNotebookTabs $ tmStateNotebook tmState
+          focusListLength = lengthFL $ tmNotebookTabs $ tmStateNotebook tmState
           lengthEqual = focusListLength == noteLength
       if lengthEqual
         then pure Nothing

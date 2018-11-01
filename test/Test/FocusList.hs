@@ -14,11 +14,11 @@ import Termonad.FocusList (Focus, FocusList, invariantFL)
 
 import Test.FocusList.Invariants (testInvariantsInFocusList)
 
-instance Arbitrary a => GenUnchecked (IntMap a) where
-  genUnchecked :: Gen (IntMap a)
+instance Arbitrary a => GenUnchecked (Seq a) where
+  genUnchecked :: Gen (Seq a)
   genUnchecked = arbitrary
 
-  shrinkUnchecked :: IntMap a -> [IntMap a]
+  shrinkUnchecked :: Seq a -> [Seq a]
   shrinkUnchecked = pure
 
 instance GenUnchecked Focus
