@@ -217,51 +217,58 @@ updateFLTabPos mvarTMState oldPos newPos =
           tmState &
             lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
 
-exit :: (ResponseType -> IO a) -> TMState -> IO a
-exit handleResponse mvarTMState = do
+-- | Try to figure out whether Termonad should exit.  This also used to figure
+-- out if Termonad should close a given terminal.
+--
+-- This reads the 'confirmExit' setting from 'ConfigOptions' to check whether
+-- the user wants to be notified when either Termonad or a given terminal is
+-- about to be closed.
+--
+-- If 'confirmExit' is 'True', then a dialog is presented to the user asking
+-- them if they really want to exit or close the terminal.  Their response is
+-- sent back as a 'ResponseType'.
+--
+-- If 'confirmExit' is 'False', then this function always returns
+-- 'ResponseTypeYes'.
+askShouldExit :: TMState -> IO ResponseType
+askShouldExit mvarTMState = do
   tmState <- readMVar mvarTMState
   let confirm = tmState ^. lensTMStateConfig . lensOptions . lensConfirmExit
-  handleResponse =<< if confirm
-    then exitWithConfirmationDialog mvarTMState
+  if confirm
+    then confirmationDialogForExit tmState
     else pure ResponseTypeYes
-
-quitOnResponse :: TMState -> ResponseType -> IO ()
-quitOnResponse mvarTMState respType = case respType of
-  ResponseTypeYes -> do
-    setUserRequestedExit mvarTMState
-    quit mvarTMState
-  _               -> pure ()
-
-stopOtherHandlers :: ResponseType -> IO Bool
-stopOtherHandlers respType = pure $ case respType of
-  ResponseTypeYes -> False
-  _               -> True
-
-exitWithConfirmationDialog :: TMState -> IO ResponseType
-exitWithConfirmationDialog mvarTMState = do
-  tmState <- readMVar mvarTMState
-  let app = tmState ^. lensTMStateApp
-  win <- applicationGetActiveWindow app
-  dialog <- dialogNew
-  box <- dialogGetContentArea dialog
-  label <- labelNew (Just "There are still terminals running.  Are you sure you want to exit?")
-  containerAdd box label
-  widgetShow label
-  setWidgetMargin label 10
-  void $
-    dialogAddButton
-      dialog
-      "No, do NOT exit"
-      (fromIntegral (fromEnum ResponseTypeNo))
-  void $
-    dialogAddButton
-      dialog
-      "Yes, exit"
-      (fromIntegral (fromEnum ResponseTypeYes))
-  windowSetTransientFor dialog win
-  res <- dialogRun dialog
-  widgetDestroy dialog
-  pure $ toEnum (fromIntegral res)
+  where
+    -- Show the user a dialog telling them there are still terminals running and
+    -- asking if they really want to exit.
+    --
+    -- Return the user's resposne as a 'ResponseType'.
+    confirmationDialogForExit :: TMState' -> IO ResponseType
+    confirmationDialogForExit tmState = do
+      let app = tmState ^. lensTMStateApp
+      win <- applicationGetActiveWindow app
+      dialog <- dialogNew
+      box <- dialogGetContentArea dialog
+      label <-
+        labelNew $
+          Just
+            "There are still terminals running.  Are you sure you want to exit?"
+      containerAdd box label
+      widgetShow label
+      setWidgetMargin label 10
+      void $
+        dialogAddButton
+          dialog
+          "No, do NOT exit"
+          (fromIntegral (fromEnum ResponseTypeNo))
+      void $
+        dialogAddButton
+          dialog
+          "Yes, exit"
+          (fromIntegral (fromEnum ResponseTypeYes))
+      windowSetTransientFor dialog win
+      res <- dialogRun dialog
+      widgetDestroy dialog
+      pure $ toEnum (fromIntegral res)
 
 quit :: TMState -> IO ()
 quit mvarTMState = do
@@ -346,8 +353,13 @@ setupTermonad tmConfig app win builder = do
   applicationSetAccelsForAction app "app.closetab" ["<Shift><Ctrl>W"]
 
   quitAction <- simpleActionNew "quit" Nothing
-  void $ onSimpleActionActivate quitAction $ \_ ->
-    exit (quitOnResponse mvarTMState) mvarTMState
+  void $ onSimpleActionActivate quitAction $ \_ -> do
+    shouldExit <- askShouldExit mvarTMState
+    case shouldExit of
+      ResponseTypeYes -> do
+        setUserRequestedExit mvarTMState
+        quit mvarTMState
+      _ -> pure ()
   actionMapAddAction app quitAction
   applicationSetAccelsForAction app "app.quit" ["<Shift><Ctrl>Q"]
 
@@ -376,11 +388,35 @@ setupTermonad tmConfig app win builder = do
 
   windowSetTitle win "Termonad"
 
+  -- This event will happen if the user requests that the top-level Termonad
+  -- window be closed through their window manager. It will also happen
+  -- normally when the user tries to close Termonad through normal methods,
+  -- like clicking "Quit" or closing the last open terminal.
+  --
+  -- If you return 'True' from this callback, then Termonad will not exit.
+  -- If you return 'False' from this callback, then Termonad will continue to
+  -- exit.
+  --
+  -- Why is this needed?  Well, there are two different ways to close Termonad
+  -- that we have to deal with.  The first one is when the user tries to close
+  -- Termonad by clicking @Quit@ or using their window manager to kill Termonad.
+  -- In that case, Termonad should ask the user whether they really mean to quit,
+  -- even though there are still Terminals running.  This is a safety precaution.
+  -- This is the case of 'UserDidNotRequestExit'.
+  --
+  -- The other case is when the user closes the last open tab.  In this case,
+  -- Termonad should exit but it won't ask the user.  This is the case of
+  -- 'UserRequestedExit'
   void $ onWidgetDeleteEvent win $ \_ -> do
     userRequestedExit <- getUserRequestedExit mvarTMState
     case userRequestedExit of
       UserRequestedExit -> pure False
-      UserDidNotRequestExit -> exit stopOtherHandlers mvarTMState
+      UserDidNotRequestExit -> do
+        shouldExit <- askShouldExit mvarTMState
+        pure $
+          case shouldExit of
+            ResponseTypeYes -> False
+            _ -> True
   void $ onWidgetDestroy win $ quit mvarTMState
 
   widgetShowAll win
