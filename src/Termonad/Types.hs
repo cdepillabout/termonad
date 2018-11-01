@@ -25,10 +25,16 @@ import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 import Termonad.FocusList (FocusList, emptyFL, singletonFL, getFLFocusItem, focusListLen)
 import Termonad.Gtk (widgetEq)
 
+-- | A wrapper around a VTE 'Terminal'.  This also stores the process ID of the
+-- process running on this terminal, as well as a 'Unique' that can be used for
+-- comparing terminals.
 data TMTerm = TMTerm
   { term :: !Terminal
+    -- ^ The actual 'Terminal'.
   , pid :: !Int
+    -- ^ The process ID of the process running in 'term'.
   , unique :: !Unique
+    -- ^ A 'Unique' for comparing different 'TMTerm' for uniqueness.
   }
 
 instance Show TMTerm where
@@ -46,10 +52,16 @@ instance Show TMTerm where
       showsPrec (d + 1) (hashUnique unique) .
       showString "}"
 
+-- | A container that holds everything in a given terminal window.  The 'term'
+-- in the 'TMTerm' is inside the 'tmNotebookTabTermContainer' 'ScrolledWindow'.
+-- The notebook tab 'Label' is also available.
 data TMNotebookTab = TMNotebookTab
   { tmNotebookTabTermContainer :: !ScrolledWindow
+    -- ^ The 'ScrolledWindow' holding the VTE 'Terminal'.
   , tmNotebookTabTerm :: !TMTerm
+    -- ^ The 'Terminal' insidie the 'ScrolledWindow'.
   , tmNotebookTabLabel :: !Label
+    -- ^ The 'Label' holding the title of the 'Terminal' in the 'Notebook' tab.
   }
 
 instance Show TMNotebookTab where
@@ -67,9 +79,13 @@ instance Show TMNotebookTab where
       showString "(GI.GTK.Label)" .
       showString "}"
 
+-- | This holds the GTK 'Notebook' containing multiple tabs of 'Terminal's.  We
+-- keep a separate list of terminals in 'tmNotebookTabs'.
 data TMNotebook = TMNotebook
   { tmNotebook :: !Notebook
+    -- ^ This is the GTK 'Notebook' that holds multiple tabs of 'Terminal's.
   , tmNotebookTabs :: !(FocusList TMNotebookTab)
+    -- ^ A 'FocusList' containing references to each individual 'TMNotebookTab'.
   }
 
 instance Show TMNotebook where
