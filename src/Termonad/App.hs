@@ -4,7 +4,7 @@ module Termonad.App where
 import Termonad.Prelude
 
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
-import Control.Lens ((&), (.~), (^.), firstOf)
+import Control.Lens ((&), (.~), (^.))
 import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
 import GI.Gio
   ( ApplicationFlags(ApplicationFlagsFlagsNone)
@@ -46,7 +46,6 @@ import GI.Gtk
   , onNotebookPageReordered
   , onNotebookSwitchPage
   , onWidgetDeleteEvent
-  , onWidgetDestroy
   , setWidgetMargin
   , styleContextAddProviderForScreen
   , widgetDestroy
@@ -54,7 +53,6 @@ import GI.Gtk
   , widgetSetCanFocus
   , widgetShow
   , widgetShowAll
-  , windowClose
   , windowPresent
   , windowSetDefaultIconFromFile
   , windowSetTitle
@@ -70,8 +68,7 @@ import GI.Pango
   , fontDescriptionSetAbsoluteSize
   )
 import GI.Vte
-  ( Terminal
-  , terminalCopyClipboard
+  ( terminalCopyClipboard
   , terminalPasteClipboard
   )
 
@@ -86,10 +83,9 @@ import Termonad.Lenses
   , lensTMStateApp
   , lensTMStateConfig
   , lensTMStateNotebook
-  , lensTMStateUserReqExit
   , lensTerm
   )
-import Termonad.FocusList (findFL, moveFromToFL, updateFocusFL, focusItemGetter)
+import Termonad.FocusList (findFL, moveFromToFL, updateFocusFL)
 import Termonad.Gtk (appNew, objFromBuildUnsafe)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Term (createTerm, relabelTabs, termExitFocused, setShowTabs)
@@ -100,38 +96,13 @@ import Termonad.Types
   , TMNotebookTab
   , TMState
   , TMState'(TMState)
-  , UserRequestedExit(UserRequestedExit, UserDidNotRequestExit)
+  , getFocusedTermFromState
   , newEmptyTMState
   , tmNotebookTabTermContainer
   , tmNotebookTabs
   , tmStateNotebook
   )
 import Termonad.XML (interfaceText, menuText)
-
-getFocusedTermFromState :: TMState -> IO (Maybe Terminal)
-getFocusedTermFromState mvarTMState = do
-  withMVar
-    mvarTMState
-    ( pure .
-      firstOf
-        ( lensTMStateNotebook .
-          lensTMNotebookTabs .
-          focusItemGetter .
-          traverse .
-          lensTMNotebookTabTerm .
-          lensTerm
-        )
-    )
-
-setShouldExit :: TMState -> IO ()
-setShouldExit mvarTMState = do
-  modifyMVar_ mvarTMState $ \tmState -> do
-    pure $ tmState & lensTMStateUserReqExit .~ UserRequestedExit
-
-getUserRequestedExit :: TMState -> IO UserRequestedExit
-getUserRequestedExit mvarTMState = do
-  tmState <- readMVar mvarTMState
-  pure $ tmState ^. lensTMStateUserReqExit
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
@@ -270,24 +241,6 @@ askShouldExit mvarTMState = do
       widgetDestroy dialog
       pure $ toEnum (fromIntegral res)
 
--- | Quit the Termonad 'Application' and close the 'ApplicationWindow'.
---
--- If the 'ApplicationWindow' doesn't exist, then just call 'applicationQuit'
--- on the Termonad 'Application'.
---
--- If the 'ApplicationWindow' does exist, then call 'windowClose' on the
--- 'ApplicationWindow'.  This should cause the window destroy callback
--- to be called on the 'ApplicationWindow', which let's the user stop Termonad
--- from closing in some circumstances.
-quit :: TMState -> IO ()
-quit mvarTMState = do
-  tmState <- readMVar mvarTMState
-  let app = tmState ^. lensTMStateApp
-  maybeWin <- applicationGetActiveWindow app
-  case maybeWin of
-    Nothing -> applicationQuit app
-    Just win -> windowClose win
-
 forceQuit :: TMState -> IO ()
 forceQuit mvarTMState = do
   tmState <- readMVar mvarTMState
@@ -311,10 +264,9 @@ setupTermonad tmConfig app win builder = do
 
   void $ onNotebookPageRemoved note $ \_ _ -> do
     pages <- notebookGetNPages note
-    when (pages == 0) $ do
-      setShouldExit mvarTMState
-      quit mvarTMState
-    setShowTabs tmConfig note
+    if pages == 0
+      then forceQuit mvarTMState
+      else setShowTabs tmConfig note
 
   void $ onNotebookSwitchPage note $ \_ pageNum -> do
     maybeRes <- tryTakeMVar mvarTMState
@@ -370,11 +322,7 @@ setupTermonad tmConfig app win builder = do
   quitAction <- simpleActionNew "quit" Nothing
   void $ onSimpleActionActivate quitAction $ \_ -> do
     shouldExit <- askShouldExit mvarTMState
-    case shouldExit of
-      ResponseTypeYes -> do
-        setShouldExit mvarTMState
-        quit mvarTMState
-      _ -> pure ()
+    when (shouldExit == ResponseTypeYes) $ forceQuit mvarTMState
   actionMapAddAction app quitAction
   applicationSetAccelsForAction app "app.quit" ["<Shift><Ctrl>Q"]
 
@@ -423,17 +371,11 @@ setupTermonad tmConfig app win builder = do
   -- Termonad should exit but it won't ask the user.  This is the case of
   -- 'UserRequestedExit'
   void $ onWidgetDeleteEvent win $ \_ -> do
-    userRequestedExit <- getUserRequestedExit mvarTMState
-    case userRequestedExit of
-      UserRequestedExit -> pure False
-      UserDidNotRequestExit -> do
-        shouldExit <- askShouldExit mvarTMState
-        pure $
-          case shouldExit of
-            ResponseTypeYes -> False
-            _ -> True
-
-  void $ onWidgetDestroy win $ quit mvarTMState
+    shouldExit <- askShouldExit mvarTMState
+    pure $
+      case shouldExit of
+        ResponseTypeYes -> False
+        _ -> True
 
   widgetShowAll win
   widgetGrabFocus $ terminal ^. lensTerm

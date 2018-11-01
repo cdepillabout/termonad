@@ -100,24 +100,12 @@ instance Show TMNotebook where
       showsPrec (d + 1) tmNotebookTabs .
       showString "}"
 
-data UserRequestedExit
-  = UserRequestedExit
-  | UserDidNotRequestExit
-  deriving (Eq, Show)
-
 data TMState' = TMState
   { tmStateApp :: !Application
   , tmStateAppWin :: !ApplicationWindow
   , tmStateNotebook :: !TMNotebook
   , tmStateFontDesc :: !FontDescription
   , tmStateConfig :: !TMConfig
-  , tmStateUserReqExit :: !UserRequestedExit
-  -- ^ This signifies whether or not the user has requested that Termonad
-  -- exit by either closing all terminals or clicking the exit button.  If so,
-  -- 'tmStateUserReqExit' should have a value of 'UserRequestedExit'.  However,
-  -- if the window manager requested Termonad to exit (probably through the user
-  -- trying to close Termonad through their window manager), then this will be
-  -- set to 'UserDidNotRequestExit'.
   }
 
 instance Show TMState' where
@@ -139,9 +127,6 @@ instance Show TMState' where
       showString ", " .
       showString "tmStateConfig = " .
       showsPrec (d + 1) tmStateConfig .
-      showString ", " .
-      showString "tmStateUserReqExit = " .
-      showsPrec (d + 1) tmStateUserReqExit .
       showString "}"
 
 type TMState = MVar TMState'
@@ -166,6 +151,16 @@ newTMTerm :: Terminal -> Int -> IO TMTerm
 newTMTerm trm pd = do
   unq <- newUnique
   pure $ createTMTerm trm pd unq
+
+getFocusedTermFromState :: TMState -> IO (Maybe Terminal)
+getFocusedTermFromState mvarTMState =
+  withMVar mvarTMState go
+  where
+    go :: TMState' -> IO (Maybe Terminal)
+    go tmState = do
+      let maybeNotebookTab =
+            getFLFocusItem $ tmNotebookTabs $ tmStateNotebook tmState
+      pure $ fmap (term . tmNotebookTabTerm) maybeNotebookTab
 
 createTMNotebookTab :: Label -> ScrolledWindow -> TMTerm -> TMNotebookTab
 createTMNotebookTab tabLabel scrollWin trm =
@@ -204,7 +199,6 @@ newTMState tmConfig app appWin note fontDesc =
       , tmStateNotebook = note
       , tmStateFontDesc = fontDesc
       , tmStateConfig = tmConfig
-      , tmStateUserReqExit = UserDidNotRequestExit
       }
 
 newEmptyTMState :: TMConfig -> Application -> ApplicationWindow -> Notebook -> FontDescription -> IO TMState
@@ -216,7 +210,6 @@ newEmptyTMState tmConfig app appWin note fontDesc =
       , tmStateNotebook = createEmptyTMNotebook note
       , tmStateFontDesc = fontDesc
       , tmStateConfig = tmConfig
-      , tmStateUserReqExit = UserDidNotRequestExit
       }
 
 newTMStateSingleTerm ::
