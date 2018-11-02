@@ -57,6 +57,7 @@ library
                      , classy-prelude
                      , colour
                      , constraints
+                     , containers
                      , data-default
                      , directory >= 1.3.1.0
                      , distributive
@@ -75,7 +76,6 @@ library
                      , singletons
                      , xml-conduit
                      , xml-html-qq
-                     , containers
   default-language:    Haskell2010
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
   default-extensions:  DataKinds
