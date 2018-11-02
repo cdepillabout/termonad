@@ -9,8 +9,6 @@ packages:
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
     - gi-vte-2.91.19
-    - git: https://github.com/Grendel-Grendel-Grendel/ostree.git
-      commit: 03f885a01e4a025988770642dd4744ff85c32c29
 
 # Override default flag values for local packages and extra-deps
 flags: {}

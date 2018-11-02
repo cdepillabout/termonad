@@ -75,7 +75,6 @@ library
                      , singletons
                      , xml-conduit
                      , xml-html-qq
-                     , order-statistic-tree
                      , containers
   default-language:    Haskell2010
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
