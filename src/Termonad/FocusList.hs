@@ -83,16 +83,26 @@ instance MonoFoldable (FocusList a)
 
 instance MonoTraversable (FocusList a)
 
+-- | Given a 'Gen' for @a@, generate a valid 'FocusList'.
+genValidFL :: forall a. Gen a -> Gen (FocusList a)
+genValidFL genA = do
+  newFL <- genFL
+  if invariantFL newFL
+    then pure newFL
+    else error "genValidFL generated an invalid FocusList!  This should never happen!"
+  where
+    genFL :: Gen (FocusList a)
+    genFL = do
+      arbList <- liftArbitrary genA
+      case arbList of
+        [] -> pure emptyFL
+        (_:_) -> do
+          let listLen = length arbList
+          len <- choose (0, listLen - 1)
+          pure $ unsafeFLFromList (Focus len) arbList
+
 instance Arbitrary1 FocusList where
-  liftArbitrary :: Gen a -> Gen (FocusList a)
-  liftArbitrary genA = do
-    arbList <- liftArbitrary genA
-    case arbList of
-      [] -> pure emptyFL
-      (_:_) -> do
-        let listLen = length arbList
-        len <- choose (0, listLen - 1)
-        pure $ unsafeFLFromList (Focus len) arbList
+  liftArbitrary = genValidFL
 
 instance Arbitrary a => Arbitrary (FocusList a) where
   arbitrary = arbitrary1

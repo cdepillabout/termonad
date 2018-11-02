@@ -4,35 +4,29 @@ module Test.FocusList where
 
 import Termonad.Prelude
 
-import Test.QuickCheck (Arbitrary, Gen, arbitrary)
+import Data.GenValidity.Sequence ()
+import Test.QuickCheck (Gen)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 import Test.Tasty.Hspec (Spec, testSpec)
-import Test.Validity (GenInvalid, GenUnchecked(genUnchecked, shrinkUnchecked), GenValid(genValid), Validity(validate), check, eqSpec, genValidSpec)
+import Test.Validity (GenInvalid, GenUnchecked, GenValid(genValid), Validity(validate), check, eqSpec, genValidSpec)
 
-import Termonad.FocusList (Focus, FocusList, invariantFL)
+import Termonad.FocusList (Focus, FocusList, genValidFL, invariantFL)
 
 import Test.FocusList.Invariants (testInvariantsInFocusList)
 
-instance Arbitrary a => GenUnchecked (Seq a) where
-  genUnchecked :: Gen (Seq a)
-  genUnchecked = arbitrary
-
-  shrinkUnchecked :: Seq a -> [Seq a]
-  shrinkUnchecked = pure
-
 instance GenUnchecked Focus
 
-instance Arbitrary a => GenUnchecked (FocusList a)
+instance GenUnchecked a => GenUnchecked (FocusList a)
 
 instance Validity (FocusList a) where
   validate fl = check (invariantFL fl) "the FocusList has been constructed correctly"
 
-instance Arbitrary a => GenValid (FocusList a) where
+instance GenValid a => GenValid (FocusList a) where
   genValid :: Gen (FocusList a)
-  genValid = arbitrary
+  genValid = genValidFL genValid
 
-instance Arbitrary a => GenInvalid (FocusList a)
+instance GenInvalid a => GenInvalid (FocusList a)
 
 focusListTestsIO :: IO TestTree
 focusListTestsIO = do

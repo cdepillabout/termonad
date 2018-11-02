@@ -138,6 +138,7 @@ test-suite termonad-test
   other-modules:       Test.FocusList
                      , Test.FocusList.Invariants
   build-depends:       base
+                     , genvalidity-containers
                      , genvalidity-hspec
                      , hedgehog
                      , lens
