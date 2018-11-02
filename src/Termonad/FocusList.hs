@@ -114,9 +114,11 @@ instance Show a => Show (FocusList a) where
       showString " " .
       showsPrec 11 (toList focusList)
 
--- lensFocusListAt :: Int -> Lens' (FocusList a) (Maybe a)
--- lensFocusListAt i = lensFocusList . (ix i %~)
-
+-- | Return the length of a 'FocusList'.
+--
+-- >>> let Just fl = flFromList (Focus 2) ["hello", "bye", "parrot"]
+-- >>> lengthFL fl
+-- 3
 lengthFL :: FocusList a -> Int
 lengthFL = S.length . focusList
 
@@ -157,13 +159,20 @@ invariantFL fl =
         NoFocus -> len == 0
 
 -- | Unsafely create a 'FocusList'.  This does not check that the focus
--- actually exists in the list.
+-- actually exists in the list.  This is an internal function and should
+-- generally not be used.  It is only safe to use if you ALREADY know
+-- the 'Focus' is within the list.
 --
 -- >>> unsafeFLFromList (Focus 1) [0..2]
 -- FocusList (Focus 1) [0,1,2]
 --
 -- >>> unsafeFLFromList NoFocus []
 -- FocusList NoFocus []
+--
+-- This allows you create a 'FocusList' that does not pass 'invariantFL'.
+--
+-- >>> unsafeFLFromList (Focus 100) [0..2]
+-- FocusList (Focus 100) [0,1,2]
 unsafeFLFromList :: Focus -> [a] -> FocusList a
 unsafeFLFromList focus list =
   FocusList
