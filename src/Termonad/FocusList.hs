@@ -116,7 +116,7 @@ instance Show a => Show (FocusList a) where
 
 -- | Return the length of a 'FocusList'.
 --
--- >>> let Just fl = flFromList (Focus 2) ["hello", "bye", "parrot"]
+-- >>> let Just fl = fromListFL (Focus 2) ["hello", "bye", "parrot"]
 -- >>> lengthFL fl
 -- 3
 lengthFL :: FocusList a -> Int
@@ -185,27 +185,27 @@ focusItemGetter = to getFLFocusItem
 
 -- | Safely create a 'FocusList' from a list.
 --
--- >>> flFromList (Focus 1) ["cat","dog","goat"]
+-- >>> fromListFL (Focus 1) ["cat","dog","goat"]
 -- Just (FocusList (Focus 1) ["cat","dog","goat"])
 --
--- >>> flFromList NoFocus []
+-- >>> fromListFL NoFocus []
 -- Just (FocusList NoFocus [])
 --
 -- If the 'Focus' is out of range for the list, then 'Nothing' will be returned.
 --
--- >>> flFromList (Focus (-1)) ["cat","dog","goat"]
+-- >>> fromListFL (Focus (-1)) ["cat","dog","goat"]
 -- Nothing
 --
--- >>> flFromList (Focus 3) ["cat","dog","goat"]
+-- >>> fromListFL (Focus 3) ["cat","dog","goat"]
 -- Nothing
 --
--- >>> flFromList NoFocus ["cat","dog","goat"]
+-- >>> fromListFL NoFocus ["cat","dog","goat"]
 -- Nothing
-flFromList :: Focus -> [a] -> Maybe (FocusList a)
-flFromList NoFocus [] = Just emptyFL
-flFromList _ [] = Nothing
-flFromList NoFocus (_:_) = Nothing
-flFromList (Focus i) list =
+fromListFL :: Focus -> [a] -> Maybe (FocusList a)
+fromListFL NoFocus [] = Just emptyFL
+fromListFL _ [] = Nothing
+fromListFL NoFocus (_:_) = Nothing
+fromListFL (Focus i) list =
   let len = length list
   in
   if i < 0 || i >= len
@@ -272,7 +272,7 @@ appendFL fl a =
 
 -- | A combination of 'appendFL' and 'setFocusFL'.
 --
--- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "tree"]
+-- >>> let Just fl = fromListFL (Focus 1) ["hello", "bye", "tree"]
 -- >>> appendSetFocusFL fl "pie"
 -- FocusList (Focus 3) ["hello","bye","tree","pie"]
 --
@@ -459,19 +459,19 @@ removeFL i fl@FocusList{focusList = fls}
 
 -- | Find the index of the first element in the 'FocusList'.
 --
--- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "tree"]
+-- >>> let Just fl = fromListFL (Focus 1) ["hello", "bye", "tree"]
 -- >>> indexOfFL "hello" fl
 -- Just 0
 --
 -- If more than one element exists, then return the index of the first one.
 --
--- >>> let Just fl = flFromList (Focus 1) ["dog", "cat", "cat"]
+-- >>> let Just fl = fromListFL (Focus 1) ["dog", "cat", "cat"]
 -- >>> indexOfFL "cat" fl
 -- Just 1
 --
 -- If the element doesn't exist, then return 'Nothing'
 --
--- >>> let Just fl = flFromList (Focus 1) ["foo", "bar", "baz"]
+-- >>> let Just fl = fromListFL (Focus 1) ["foo", "bar", "baz"]
 -- >>> indexOfFL "hogehoge" fl
 -- Nothing
 indexOfFL :: Eq a => a -> FocusList a -> Maybe Int
@@ -480,25 +480,25 @@ indexOfFL a FocusList{focusList = fls} =
 
 -- | Delete an element from a 'FocusList'.
 --
--- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "tree"]
+-- >>> let Just fl = fromListFL (Focus 0) ["hello", "bye", "tree"]
 -- >>> deleteFL "bye" fl
 -- FocusList (Focus 0) ["hello","tree"]
 --
 -- The focus will be updated if an item before it is deleted.
 --
--- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "tree"]
+-- >>> let Just fl = fromListFL (Focus 1) ["hello", "bye", "tree"]
 -- >>> deleteFL "hello" fl
 -- FocusList (Focus 0) ["bye","tree"]
 --
 -- If there are multiple matching elements in the 'FocusList', remove them all.
 --
--- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "bye"]
+-- >>> let Just fl = fromListFL (Focus 0) ["hello", "bye", "bye"]
 -- >>> deleteFL "bye" fl
 -- FocusList (Focus 0) ["hello"]
 --
 -- If there are no matching elements, return the original 'FocusList'.
 --
--- >>> let Just fl = flFromList (Focus 2) ["hello", "good", "bye"]
+-- >>> let Just fl = fromListFL (Focus 2) ["hello", "good", "bye"]
 -- >>> deleteFL "frog" fl
 -- FocusList (Focus 2) ["hello","good","bye"]
 deleteFL
@@ -540,7 +540,7 @@ setFocusFL i fl
 
 -- | Update the 'Focus' for a 'FocusList' and get the new focused element.
 --
--- >>> updateFocusFL 1 =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
+-- >>> updateFocusFL 1 =<< fromListFL (Focus 2) ["hello","bye","dog","cat"]
 -- Just ("bye",FocusList (Focus 1) ["hello","bye","dog","cat"])
 --
 -- If the 'FocusList' is empty, then return 'Nothing'.
@@ -551,10 +551,10 @@ setFocusFL i fl
 -- If the new focus is less than 0, or greater than or equal to the length of
 -- the 'FocusList', then return 'Nothing'.
 --
--- >>> updateFocusFL (-1) =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
+-- >>> updateFocusFL (-1) =<< fromListFL (Focus 2) ["hello","bye","dog","cat"]
 -- Nothing
 --
--- >>> updateFocusFL 4 =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
+-- >>> updateFocusFL 4 =<< fromListFL (Focus 2) ["hello","bye","dog","cat"]
 -- Nothing
 updateFocusFL :: Int -> FocusList a -> Maybe (a, FocusList a)
 updateFocusFL i fl
@@ -570,19 +570,19 @@ updateFocusFL i fl
 
 -- | Find a value in a 'FocusList'.  Similar to @Data.List.'Data.List.find'@.
 --
--- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "tree"]
+-- >>> let Just fl = fromListFL (Focus 1) ["hello", "bye", "tree"]
 -- >>> findFL (\a -> a == "hello") fl
 -- Just "hello"
 --
 -- This will only find the first value.
 --
--- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "bye"]
+-- >>> let Just fl = fromListFL (Focus 0) ["hello", "bye", "bye"]
 -- >>> findFL (\a -> a == "bye") fl
 -- Just "bye"
 --
 -- If no values match the comparison, this will return 'Nothing'.
 --
--- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "parrot"]
+-- >>> let Just fl = fromListFL (Focus 1) ["hello", "bye", "parrot"]
 -- >>> findFL (\a -> a == "ball") fl
 -- Nothing
 findFL :: (a -> Bool) -> FocusList a -> Maybe (a)
@@ -594,31 +594,31 @@ findFL p fl =
 --
 -- The 'Focus' gets updated appropriately when moving items.
 --
--- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "parrot"]
+-- >>> let Just fl = fromListFL (Focus 1) ["hello", "bye", "parrot"]
 -- >>> moveFromToFL 0 1 fl
 -- Just (FocusList (Focus 0) ["bye","hello","parrot"])
 --
 -- The 'Focus' may not get updated if it is not involved.
 --
--- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "parrot"]
+-- >>> let Just fl = fromListFL (Focus 0) ["hello", "bye", "parrot"]
 -- >>> moveFromToFL 1 2 fl
 -- Just (FocusList (Focus 0) ["hello","parrot","bye"])
 --
 -- If the element with the 'Focus' is moved, then the 'Focus' will be updated appropriately.
 --
--- >>> let Just fl = flFromList (Focus 2) ["hello", "bye", "parrot"]
+-- >>> let Just fl = fromListFL (Focus 2) ["hello", "bye", "parrot"]
 -- >>> moveFromToFL 2 0 fl
 -- Just (FocusList (Focus 0) ["parrot","hello","bye"])
 --
 -- If the index of the item to move is out bounds, then 'Nothing' will be returned.
 --
--- >>> let Just fl = flFromList (Focus 2) ["hello", "bye", "parrot"]
+-- >>> let Just fl = fromListFL (Focus 2) ["hello", "bye", "parrot"]
 -- >>> moveFromToFL 3 0 fl
 -- Nothing
 --
 -- If the new index is out of bounds, then 'Nothing' wil be returned.
 --
--- >>> let Just fl = flFromList (Focus 2) ["hello", "bye", "parrot"]
+-- >>> let Just fl = fromListFL (Focus 2) ["hello", "bye", "parrot"]
 -- >>> moveFromToFL 1 (-1) fl
 -- Nothing
 moveFromToFL
