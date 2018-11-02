@@ -55,7 +55,7 @@ unsafeGetFocus (Focus i) = i
 data FocusList a = FocusList
   { focusListFocus :: !Focus
   , focusList :: !(S.Seq  a)
-  } deriving (Eq, Generic)
+  } deriving (Eq, Functor, Generic)
 
 $(makeLensesFor
     [ ("focusListFocus", "lensFocusListFocus")
@@ -63,10 +63,6 @@ $(makeLensesFor
     ]
     ''FocusList
  )
-
-instance Functor FocusList where
-  fmap :: (a -> b) -> FocusList a -> FocusList b
-  fmap f (FocusList focus fls) = FocusList focus (fmap f fls)
 
 instance Foldable FocusList where
   foldr f b (FocusList _ fls) = Foldable.foldr f b fls
@@ -584,7 +580,6 @@ findFL :: (a -> Bool) -> FocusList a -> Maybe (a)
 findFL p fl =
   let fls = fl ^. lensFocusList
   in find p fls
-
 
 -- | Move an existing item in a 'FocusList' to a new index.
 --
