@@ -17,11 +17,20 @@ import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 -- >>> :set -XFlexibleContexts
 -- >>> :set -XScopedTypeVariables
 
+-- | A 'Focus' for the 'FocusList'.
+--
+-- The 'Focus' is either 'NoFocus' (if the 'Focuslist' is empty), or 'Focus'
+-- 'Int' to represent focusing on a specific element of the 'FocusList'.
 data Focus = Focus {-# UNPACK #-} !Int | NoFocus deriving (Eq, Generic, Read, Show)
 
 -- | 'NoFocus' is always less than 'Focus'.
 --
 -- prop> NoFocus < Focus a
+--
+-- The ordering of 'Focus' depends on the ordering of the integer contained
+-- inside.
+--
+-- prop> (a < b) ==> (Focus a < Focus b)
 instance Ord Focus where
   compare :: Focus -> Focus -> Ordering
   compare NoFocus NoFocus = EQ
@@ -123,6 +132,19 @@ lengthFL :: FocusList a -> Int
 lengthFL = S.length . focusList
 
 -- | This is an invariant that the 'FocusList' must always protect.
+--
+-- The functions in this module should generally protect this invariant.  If
+-- they do not, it is generally a bug.
+--
+-- The invariants are as follows:
+--
+-- - The 'Focus' in a 'FocusList' can never be negative.
+--
+-- - If there is a 'Focus', then it actually exists in
+--   the 'FocusList'.
+--
+-- - There needs to be a 'Focus' if the length of the
+--   'FocusList' is greater than 0.
 invariantFL :: FocusList a -> Bool
 invariantFL fl =
   invariantFocusNotNeg &&
@@ -179,6 +201,9 @@ invariantFL fl =
 --
 -- >>> unsafeFromListFL (Focus 100) [0..2]
 -- FocusList (Focus 100) [0,1,2]
+--
+-- If 'fromListFL' returns a 'Just' 'FocusList', then 'unsafeFromListFL' should
+-- return the same 'FocusList'.
 unsafeFromListFL :: Focus -> [a] -> FocusList a
 unsafeFromListFL focus list =
   FocusList
@@ -315,6 +340,8 @@ prependFL a fl@FocusList{ focusListFocus = focus, focusList = fls}  =
 
 -- | Unsafely get the 'Focus' from a 'FocusList'.  If the 'Focus' is
 -- 'NoFocus', this function returns 'error'.
+--
+-- Generally, 'getFocusFL' should be used instead of this function.
 unsafeGetFLFocus :: FocusList a -> Int
 unsafeGetFLFocus fl =
   let focus = fl ^. lensFocusListFocus
