@@ -103,7 +103,7 @@ generateAction valGen fl = do
       choice generators
 
 performAction :: Eq a => FocusList a -> Action a -> Maybe (FocusList a)
-performAction fl (InsertFL key val) = insertFL key val fl
+performAction fl (InsertFL key val) = Just $ insertFL key val fl
 performAction fl (RemoveFL keyToRemove) = removeFL keyToRemove fl
 performAction fl (DeleteFL valToDelete) = Just $ deleteFL valToDelete fl
 

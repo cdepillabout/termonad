@@ -168,7 +168,7 @@ invariantFL fl =
 --
 -- >>> let fl = unsafeFLFromList (Focus 1) [0..2]
 -- >>> debugFL fl
--- "FocusList {focusListFocus = Focus 1, focusListLen = 3, focusList = fromList [(0,0),(1,1),(2,2)]}"
+-- "FocusList {focusListFocus = Focus 1, focusListLen = 3, focusList = fromList [0,1,2]}"
 --
 -- >>> let fl = unsafeFLFromList NoFocus []
 -- >>> debugFL fl
@@ -186,10 +186,10 @@ focusItemGetter = to getFLFocusItem
 -- | Safely create a 'FocusList' from a list.
 --
 -- >>> flFromList (Focus 1) ["cat","dog","goat"]
--- Just (FocusList (Focus 1) ["cat","dog","goat"])
+-- Just (FocusList (Focus 1) (fromList ["cat","dog","goat"]))
 --
 -- >>> flFromList NoFocus []
--- Just (FocusList NoFocus [])
+-- Just (FocusList NoFocus (fromList []))
 --
 -- If the 'Focus' is out of range for the list, then 'Nothing' will be returned.
 --
@@ -220,7 +220,7 @@ flFromList (Focus i) list =
 -- | Create a 'FocusList' with a single element.
 --
 -- >>> singletonFL "hello"
--- FocusList (Focus 0) ["hello"]
+-- FocusList (Focus 0) (fromList ["hello"])
 singletonFL :: a -> FocusList a
 singletonFL a =
   FocusList
@@ -231,7 +231,7 @@ singletonFL a =
 -- | Create an empty 'FocusList' without a 'Focus'.
 --
 -- >>> emptyFL
--- FocusList NoFocus []
+-- FocusList NoFocus (fromList [])
 emptyFL :: FocusList a
 emptyFL =
   FocusList
@@ -256,10 +256,10 @@ isEmptyFL fl = (lengthFL fl) == 0
 -- This can be thought of as a \"snoc\" operation.
 --
 -- >>> appendFL emptyFL "hello"
--- FocusList (Focus 0) ["hello"]
+-- FocusList (Focus 0) (fromList ["hello"])
 --
 -- >>> appendFL (singletonFL "hello") "bye"
--- FocusList (Focus 0) ["hello","bye"]
+-- FocusList (Focus 0) (fromList ["hello","bye"])
 --
 -- Appending a value to an empty 'FocusList' is the same as using 'singletonFL'.
 --
@@ -268,13 +268,13 @@ appendFL :: FocusList a -> a -> FocusList a
 appendFL fl a =
   if isEmptyFL fl
     then singletonFL a
-    else unsafeInsertNewFL (length $ focusList fl) a fl
+    else insertFL (length $ focusList fl) a fl
 
 -- | A combination of 'appendFL' and 'setFocusFL'.
 --
 -- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "tree"]
 -- >>> appendSetFocusFL fl "pie"
--- FocusList (Focus 3) ["hello","bye","tree","pie"]
+-- FocusList (Focus 3) (fromList ["hello","bye","tree","pie"])
 --
 -- prop> (appendSetFocusFL fl a) ^. lensFocusListFocus /= fl ^. lensFocusListFocus
 appendSetFocusFL :: FocusList a -> a -> FocusList a
@@ -290,22 +290,22 @@ appendSetFocusFL fl a =
 -- This can be thought of as a \"cons\" operation.
 --
 -- >>> prependFL "hello" emptyFL
--- FocusList (Focus 0) ["hello"]
+-- FocusList (Focus 0) (fromList ["hello"])
 --
 -- The focus will be updated when prepending:
 --
 -- >>> prependFL "bye" (singletonFL "hello")
--- FocusList (Focus 1) ["bye","hello"]
+-- FocusList (Focus 1) (fromList ["bye","hello"])
 --
 -- Prepending to a 'FocusList' will always update the 'Focus':
 --
 -- prop> (fl ^. lensFocusListFocus) < (prependFL a fl ^. lensFocusListFocus)
 prependFL :: a -> FocusList a -> FocusList a
-prependFL e fl@FocusList{ focusListFocus = focus, focusList = fls}  =
+prependFL a fl@FocusList{ focusListFocus = focus, focusList = fls}  =
   case focus of
-    NoFocus -> singletonFL e
+    NoFocus -> singletonFL a
     Focus i   -> fl {focusListFocus = Focus (i+1)
-                    , focusList = e S.<| fls}
+                    , focusList = a S.<| fls}
 
 
 -- | Unsafely get the 'Focus' from a 'FocusList'.  If the 'Focus' is
@@ -334,7 +334,7 @@ unsafeGetFLFocusItem fl =
           error $
             "unsafeGetFLFocusItem: internal error, i (" <>
             show i <>
-            ") doesnt exist in intmap"
+            ") doesnt exist in sequence"
         Just a -> a
 
 getFLFocusItem :: FocusList a -> Maybe a
@@ -351,37 +351,8 @@ getFLFocusItem fl =
           error $
             "getFLFocusItem: internal error, i (" <>
             show i <>
-            ") doesnt exist in intmap"
+            ") doesnt exist in sequence"
         Just a -> Just a
-
--- | Unsafely insert a new @a@ in a 'FocusList'.  This sets the 'Int' value to
--- @a@.  The length of the 'FocusList' will be increased by 1.  The
--- 'FocusList's 'Focus' is not changed.
---
--- If there is some value in the 'FocusList' already at the 'Int', then it will
--- be overwritten.  Also, the 'Int' is not checked to make sure it is above 0.
---
--- This function is meant to be used after 'unsafeShiftUpFrom'.
---
--- >>> let fl = unsafeShiftUpFrom 2 $ unsafeFLFromList (Focus 1) [0,1,200]
--- >>> debugFL $ unsafeInsertNewFL 2 100 fl
--- "FocusList {focusListFocus = Focus 1, focusListLen = 4, focusList = fromList [(0,0),(1,1),(2,100),(3,200)]}"
---
--- >>> let fl = unsafeFLFromList NoFocus []
--- >>> debugFL $ unsafeInsertNewFL 0 100 fl
--- "FocusList {focusListFocus = NoFocus, focusListLen = 1, focusList = fromList [(0,100)]}"
-unsafeInsertNewFL :: Int -> a -> FocusList a -> FocusList a
-unsafeInsertNewFL i a fl =
-  let fls = focusList fl
-  in
-    fl {focusList = S.insertAt i a fls}
--- | This is an unsafe lookup function.  This assumes that the 'Int' exists in
--- the 'IntMap'.
-unsafeLookup :: Int -> IntMap a -> a
-unsafeLookup i intmap =
-  case lookup i intmap of
-    Nothing -> error $ "unsafeLookup: key " <> show i <> " not found in intmap"
-    Just a -> a
 
 lookupFL :: Int -> FocusList a -> Maybe a
 lookupFL i fl = S.lookup i (fl ^. lensFocusList)
@@ -390,68 +361,36 @@ lookupFL i fl = S.lookup i (fl ^. lensFocusList)
 -- changed appropriately.
 --
 -- >>> insertFL 0 "hello" emptyFL
--- Just (FocusList (Focus 0) ["hello"])
+-- FocusList (Focus 0) (fromList ["hello"])
 --
 -- >>> insertFL 0 "hello" (singletonFL "bye")
--- Just (FocusList (Focus 1) ["hello","bye"])
+-- FocusList (Focus 1) (fromList ["hello","bye"])
 --
 -- >>> insertFL 1 "hello" (singletonFL "bye")
--- Just (FocusList (Focus 0) ["bye","hello"])
+-- FocusList (Focus 0) (fromList ["bye","hello"])
 --
--- This returns 'Nothing' if the index at which to insert the new value is
--- either less than 0 or greater than the length of the list.
+-- Behaves like Data.Sequence.InsertAt, if the index is out of bounds, it will be
+-- inserted at the nearest available index
 --
 -- >>> insertFL 100 "hello" emptyFL
--- Nothing
+-- FocusList (Focus 0) (fromList ["hello"])
 --
 -- >>> insertFL 100 "bye" (singletonFL "hello")
--- Nothing
+-- FocusList (Focus 0) (fromList ["hello","bye"])
 --
 -- >>> insertFL (-1) "bye" (singletonFL "hello")
--- Nothing
+-- FocusList (Focus 1) (fromList ["bye","hello"])
 insertFL
   :: Int  -- ^ The index at which to insert the value.
   -> a
   -> FocusList a
-  -> Maybe (FocusList a)
-insertFL _ a FocusList {focusListFocus = NoFocus} = Just $ singletonFL a
+  -> FocusList a
+insertFL _ a FocusList {focusListFocus = NoFocus} = singletonFL a
 insertFL i a fl@FocusList{focusListFocus = Focus focus, focusList = fls} =
-  if i >= 0
-  then if i < focus
-       then Just fl {focusList = S.insertAt i a fls}
-       else Just fl {focusList = S.insertAt i a fls,
-                     focusListFocus = Focus $ focus + 1}
-  else Nothing
--- | Unsafely remove a value from a 'FocusList'.  It effectively leaves a hole
--- inside the 'FocusList'.  It updates the length of the 'FocusList'.
---
--- This function does not check that a value actually exists in the
--- 'FocusList'.  It also does not update the 'Focus'.
---
--- This function does update the length of the 'FocusList'.
---
--- >>> debugFL $ unsafeRemove 1 $ unsafeFLFromList (Focus 0) [0..2]
--- "FocusList {focusListFocus = Focus 0, focusListLen = 2, focusList = fromList [(0,0),(2,2)]}"
---
--- >>> debugFL $ unsafeRemove 0 $ unsafeFLFromList (Focus 0) [0..2]
--- "FocusList {focusListFocus = Focus 0, focusListLen = 2, focusList = fromList [(1,1),(2,2)]}"
---
--- Trying to remove the last element is completely safe (unless, of course, it
--- is the 'Focus'):
---
--- >>> debugFL $ unsafeRemove 2 $ unsafeFLFromList (Focus 2) [0..2]
--- "FocusList {focusListFocus = Focus 2, focusListLen = 2, focusList = fromList [(0,0),(1,1)]}"
---
--- If this function is passed an empty 'FocusList', it will make the length -1.
---
--- >>> debugFL $ unsafeRemove 0 emptyFL
--- "FocusList {focusListFocus = NoFocus, focusListLen = -1, focusList = fromList []}"
-unsafeRemove
-  :: Int
-  -> FocusList a
-  -> FocusList a
-unsafeRemove i fl@FocusList{focusList = fls} =
-  fl {focusList = S.deleteAt i fls}
+  if i > focus
+  then fl {focusList = S.insertAt i a fls}
+  else fl {focusList = S.insertAt i a fls,
+           focusListFocus = Focus $ focus + 1}
 
 -- | Remove an element from a 'FocusList'.
 --
@@ -463,27 +402,27 @@ unsafeRemove i fl@FocusList{focusList = fls} =
 --
 -- >>> let focusList = unsafeFLFromList (Focus 1) ["cat","goat","dog","hello"]
 -- >>> removeFL 2 focusList
--- Just (FocusList (Focus 1) ["cat","goat","hello"])
+-- Just (FocusList (Focus 1) (fromList ["cat","goat","hello"]))
 --
 -- If the 'Focus' is on index 2 and we have removed index 1, then the 'Focus'
 -- will be moved back one element to set to index 1.
 --
 -- >>> let focusList = unsafeFLFromList (Focus 2) ["cat","goat","dog","hello"]
 -- >>> removeFL 1 focusList
--- Just (FocusList (Focus 1) ["cat","dog","hello"])
+-- Just (FocusList (Focus 1) (fromList ["cat","dog","hello"]))
 --
 -- If we remove the 'Focus', then the next item is set to have the 'Focus'.
 --
 -- >>> let focusList = unsafeFLFromList (Focus 0) ["cat","goat","dog","hello"]
 -- >>> removeFL 0 focusList
--- Just (FocusList (Focus 0) ["goat","dog","hello"])
+-- Just (FocusList (Focus 0) (fromList ["goat","dog","hello"]))
 --
 -- If the element to remove is the only element in the list, then the 'Focus'
 -- will be set to 'NoFocus'.
 --
 -- >>> let focusList = unsafeFLFromList (Focus 0) ["hello"]
 -- >>> removeFL 0 focusList
--- Just (FocusList NoFocus [])
+-- Just (FocusList NoFocus (fromList []))
 --
 -- If the 'Int' for the index to remove is either less than 0 or greater then
 -- the length of the list, then 'Nothing' is returned.
@@ -544,25 +483,25 @@ indexOfFL a FocusList{focusList = fls} =
 --
 -- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "tree"]
 -- >>> deleteFL "bye" fl
--- FocusList (Focus 0) ["hello","tree"]
+-- FocusList (Focus 0) (fromList ["hello","tree"])
 --
 -- The focus will be updated if an item before it is deleted.
 --
 -- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "tree"]
 -- >>> deleteFL "hello" fl
--- FocusList (Focus 0) ["bye","tree"]
+-- FocusList (Focus 0) (fromList ["bye","tree"])
 --
 -- If there are multiple matching elements in the 'FocusList', remove them all.
 --
 -- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "bye"]
 -- >>> deleteFL "bye" fl
--- FocusList (Focus 0) ["hello"]
+-- FocusList (Focus 0) (fromList ["hello"])
 --
 -- If there are no matching elements, return the original 'FocusList'.
 --
 -- >>> let Just fl = flFromList (Focus 2) ["hello", "good", "bye"]
 -- >>> deleteFL "frog" fl
--- FocusList (Focus 2) ["hello","good","bye"]
+-- FocusList (Focus 2) (fromList ["hello","good","bye"])
 deleteFL
   :: forall a.
      (Eq a)
@@ -603,7 +542,7 @@ setFocusFL i fl
 -- | Update the 'Focus' for a 'FocusList' and get the new focused element.
 --
 -- >>> updateFocusFL 1 =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
--- Just ("bye",FocusList (Focus 1) ["hello","bye","dog","cat"])
+-- Just ("bye",FocusList (Focus 1) (fromList ["hello","bye","dog","cat"]))
 --
 -- If the 'FocusList' is empty, then return 'Nothing'.
 --
@@ -633,19 +572,19 @@ updateFocusFL i fl
 -- | Find a value in a 'FocusList'.  Similar to @Data.List.'Data.List.find'@.
 --
 -- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "tree"]
--- >>> findFL (\_ a -> a == "hello") fl
--- Just (0,"hello")
+-- >>> findFL (\a -> a == "hello") fl
+-- Just "hello"
 --
 -- This will only find the first value.
 --
 -- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "bye"]
--- >>> findFL (\_ a -> a == "bye") fl
--- Just (1,"bye")
+-- >>> findFL (\a -> a == "bye") fl
+-- Just "bye"
 --
 -- If no values match the comparison, this will return 'Nothing'.
 --
 -- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "parrot"]
--- >>> findFL (\_ a -> a == "ball") fl
+-- >>> findFL (\a -> a == "ball") fl
 -- Nothing
 findFL :: (a -> Bool) -> FocusList a -> Maybe (a)
 findFL p fl =
@@ -659,29 +598,29 @@ findFL p fl =
 --
 -- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "parrot"]
 -- >>> moveFromToFL 0 1 fl
--- Just (FocusList (Focus 0) ["bye","hello","parrot"])
+-- Just (FocusList (Focus 0) (fromList ["bye","hello","parrot"]))
 --
 -- The 'Focus' may not get updated if it is not involved.
 --
 -- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "parrot"]
 -- >>> moveFromToFL 1 2 fl
--- Just (FocusList (Focus 0) ["hello","parrot","bye"])
+-- Just (FocusList (Focus 0) (fromList ["hello","parrot","bye"]))
 --
 -- If the element with the 'Focus' is moved, then the 'Focus' will be updated appropriately.
 --
 -- >>> let Just fl = flFromList (Focus 2) ["hello", "bye", "parrot"]
 -- >>> moveFromToFL 2 0 fl
--- Just (FocusList (Focus 0) ["parrot","hello","bye"])
+-- Just (FocusList (Focus 0) (fromList ["parrot","hello","bye"]))
 --
 -- If the index of the item to move is out bounds, then 'Nothing' will be returned.
 --
--- >>> let Just fl = flFromList (Focus 2) ["hello", "bye", "parrot"]
+-- >>> let Just fl = flFromList (Focus 2) (fromList ["hello", "bye", "parrot"])
 -- >>> moveFromToFL 3 0 fl
 -- Nothing
 --
 -- If the new index is out of bounds, then 'Nothing' wil be returned.
 --
--- >>> let Just fl = flFromList (Focus 2) ["hello", "bye", "parrot"]
+-- >>> let Just fl = flFromList (Focus 2) (fromList ["hello", "bye", "parrot"])
 -- >>> moveFromToFL 1 (-1) fl
 -- Nothing
 moveFromToFL
@@ -701,9 +640,7 @@ moveFromToFL oldPos newPos fl
         case removeFL oldPos fl of
           Nothing -> error "moveFromToFL should have been able to remove old position"
           Just flAfterRemove ->
-            case insertFL newPos item flAfterRemove of
-              Nothing -> error "moveFromToFL should have been able to reinsert the item"
-              Just flAfterInsert ->
+            let flAfterInsert = insertFL newPos item flAfterRemove in
                 if Focus oldPos == oldFocus
                   then
                     case setFocusFL newPos flAfterInsert of
