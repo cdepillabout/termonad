@@ -95,7 +95,7 @@ genValidFL genA = do
         (_:_) -> do
           let listLen = length arbList
           len <- choose (0, listLen - 1)
-          pure $ unsafeFLFromList (Focus len) arbList
+          pure $ unsafeFromListFL (Focus len) arbList
 
 instance Arbitrary1 FocusList where
   liftArbitrary = genValidFL
@@ -163,18 +163,24 @@ invariantFL fl =
 -- generally not be used.  It is only safe to use if you ALREADY know
 -- the 'Focus' is within the list.
 --
--- >>> unsafeFLFromList (Focus 1) [0..2]
+-- Instead, you should generally use 'fromListFL'.
+--
+-- The following is an example of using 'unsafeFromListFL' correctly.
+--
+-- >>> unsafeFromListFL (Focus 1) [0..2]
 -- FocusList (Focus 1) [0,1,2]
 --
--- >>> unsafeFLFromList NoFocus []
+-- >>> unsafeFromListFL NoFocus []
 -- FocusList NoFocus []
 --
--- This allows you create a 'FocusList' that does not pass 'invariantFL'.
+-- 'unsafeFromListFL' can also be used uncorrectly.  The following is an
+-- example of 'unsafeFromListFL' allowing you to create a 'FocusList' that does
+-- not pass 'invariantFL'.
 --
--- >>> unsafeFLFromList (Focus 100) [0..2]
+-- >>> unsafeFromListFL (Focus 100) [0..2]
 -- FocusList (Focus 100) [0,1,2]
-unsafeFLFromList :: Focus -> [a] -> FocusList a
-unsafeFLFromList focus list =
+unsafeFromListFL :: Focus -> [a] -> FocusList a
+unsafeFromListFL focus list =
   FocusList
     { focusListFocus = focus
     , focusList = S.fromList list
@@ -399,38 +405,38 @@ insertFL i a fl@FocusList{focusListFocus = Focus focus, focusList = fls} =
 -- For example, if the 'Focus' is on index 1, and we have removed index 2, then
 -- the focus is not affected, so it is not changed.
 --
--- >>> let focusList = unsafeFLFromList (Focus 1) ["cat","goat","dog","hello"]
+-- >>> let focusList = unsafeFromListFL (Focus 1) ["cat","goat","dog","hello"]
 -- >>> removeFL 2 focusList
 -- Just (FocusList (Focus 1) ["cat","goat","hello"])
 --
 -- If the 'Focus' is on index 2 and we have removed index 1, then the 'Focus'
 -- will be moved back one element to set to index 1.
 --
--- >>> let focusList = unsafeFLFromList (Focus 2) ["cat","goat","dog","hello"]
+-- >>> let focusList = unsafeFromListFL (Focus 2) ["cat","goat","dog","hello"]
 -- >>> removeFL 1 focusList
 -- Just (FocusList (Focus 1) ["cat","dog","hello"])
 --
 -- If we remove the 'Focus', then the next item is set to have the 'Focus'.
 --
--- >>> let focusList = unsafeFLFromList (Focus 0) ["cat","goat","dog","hello"]
+-- >>> let focusList = unsafeFromListFL (Focus 0) ["cat","goat","dog","hello"]
 -- >>> removeFL 0 focusList
 -- Just (FocusList (Focus 0) ["goat","dog","hello"])
 --
 -- If the element to remove is the only element in the list, then the 'Focus'
 -- will be set to 'NoFocus'.
 --
--- >>> let focusList = unsafeFLFromList (Focus 0) ["hello"]
+-- >>> let focusList = unsafeFromListFL (Focus 0) ["hello"]
 -- >>> removeFL 0 focusList
 -- Just (FocusList NoFocus [])
 --
 -- If the 'Int' for the index to remove is either less than 0 or greater then
 -- the length of the list, then 'Nothing' is returned.
 --
--- >>> let focusList = unsafeFLFromList (Focus 0) ["hello"]
+-- >>> let focusList = unsafeFromListFL (Focus 0) ["hello"]
 -- >>> removeFL (-1) focusList
 -- Nothing
 --
--- >>> let focusList = unsafeFLFromList (Focus 1) ["hello","bye","cat"]
+-- >>> let focusList = unsafeFromListFL (Focus 1) ["hello","bye","cat"]
 -- >>> removeFL 3 focusList
 -- Nothing
 --
