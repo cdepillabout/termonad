@@ -22,7 +22,7 @@ import GI.Vte (Terminal, CursorBlinkMode(CursorBlinkModeOn))
 import Text.Pretty.Simple (pPrint)
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
-import Termonad.FocusList (FocusList, emptyFL, singletonFL, getFLFocusItem, lengthFL)
+import Termonad.FocusList (FocusList, emptyFL, singletonFL, getFocusItemFL, lengthFL)
 import Termonad.Gtk (widgetEq)
 
 -- | A wrapper around a VTE 'Terminal'.  This also stores the process ID of the
@@ -159,7 +159,7 @@ getFocusedTermFromState mvarTMState =
     go :: TMState' -> IO (Maybe Terminal)
     go tmState = do
       let maybeNotebookTab =
-            getFLFocusItem $ tmNotebookTabs $ tmStateNotebook tmState
+            getFocusItemFL $ tmNotebookTabs $ tmStateNotebook tmState
       pure $ fmap (term . tmNotebookTabTerm) maybeNotebookTab
 
 createTMNotebookTab :: Label -> ScrolledWindow -> TMTerm -> TMNotebookTab
@@ -458,7 +458,7 @@ invariantTMState' tmState =
       maybeWidgetFromNote <- notebookGetNthPage tmNote index32
       let focusList = tmNotebookTabs $ tmStateNotebook tmState
           maybeScrollWinFromFL =
-            fmap tmNotebookTabTermContainer $ getFLFocusItem $ focusList
+            fmap tmNotebookTabTermContainer $ getFocusItemFL $ focusList
           idx = fromIntegral index32
       case (maybeWidgetFromNote, maybeScrollWinFromFL) of
         (Nothing, Nothing) -> pure Nothing

@@ -212,7 +212,7 @@ unsafeFromListFL focus list =
     }
 
 focusItemGetter :: Getter (FocusList a) (Maybe a)
-focusItemGetter = to getFLFocusItem
+focusItemGetter = to getFocusItemFL
 
 -- | Safely create a 'FocusList' from a list.
 --
@@ -313,6 +313,8 @@ appendFL fl a =
 -- >>> appendSetFocusFL fl "pie"
 -- FocusList (Focus 3) ["hello","bye","tree","pie"]
 --
+-- The 'Focus' will always be updated after calling 'appendSetFocusFL'.
+--
 -- prop> (appendSetFocusFL fl a) ^. lensFocusListFocus /= fl ^. lensFocusListFocus
 appendSetFocusFL :: FocusList a -> a -> FocusList a
 appendSetFocusFL fl a =
@@ -350,13 +352,24 @@ prependFL a fl@FocusList{ focusListFocus = focus, focusList = fls}  =
 -- | Unsafely get the 'Focus' from a 'FocusList'.  If the 'Focus' is
 -- 'NoFocus', this function returns 'error'.
 --
+-- This function is only safe if you already have knowledge that
+-- the 'FocusList' has a 'Focus'.
+--
 -- Generally, 'getFocusFL' should be used instead of this function.
-unsafeGetFLFocus :: FocusList a -> Int
-unsafeGetFLFocus fl =
+--
+-- >>> let Just fl = fromListFL (Focus 1) [0..9]
+-- >>> unsafeGetFocusFL fl
+-- 1
+--
+-- >>> unsafeGetFocusFL emptyFL
+-- *** Exception: ...
+-- ...
+unsafeGetFocusFL :: FocusList a -> Int
+unsafeGetFocusFL fl =
   let focus = fl ^. lensFocusListFocus
   in
   case focus of
-    NoFocus -> error "unsafeGetFLFocus: the focus list doesn't have a focus"
+    NoFocus -> error "unsafeGetFocusFL: the focus list doesn't have a focus"
     Focus i -> i
 
 -- | Return 'True' if the 'Focus' in a 'FocusList' exists.
@@ -387,25 +400,38 @@ getFocusFL FocusList{focusListFocus} = focusListFocus
 
 -- | Unsafely get the value of the 'Focus' from a 'FocusList'.  If the 'Focus' is
 -- 'NoFocus', this function returns 'error'.
-unsafeGetFLFocusItem :: FocusList a -> a
-unsafeGetFLFocusItem fl =
+--
+-- This function is only safe if you already have knowledge that the 'FocusList'
+-- has a 'Focus'.
+--
+-- Generally, 'getFocusItemFL' should be used instead of this function.
+--
+-- >>> let Just fl = fromListFL (Focus 0) ['a'..'c']
+-- >>> unsafeGetFocusItemFL fl
+-- 'a'
+--
+-- >>> unsafeGetFocusFL emptyFL
+-- *** Exception: ...
+-- ...
+unsafeGetFocusItemFL :: FocusList a -> a
+unsafeGetFocusItemFL fl =
   let focus = fl ^. lensFocusListFocus
   in
   case focus of
-    NoFocus -> error "unsafeGetFLFocusItem: the focus list doesn't have a focus"
+    NoFocus -> error "unsafeGetFocusItemFL: the focus list doesn't have a focus"
     Focus i ->
-      let fls = fl ^. lensFocusList --fls = focus list sequence
+      let fls = fl ^. lensFocusList
       in
       case S.lookup i fls of
         Nothing ->
           error $
-            "unsafeGetFLFocusItem: internal error, i (" <>
+            "unsafeGetFocusItemFL: internal error, i (" <>
             show i <>
             ") doesnt exist in sequence"
         Just a -> a
 
-getFLFocusItem :: FocusList a -> Maybe a
-getFLFocusItem fl =
+getFocusItemFL :: FocusList a -> Maybe a
+getFocusItemFL fl =
   let focus = fl ^. lensFocusListFocus
   in
   case focus of
@@ -416,7 +442,7 @@ getFLFocusItem fl =
       case S.lookup i fls of
         Nothing ->
           error $
-            "getFLFocusItem: internal error, i (" <>
+            "getFocusItemFL: internal error, i (" <>
             show i <>
             ") doesnt exist in sequence"
         Just a -> Just a
@@ -519,7 +545,7 @@ removeFL i fl@FocusList{focusList = fls}
     Just emptyFL
   | otherwise =
     let newFL = fl {focusList = S.deleteAt i fls}
-        focus = unsafeGetFLFocus fl
+        focus = unsafeGetFocusFL fl
     in
     if focus >= i && focus /= 0
       then Just $ newFL & lensFocusListFocus . _Focus -~ 1
@@ -634,7 +660,7 @@ updateFocusFL i fl
       then Nothing
       else
         let newFL = fl & lensFocusListFocus . _Focus .~ i
-        in Just (unsafeGetFLFocusItem newFL, newFL)
+        in Just (unsafeGetFocusItemFL newFL, newFL)
 
 -- | Find a value in a 'FocusList'.  Similar to @Data.List.'Data.List.find'@.
 --
