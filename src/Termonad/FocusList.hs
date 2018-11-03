@@ -7,7 +7,7 @@ module Termonad.FocusList
 
 import Termonad.Prelude
 
-import Control.Lens (Getter, Prism', (^.), (.~), (-~), makeLensesFor, prism', to)
+import Control.Lens (Prism', (^.), (.~), (-~), makeLensesFor, prism')
 import qualified Data.Foldable as Foldable
 import qualified Data.Sequence as S
 import Data.Sequence (Seq((:<|), Empty))
