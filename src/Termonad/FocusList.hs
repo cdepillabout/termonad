@@ -13,7 +13,6 @@ import qualified Data.Sequence as S
 import Test.QuickCheck
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
-
 -- $setup
 -- >>> :set -XFlexibleContexts
 -- >>> :set -XScopedTypeVariables
@@ -62,9 +61,14 @@ unsafeGetFocus :: Focus -> Int
 unsafeGetFocus NoFocus = error "unsafeGetFocus: NoFocus"
 unsafeGetFocus (Focus i) = i
 
+-- | A list with a given element having the 'Focus'.
+--
+-- Implemented under the hood as a 'S.Seq'.  The 'FocusList' has some
+-- invariants that must be protected.  You should not use the 'FocusList'
+-- constructor or the 'focusListFocus' or 'focusList' accessors.
 data FocusList a = FocusList
   { focusListFocus :: !Focus
-  , focusList :: !(S.Seq  a)
+  , focusList :: !(S.Seq a)
   } deriving (Eq, Functor, Generic)
 
 $(makeLensesFor
