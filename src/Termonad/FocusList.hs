@@ -41,6 +41,9 @@ instance Ord Focus where
 
 instance CoArbitrary Focus
 
+instance Arbitrary Focus where
+  arbitrary = frequency [(1, pure NoFocus), (3, fmap Focus arbitrary)]
+
 foldFocus :: b -> (Int -> b) -> Focus -> b
 foldFocus b _ NoFocus = b
 foldFocus _ f (Focus i) = f i
@@ -245,6 +248,15 @@ fromListFL (Focus i) list =
           { focusListFocus = Focus i
           , focusList = S.fromList list
           }
+
+-- | Create a 'FocusList' from any 'Foldable' container.
+--
+-- This just calls 'toList' on the 'Foldable', and then passes the result to
+-- 'fromListFL'.
+--
+-- prop> fromFoldableFL foc (foldable :: Data.Sequence.Seq Int) == fromListFL foc (toList foldable)
+fromFoldableFL :: Foldable f => Focus -> f a -> Maybe (FocusList a)
+fromFoldableFL foc as = fromListFL foc (Foldable.toList as)
 
 -- | Create a 'FocusList' with a single element.
 --
@@ -484,16 +496,25 @@ lookupFL i fl = S.lookup i (fl ^. lensFocusList)
 -- | Insert a new value into the 'FocusList'.  The 'Focus' of the list is
 -- changed appropriately.
 --
+-- Inserting an element into an empyt 'FocusList' will set the 'Focus' on
+-- that element.
+--
 -- >>> insertFL 0 "hello" emptyFL
 -- FocusList (Focus 0) ["hello"]
 --
--- >>> insertFL 0 "hello" (singletonFL "bye")
--- FocusList (Focus 1) ["hello","bye"]
+-- The 'Focus' will not be changed if you insert a new element after the
+-- current 'Focus'.
 --
 -- >>> insertFL 1 "hello" (singletonFL "bye")
 -- FocusList (Focus 0) ["bye","hello"]
 --
--- Behaves like Data.Sequence.InsertAt, if the index is out of bounds, it will be
+-- The 'Focus' will be bumped up by one if you insert a new element before
+-- the current 'Focus'.
+--
+-- >>> insertFL 0 "hello" (singletonFL "bye")
+-- FocusList (Focus 1) ["hello","bye"]
+--
+-- Behaves like @Data.Sequence.'Data.Sequence.insertAt'@. If the index is out of bounds, it will be
 -- inserted at the nearest available index
 --
 -- >>> insertFL 100 "hello" emptyFL
