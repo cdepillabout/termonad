@@ -100,6 +100,8 @@ instance SemiSequence (FocusList a) where
 
   intersperse = intersperseFL
 
+  reverse = reverseFL
+
 
 -- | Given a 'Gen' for @a@, generate a valid 'FocusList'.
 genValidFL :: forall a. Gen a -> Gen (FocusList a)
@@ -824,7 +826,7 @@ moveFromToFL oldPos newPos fl
 --
 -- The item with the 'Focus' should never change after calling 'intersperseFL'.
 --
--- prop> getFocusItemFL fl == getFocusItemFL (intersperseFL a fl)
+-- prop> getFocusItemFL (fl :: FocusList Int) == getFocusItemFL (intersperseFL a fl)
 --
 -- 'intersperseFL' should not have any effect on a 'FocusList' with less than
 -- two items.
@@ -840,3 +842,37 @@ intersperseFL a FocusList{focusList = fls, focusListFocus = Focus foc} =
     { focusList = newFLS
     , focusListFocus = Focus (foc * 2)
     }
+
+-- | Reverse a 'FocusList'.  The 'Focus' is updated accordingly.
+--
+-- >>> let Just fl = fromListFL (Focus 0) ["hello", "bye", "cat"]
+-- >>> reverseFL fl
+-- FocusList (Focus 2) ["cat","bye","hello"]
+--
+-- >>> let Just fl = fromListFL (Focus 2) ["hello", "bye", "cat", "goat"]
+-- >>> reverseFL fl
+-- FocusList (Focus 1) ["goat","cat","bye","hello"]
+--
+-- The item with the 'Focus' should never change after calling 'intersperseFL'.
+--
+-- prop> getFocusItemFL (fl :: FocusList Int) == getFocusItemFL (reverseFL fl)
+--
+-- Reversing twice should not change anything.
+--
+-- prop> (fl :: FocusList Int) == reverseFL (reverseFL fl)
+--
+-- Reversing empty lists and single lists should not do anything.
+--
+-- prop> emptyFL == reverseFL emptyFL
+-- prop> singletonFL a == reverseFL (singletonFL a)
+reverseFL :: FocusList a -> FocusList a
+reverseFL FocusList{focusListFocus = NoFocus} = emptyFL
+reverseFL FocusList{focusList = fls, focusListFocus = Focus foc} =
+  let newFLS = reverse fls
+      newFLSLen = length newFLS
+  in
+  FocusList
+    { focusList = newFLS
+    , focusListFocus = Focus (newFLSLen - foc - 1)
+    }
+
