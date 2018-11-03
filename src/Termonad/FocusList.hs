@@ -350,6 +350,32 @@ unsafeGetFLFocus fl =
     NoFocus -> error "unsafeGetFLFocus: the focus list doesn't have a focus"
     Focus i -> i
 
+-- | Return 'True' if the 'Focus' in a 'FocusList' exists.
+--
+-- Return 'False' if the 'Focus' in a 'FocusList' is 'NoFocus'.
+--
+-- >>> hasFocusFL $ singletonFL "hello"
+-- True
+--
+-- >>> hasFocusFL emptyFL
+-- False
+hasFocusFL :: FocusList a -> Bool
+hasFocusFL = hasFocus . getFocusFL
+
+-- | Get the 'Focus' from a 'FocusList'.
+--
+-- >>> getFocusFL $ singletonFL "hello"
+-- Focus 0
+--
+-- >>> let Just fl = fromListFL (Focus 3) [0..9]
+-- >>> getFocusFL fl
+-- Focus 3
+--
+-- >>> getFocusFL emptyFL
+-- NoFocus
+getFocusFL :: FocusList a -> Focus
+getFocusFL FocusList{focusListFocus} = focusListFocus
+
 -- | Unsafely get the value of the 'Focus' from a 'FocusList'.  If the 'Focus' is
 -- 'NoFocus', this function returns 'error'.
 unsafeGetFLFocusItem :: FocusList a -> a
