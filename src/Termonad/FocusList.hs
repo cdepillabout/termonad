@@ -111,7 +111,6 @@ instance SemiSequence (FocusList a) where
 
   snoc = appendFL
 
-
 -- | Given a 'Gen' for @a@, generate a valid 'FocusList'.
 genValidFL :: forall a. Gen a -> Gen (FocusList a)
 genValidFL genA = do
@@ -238,9 +237,6 @@ unsafeFromListFL focus list =
     { focusListFocus = focus
     , focusList = S.fromList list
     }
-
-focusItemGetter :: Getter (FocusList a) (Maybe a)
-focusItemGetter = to getFocusItemFL
 
 -- | Safely create a 'FocusList' from a list.
 --
