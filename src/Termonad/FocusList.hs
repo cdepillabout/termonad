@@ -93,6 +93,14 @@ instance MonoFoldable (FocusList a)
 
 instance MonoTraversable (FocusList a)
 
+instance GrowingAppend (FocusList a)
+
+instance SemiSequence (FocusList a) where
+  type Index (FocusList a) = Int
+
+  intersperse = intersperseFL
+
+
 -- | Given a 'Gen' for @a@, generate a valid 'FocusList'.
 genValidFL :: forall a. Gen a -> Gen (FocusList a)
 genValidFL genA = do
@@ -801,3 +809,34 @@ moveFromToFL oldPos newPos fl
                       Nothing -> error "moveFromToFL should have been able to reset the focus"
                       Just flWithUpdatedFocus -> Just flWithUpdatedFocus
                   else Just flAfterInsert
+
+-- | Intersperse a new element between existing elements in the 'FocusList'.
+--
+-- >>> let Just fl = fromListFL (Focus 0) ["hello", "bye", "cat"]
+-- >>> intersperseFL "foo" fl
+-- FocusList (Focus 0) ["hello","foo","bye","foo","cat"]
+--
+-- The 'Focus' is updated accordingly.
+--
+-- >>> let Just fl = fromListFL (Focus 2) ["hello", "bye", "cat", "goat"]
+-- >>> intersperseFL "foo" fl
+-- FocusList (Focus 4) ["hello","foo","bye","foo","cat","foo","goat"]
+--
+-- The item with the 'Focus' should never change after calling 'intersperseFL'.
+--
+-- prop> getFocusItemFL fl == getFocusItemFL (intersperseFL a fl)
+--
+-- 'intersperseFL' should not have any effect on a 'FocusList' with less than
+-- two items.
+--
+-- prop> emptyFL == intersperseFL x emptyFL
+-- prop> singletonFL a == intersperseFL x (singletonFL a)
+intersperseFL :: a -> FocusList a -> FocusList a
+intersperseFL _ FocusList{focusListFocus = NoFocus} = emptyFL
+intersperseFL a FocusList{focusList = fls, focusListFocus = Focus foc} =
+  let newFLS = intersperse a fls
+  in
+  FocusList
+    { focusList = newFLS
+    , focusListFocus = Focus (foc * 2)
+    }
