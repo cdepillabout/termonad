@@ -44,20 +44,78 @@ instance CoArbitrary Focus
 instance Arbitrary Focus where
   arbitrary = frequency [(1, pure NoFocus), (3, fmap Focus arbitrary)]
 
+-- | A fold function for 'Focus'.
+--
+-- This is similar to 'maybe' for 'Maybe'.
+--
+-- >>> foldFocus "empty" (\i -> "focus at " <> show i) (Focus 3)
+-- "focus at 3"
+--
+-- >>> foldFocus Nothing Just NoFocus
+-- Nothing
+--
+-- prop> foldFocus NoFocus Focus focus == focus
 foldFocus :: b -> (Int -> b) -> Focus -> b
 foldFocus b _ NoFocus = b
 foldFocus _ f (Focus i) = f i
 
+-- | A 'Prism'' for focusing on the 'Focus' constructor in a 'Focus' data type.
 _Focus :: Prism' Focus Int
 _Focus = prism' Focus (foldFocus Nothing Just)
 
+-- | A 'Prism'' for focusing on the 'NoFocus' constructor in a 'Focus' data type.
 _NoFocus :: Prism' Focus ()
 _NoFocus = prism' (const NoFocus) (foldFocus (Just ()) (const Nothing))
 
+-- | Returns 'True' if a 'Focus' exists, and 'False' if not.
+--
+-- >>> hasFocus (Focus 0)
+-- True
+--
+-- >>> hasFocus NoFocus
+-- False
 hasFocus :: Focus -> Bool
 hasFocus NoFocus = False
 hasFocus (Focus _) = True
 
+-- | Get the focus index from a 'Focus'.
+--
+-- >>> getFocus (Focus 3)
+-- Just 3
+--
+-- >>> getFocus NoFocus
+-- Nothing
+getFocus :: Focus -> Maybe Int
+getFocus NoFocus = Nothing
+getFocus (Focus i) = Just i
+
+-- | Convert a 'Maybe' 'Int' to a 'Focus'.
+--
+-- >>> maybeToFocus (Just 100)
+-- Focus 100
+--
+-- >>> maybeToFocus Nothing
+-- NoFocus
+--
+-- 'maybeToFocus' and 'getFocus' witness an isomorphism.
+--
+-- prop> focus == maybeToFocus (getFocus focus)
+--
+-- prop> maybeInt == getFocus (maybeToFocus maybeInt)
+maybeToFocus :: Maybe Int -> Focus
+maybeToFocus Nothing = NoFocus
+maybeToFocus (Just i) = Focus i
+
+-- | Unsafely get the focus index from a 'Focus'.
+--
+-- Returns an error if 'NoFocus'.
+--
+-- >>> unsafeGetFocus (Focus 50)
+-- 50
+--
+-- >>> unsafeGetFocus NoFocus
+-- *** Exception: ...
+-- ...
 unsafeGetFocus :: Focus -> Int
 unsafeGetFocus NoFocus = error "unsafeGetFocus: NoFocus"
 unsafeGetFocus (Focus i) = i
@@ -316,8 +374,6 @@ emptyFL =
 -- prop> hasFocusFL fl ==> not (isEmptyFL fl)
 --
 -- The opposite is also true.
---
--- prop> withMaxSuccess 10 (isEmptyFL fl ==> not (hasFocusFL fl))
 isEmptyFL :: FocusList a -> Bool
 isEmptyFL fl = (lengthFL fl) == 0
 
