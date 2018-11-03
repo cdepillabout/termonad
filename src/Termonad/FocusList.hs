@@ -2,7 +2,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Termonad.FocusList where
+module Termonad.FocusList
+  where
 
 import Termonad.Prelude
 
@@ -427,6 +428,19 @@ unsafeGetFocusItemFL fl =
             ") doesnt exist in sequence"
         Just a -> a
 
+-- | Get the item the 'FocusList' is focusing on.  Return 'Nothing' if the
+-- 'FocusList' is empty.
+--
+-- >>> let Just fl = fromListFL (Focus 0) ['a'..'c']
+-- >>> getFocusItemFL fl
+-- Just 'a'
+--
+-- >>> getFocusItemFL emptyFL
+-- Nothing
+--
+-- This will always return 'Just' if there is a 'Focus'.
+--
+-- prop> hasFocusFL fl ==> isJust (getFocusItemFL fl)
 getFocusItemFL :: FocusList a -> Maybe a
 getFocusItemFL fl =
   let focus = fl ^. lensFocusListFocus
