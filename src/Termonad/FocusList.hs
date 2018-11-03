@@ -341,8 +341,11 @@ prependFL :: a -> FocusList a -> FocusList a
 prependFL a fl@FocusList{ focusListFocus = focus, focusList = fls}  =
   case focus of
     NoFocus -> singletonFL a
-    Focus i   -> fl {focusListFocus = Focus (i+1)
-                    , focusList = a S.<| fls}
+    Focus i ->
+      fl
+        { focusListFocus = Focus (i+1)
+        , focusList = a S.<| fls
+        }
 
 -- | Unsafely get the 'Focus' from a 'FocusList'.  If the 'Focus' is
 -- 'NoFocus', this function returns 'error'.
