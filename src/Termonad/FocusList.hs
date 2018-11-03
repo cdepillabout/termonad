@@ -458,7 +458,27 @@ getFocusItemFL fl =
             ") doesnt exist in sequence"
         Just a -> Just a
 
-lookupFL :: Int -> FocusList a -> Maybe a
+-- | Lookup the element at the specified index, counting from 0.
+--
+-- >>> let Just fl = fromListFL (Focus 0) ['a'..'c']
+-- >>> lookupFL 0 fl
+-- Just 'a'
+--
+-- Returns 'Nothing' if the index is out of bounds.
+--
+-- >>> let Just fl = fromListFL (Focus 0) ['a'..'c']
+-- >>> lookupFL 100 fl
+-- Nothing
+-- >>> lookupFL (-1) fl
+-- Nothing
+--
+-- Always returns 'Nothing' if the 'FocusList' is empty.
+--
+-- prop> lookupFL i emptyFL == Nothing
+lookupFL
+  :: Int  -- ^ Index to lookup.
+  -> FocusList a
+  -> Maybe a
 lookupFL i fl = S.lookup i (fl ^. lensFocusList)
 
 -- | Insert a new value into the 'FocusList'.  The 'Focus' of the list is
