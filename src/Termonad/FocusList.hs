@@ -7,9 +7,10 @@ module Termonad.FocusList
 
 import Termonad.Prelude
 
-import Control.Lens
+import Control.Lens (Getter, Prism', (^.), (.~), (-~), makeLensesFor, prism', to)
 import qualified Data.Foldable as Foldable
 import qualified Data.Sequence as S
+import Data.Sequence (Seq((:<|), Empty))
 import Test.QuickCheck
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
@@ -102,6 +103,10 @@ instance SemiSequence (FocusList a) where
 
   reverse = reverseFL
 
+  find = findFL
+
+  sortBy = sortByFL
+
 
 -- | Given a 'Gen' for @a@, generate a valid 'FocusList'.
 genValidFL :: forall a. Gen a -> Gen (FocusList a)
@@ -137,6 +142,10 @@ instance Show a => Show (FocusList a) where
       showsPrec 11 focusListFocus .
       showString " " .
       showsPrec 11 (toList focusList)
+
+-- | Get the underlying 'Seq' in a 'FocusList'.
+toSeqFL :: FocusList a -> Seq a
+toSeqFL FocusList{focusList = fls} = fls
 
 -- | Return the length of a 'FocusList'.
 --
@@ -876,3 +885,100 @@ reverseFL FocusList{focusList = fls, focusListFocus = Focus foc} =
     , focusListFocus = Focus (newFLSLen - foc - 1)
     }
 
+-- | Sort a 'FocusList'.
+--
+-- The 'Focus' will stay with the element that has the 'Focus'.
+--
+-- >>> let Just fl = fromListFL (Focus 2) ["b", "c", "a"]
+-- >>> sortByFL compare fl
+-- FocusList (Focus 0) ["a","b","c"]
+--
+-- Nothing will happen if you try to sort an empty 'FocusList', or a
+-- 'FocusList' with only one element.
+--
+-- prop> emptyFL == sortByFL compare emptyFL
+-- prop> singletonFL a == sortByFL compare (singletonFL a)
+--
+-- The element with the 'Focus' should be the same before and after sorting.
+--
+-- prop> getFocusItemFL (fl :: FocusList Int) == getFocusItemFL (sortByFL compare fl)
+--
+-- Sorting a 'FocusList' and getting the underlying 'Seq' should be the same as
+-- getting the underlying 'Seq' and then sorting it.
+--
+-- prop> toSeqFL (sortByFL compare (fl :: FocusList Int)) == sortBy compare (toSeqFL fl)
+sortByFL
+  :: forall a
+   . (a -> a -> Ordering) -- ^ The function to use to compare elements.
+  -> FocusList a
+  -> FocusList a
+sortByFL _ FocusList{focusListFocus = NoFocus} = emptyFL
+sortByFL cmpFunc FocusList{focusList = fls, focusListFocus = Focus foc} =
+  let (res, maybeNewFoc) = go fls (Just foc)
+  in
+  case maybeNewFoc of
+    Nothing -> error "sortByFL: A sequence should never lose its focus."
+    Just newFoc ->
+      FocusList
+        { focusList = res
+        , focusListFocus = Focus newFoc
+        }
+  where
+    go
+      :: S.Seq a -- ^ The sequence that needs to be sorted.
+      -> Maybe Int -- ^ Whether or not we are tracking a 'Focus' that needs to be updated.
+      -> (S.Seq a, Maybe Int)
+    -- Trying to sort an empty sequence with a 'Focus'.  This should never happen.
+    go Empty (Just _) =
+      error "sortByFL: go: this should never happen, sort empty with focus."
+    -- Trying to sort an empty sequence.
+    go Empty Nothing = (Empty, Nothing)
+    -- Trying to sort a non-empty sequence with no focus.
+    go (a :<| as) Nothing =
+      let res = go as Nothing
+      in
+      case res of
+        (_, Just _) -> error "sortByFL: go: this should never happen, no focus case"
+        (Empty, Nothing) -> (a :<| Empty, Nothing)
+        (b :<| bs, Nothing) ->
+          case cmpFunc a b of
+            LT -> (a :<| b :<| bs, Nothing)
+            EQ -> (a :<| b :<| bs, Nothing)
+            GT -> (b :<| fst (go (a :<| bs) Nothing), Nothing)
+    -- Trying to sort a non-empty sequence with the top element having the focus.
+    go (a :<| as) (Just 0) =
+      let res = go as Nothing
+      in
+      case res of
+        (_, Just _) -> error "sortByFL: go: this should never happen, top elem has focus case"
+        (Empty, Nothing) -> (a :<| Empty, Just 0)
+        (b :<| bs, Nothing) ->
+          case cmpFunc a b of
+            LT -> (a :<| b :<| bs, Just 0)
+            EQ -> (a :<| b :<| bs, Just 0)
+            GT ->
+              let (newSeq, maybeNewFoc) = go (a :<| bs) (Just 0)
+              in
+              case maybeNewFoc of
+                Nothing -> error "sortByFL: go: this should never happen, lost the focus"
+                Just newFoc -> (b :<| newSeq, Just (newFoc + 1))
+    -- Trying to sort a non-empty sequence where some element other than the top element has the focus.
+    go (a :<| as) (Just n) =
+      let res = go as (Just (n - 1))
+      in
+      case res of
+        (_, Nothing) -> error "sortByFL: go: this should never happen, no focus"
+        (Empty, Just _) -> error "sortByFL: go: this should never happen, focus but no elems"
+        (b :<| bs, Just newFoc) ->
+          case cmpFunc a b of
+            LT -> (a :<| b :<| bs, Just (newFoc + 1))
+            EQ -> (a :<| b :<| bs, Just (newFoc + 1))
+            GT ->
+              case newFoc of
+                0 -> (b :<| fst (go (a :<| bs) Nothing), Just 0)
+                gt0 ->
+                  let (newSeq, maybeNewFoc') = go (a :<| bs) (Just gt0)
+                  in
+                  case maybeNewFoc' of
+                    Nothing -> error "sortByFL: go: this should never happen, lost the focus again"
+                    Just newFoc' -> (b :<| newSeq, Just (newFoc' + 1))
