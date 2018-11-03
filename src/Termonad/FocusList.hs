@@ -279,6 +279,12 @@ emptyFL =
 -- False
 --
 -- Any 'FocusList' with a 'Focus' should never be empty.
+--
+-- prop> hasFocusFL fl ==> not (isEmptyFL fl)
+--
+-- The opposite is also true.
+--
+-- prop> withMaxSuccess 10 (isEmptyFL fl ==> not (hasFocusFL fl))
 isEmptyFL :: FocusList a -> Bool
 isEmptyFL fl = (lengthFL fl) == 0
 
