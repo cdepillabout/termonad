@@ -58,9 +58,6 @@ unsafeGetFocus :: Focus -> Int
 unsafeGetFocus NoFocus = error "unsafeGetFocus: NoFocus"
 unsafeGetFocus (Focus i) = i
 
--- TODO: Probably be better
--- implemented as an Order statistic tree
--- (https://en.wikipedia.org/wiki/Order_statistic_tree).
 data FocusList a = FocusList
   { focusListFocus :: !Focus
   , focusList :: !(S.Seq  a)
@@ -474,16 +471,22 @@ lookupFL i fl = S.lookup i (fl ^. lensFocusList)
 -- >>> insertFL (-1) "bye" (singletonFL "hello")
 -- FocusList (Focus 1) ["bye","hello"]
 insertFL
-  :: Int  -- ^ The index at which to insert the value.
-  -> a
+  :: Int  -- ^ The index at which to insert the new element.
+  -> a    -- ^ The new element.
   -> FocusList a
   -> FocusList a
 insertFL _ a FocusList {focusListFocus = NoFocus} = singletonFL a
 insertFL i a fl@FocusList{focusListFocus = Focus focus, focusList = fls} =
   if i > focus
-  then fl {focusList = S.insertAt i a fls}
-  else fl {focusList = S.insertAt i a fls,
-           focusListFocus = Focus $ focus + 1}
+    then
+      fl
+        { focusList = S.insertAt i a fls
+        }
+    else
+      fl
+        { focusList = S.insertAt i a fls
+        , focusListFocus = Focus $ focus + 1
+        }
 
 -- | Remove an element from a 'FocusList'.
 --
