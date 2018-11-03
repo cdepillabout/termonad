@@ -107,6 +107,10 @@ instance SemiSequence (FocusList a) where
 
   sortBy = sortByFL
 
+  cons = prependFL
+
+  snoc = appendFL
+
 
 -- | Given a 'Gen' for @a@, generate a valid 'FocusList'.
 genValidFL :: forall a. Gen a -> Gen (FocusList a)
