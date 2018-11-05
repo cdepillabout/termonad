@@ -70,14 +70,15 @@ import Prelude hiding (reverse)
 
 import Control.Lens (Prism', (^.), (.~), (-~), makeLensesFor, prism')
 import Data.Foldable (toList)
-import qualified Data.Foldable as Foldable
 import Data.Function ((&))
 import Data.MonoTraversable
   (Element, GrowingAppend, MonoFoldable, MonoFunctor, MonoTraversable, olength)
-import qualified Data.Sequence as S
-import Data.Sequence (Seq((:<|), Empty))
+import qualified Data.Sequence as Sequence
+import Data.Sequence
+  (Seq((:<|), Empty), (<|), deleteAt, elemIndexL, insertAt, singleton)
 import Data.Sequences
   (Index, SemiSequence, cons, find, intersperse, reverse, snoc, sortBy)
+import GHC.Exts (fromList)
 import GHC.Generics (Generic)
 import Test.QuickCheck
   ( Arbitrary, Arbitrary1, CoArbitrary, Gen, arbitrary, arbitrary1, choose
@@ -206,10 +207,10 @@ unsafeGetFocus (Focus i) = i
 -- the 'FocusList' constructor or the 'focusListFocus' or 'focusList'
 -- accessors.
 --
--- Implemented under the hood as a 'S.Seq'.
+-- Implemented under the hood as a 'Seq'.
 data FocusList a = FocusList
   { focusListFocus :: !Focus
-  , focusList :: !(S.Seq a)
+  , focusList :: !(Seq a)
   } deriving (Eq, Functor, Generic)
 
 $(makeLensesFor
@@ -303,7 +304,7 @@ toSeqFL FocusList{focusList = fls} = fls
 --
 -- /complexity/: @O(1)@
 lengthFL :: FocusList a -> Int
-lengthFL = S.length . focusList
+lengthFL = length . focusList
 
 -- | This is an invariant that the 'FocusList' must always protect.
 --
@@ -341,7 +342,7 @@ invariantFL fl =
       case fl ^. lensFocusListFocus of
         NoFocus -> length (fl ^. lensFocusList) == 0
         Focus i ->
-          case S.lookup i (fl ^. lensFocusList) of
+          case Sequence.lookup i (fl ^. lensFocusList) of
             Nothing -> False
             Just _ -> True
 
@@ -386,7 +387,7 @@ unsafeFromListFL :: Focus -> [a] -> FocusList a
 unsafeFromListFL focus list =
   FocusList
     { focusListFocus = focus
-    , focusList = S.fromList list
+    , focusList = fromList list
     }
 
 -- | Safely create a 'FocusList' from a list.
@@ -422,7 +423,7 @@ fromListFL (Focus i) list =
       Just $
         FocusList
           { focusListFocus = Focus i
-          , focusList = S.fromList list
+          , focusList = fromList list
           }
 
 -- | Create a 'FocusList' from any 'Foldable' container.
@@ -446,7 +447,7 @@ singletonFL :: a -> FocusList a
 singletonFL a =
   FocusList
     { focusListFocus = Focus 0
-    , focusList = S.singleton a
+    , focusList = singleton a
     }
 
 -- | Create an empty 'FocusList' without a 'Focus'.
@@ -544,7 +545,7 @@ prependFL a fl@FocusList{ focusListFocus = focus, focusList = fls}  =
     Focus i ->
       fl
         { focusListFocus = Focus (i+1)
-        , focusList = a S.<| fls
+        , focusList = a <| fls
         }
 
 -- | Unsafely get the 'Focus' from a 'FocusList'.  If the 'Focus' is
@@ -629,7 +630,7 @@ unsafeGetFocusItemFL fl =
     Focus i ->
       let fls = fl ^. lensFocusList
       in
-      case S.lookup i fls of
+      case Sequence.lookup i fls of
         Nothing ->
           error $
             "unsafeGetFocusItemFL: internal error, i (" <>
@@ -662,7 +663,7 @@ getFocusItemFL fl =
     Focus i ->
       let fls = fl ^. lensFocusList
       in
-      case S.lookup i fls of
+      case Sequence.lookup i fls of
         Nothing ->
           error $
             "getFocusItemFL: internal error, i (" <>
@@ -694,7 +695,7 @@ lookupFL
   :: Int  -- ^ Index to lookup.
   -> FocusList a
   -> Maybe a
-lookupFL i fl = S.lookup i (fl ^. lensFocusList)
+lookupFL i fl = Sequence.lookup i (fl ^. lensFocusList)
 
 -- | Insert a new value into the 'FocusList'.  The 'Focus' of the list is
 -- changed appropriately.
@@ -741,11 +742,11 @@ insertFL i a fl@FocusList{focusListFocus = Focus focus, focusList = fls} =
   if i > focus
     then
       fl
-        { focusList = S.insertAt i a fls
+        { focusList = insertAt i a fls
         }
     else
       fl
-        { focusList = S.insertAt i a fls
+        { focusList = insertAt i a fls
         , focusListFocus = Focus $ focus + 1
         }
 
@@ -811,7 +812,7 @@ removeFL i fl@FocusList{focusList = fls}
     -- Return an empty focus list if there is currently only one element
     Just emptyFL
   | otherwise =
-    let newFL = fl {focusList = S.deleteAt i fls}
+    let newFL = fl {focusList = deleteAt i fls}
         focus = unsafeGetFocusFL fl
     in
     if focus >= i && focus /= 0
@@ -837,7 +838,7 @@ removeFL i fl@FocusList{focusList = fls}
 -- Nothing
 indexOfFL :: Eq a => a -> FocusList a -> Maybe Int
 indexOfFL a FocusList{focusList = fls} =
-  S.elemIndexL a fls
+  elemIndexL a fls
 
 -- | Delete an element from a 'FocusList'.
 --
@@ -1140,10 +1141,10 @@ sortByFL cmpFunc FocusList{focusList = fls, focusListFocus = Focus foc} =
         }
   where
     go
-      :: S.Seq a -- ^ The sequence that needs to be sorted.
+      :: Seq a -- ^ The sequence that needs to be sorted.
       -> Maybe Int
          -- ^ Whether or not we are tracking a 'Focus' that needs to be updated.
-      -> (S.Seq a, Maybe Int)
+      -> (Seq a, Maybe Int)
     -- Trying to sort an empty sequence with a 'Focus'.  This should never happen.
     go Empty (Just _) =
       error "sortByFL: go: this should never happen, sort empty with focus."
