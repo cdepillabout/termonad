@@ -688,7 +688,7 @@ lookupFL i fl = S.lookup i (fl ^. lensFocusList)
 -- | Insert a new value into the 'FocusList'.  The 'Focus' of the list is
 -- changed appropriately.
 --
--- Inserting an element into an empyt 'FocusList' will set the 'Focus' on
+-- Inserting an element into an empty 'FocusList' will set the 'Focus' on
 -- that element.
 --
 -- >>> insertFL 0 "hello" emptyFL
@@ -874,7 +874,7 @@ deleteFL item = go
 
 -- | Set the 'Focus' for a 'FocusList'.
 --
--- This is just like 'updateFocusFL', but doesn't return the new focused item.
+-- This is just like 'updateFocusFL', but doesn't return the newly focused item.
 --
 -- prop> setFocusFL i fl == fmap snd (updateFocusFL i fl)
 --
