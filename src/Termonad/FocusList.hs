@@ -2,24 +2,109 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Termonad.FocusList where
+module Termonad.FocusList
+  (
+    -- * FocusList
+    FocusList(FocusList, focusListFocus, focusList)
+    -- ** Conversions
+  , fromListFL
+  , fromFoldableFL
+  , toSeqFL
+    -- ** Query
+  , lengthFL
+  , isEmptyFL
+  , getFocusItemFL
+  , lookupFL
+  , indexOfFL
+  , findFL
+    -- *** Query 'Focus'
+  , hasFocusFL
+  , getFocusFL
+    -- ** Manipulate
+  , prependFL
+  , appendFL
+  , appendSetFocusFL
+  , insertFL
+  , removeFL
+  , deleteFL
+  , moveFromToFL
+  , intersperseFL
+  , reverseFL
+    -- *** Manipulate 'Focus'
+  , setFocusFL
+  , updateFocusFL
+    -- ** Sort
+  , sortByFL
+    -- ** Construction
+  , emptyFL
+  , singletonFL
+    -- ** Unsafe Functions
+  , unsafeFromListFL
+  , unsafeGetFocusFL
+  , unsafeGetFocusItemFL
+    -- ** Invariants
+  , invariantFL
+    -- ** Testing
+  , genValidFL
+    -- ** Optics
+    -- | These optics allow you to get/set the internal state of a 'FocusList'.
+    -- You should make sure not to directly set the internal state of a
+    -- 'FocusList' unless you are sure that the invariants for the 'FocusList'
+    -- are protected.  See 'invariantFL'.
+  , lensFocusListFocus
+  , lensFocusList
+    -- * Focus
+  , Focus(Focus, NoFocus)
+    , hasFocus
+    , getFocus
+    , maybeToFocus
+    , foldFocus
+    -- ** Optics
+  , _Focus
+  , _NoFocus
+    -- ** Unsafe Functions
+  , unsafeGetFocus
+  ) where
 
-import Termonad.Prelude
+import Prelude hiding (reverse)
 
-import Control.Lens
-import qualified Data.Foldable as Foldable
+import Control.Lens (Prism', (^.), (.~), (-~), makeLensesFor, prism')
+import Data.Foldable (toList)
+import Data.Function ((&))
+import Data.MonoTraversable
+  (Element, GrowingAppend, MonoFoldable, MonoFunctor, MonoTraversable, olength)
+import qualified Data.Sequence as Sequence
+import Data.Sequence
+  (Seq((:<|), Empty), (<|), deleteAt, elemIndexL, insertAt, singleton)
+import Data.Sequences
+  (Index, SemiSequence, cons, find, intersperse, reverse, snoc, sortBy)
+import GHC.Exts (fromList)
+import GHC.Generics (Generic)
 import Test.QuickCheck
+  ( Arbitrary, Arbitrary1, CoArbitrary, Gen, arbitrary, arbitrary1, choose
+  , frequency, liftArbitrary
+  )
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
 -- $setup
 -- >>> :set -XFlexibleContexts
 -- >>> :set -XScopedTypeVariables
+-- >>> import Data.Maybe (isJust)
 
+-- | A 'Focus' for the 'FocusList'.
+--
+-- The 'Focus' is either 'NoFocus' (if the 'Focuslist' is empty), or 'Focus'
+-- 'Int' to represent focusing on a specific element of the 'FocusList'.
 data Focus = Focus {-# UNPACK #-} !Int | NoFocus deriving (Eq, Generic, Read, Show)
 
 -- | 'NoFocus' is always less than 'Focus'.
 --
 -- prop> NoFocus < Focus a
+--
+-- The ordering of 'Focus' depends on the ordering of the integer contained
+-- inside.
+--
+-- prop> (a < b) ==> (Focus a < Focus b)
 instance Ord Focus where
   compare :: Focus -> Focus -> Ordering
   compare NoFocus NoFocus = EQ
@@ -29,111 +114,219 @@ instance Ord Focus where
 
 instance CoArbitrary Focus
 
+instance Arbitrary Focus where
+  arbitrary = frequency [(1, pure NoFocus), (3, fmap Focus arbitrary)]
+
+-- | A fold function for 'Focus'.
+--
+-- This is similar to 'maybe' for 'Maybe'.
+--
+-- >>> foldFocus "empty" (\i -> "focus at " <> show i) (Focus 3)
+-- "focus at 3"
+--
+-- >>> foldFocus Nothing Just NoFocus
+-- Nothing
+--
+-- prop> foldFocus NoFocus Focus focus == focus
 foldFocus :: b -> (Int -> b) -> Focus -> b
 foldFocus b _ NoFocus = b
 foldFocus _ f (Focus i) = f i
 
+-- | A 'Prism'' for focusing on the 'Focus' constructor in a 'Focus' data type.
 _Focus :: Prism' Focus Int
 _Focus = prism' Focus (foldFocus Nothing Just)
 
+-- | A 'Prism'' for focusing on the 'NoFocus' constructor in a 'Focus' data type.
 _NoFocus :: Prism' Focus ()
 _NoFocus = prism' (const NoFocus) (foldFocus (Just ()) (const Nothing))
 
+-- | Returns 'True' if a 'Focus' exists, and 'False' if not.
+--
+-- >>> hasFocus (Focus 0)
+-- True
+--
+-- >>> hasFocus NoFocus
+-- False
+--
+-- /complexity/: @O(1)@
 hasFocus :: Focus -> Bool
 hasFocus NoFocus = False
 hasFocus (Focus _) = True
 
+-- | Get the focus index from a 'Focus'.
+--
+-- >>> getFocus (Focus 3)
+-- Just 3
+--
+-- >>> getFocus NoFocus
+-- Nothing
+--
+-- /complexity/: @O(1)@
+getFocus :: Focus -> Maybe Int
+getFocus NoFocus = Nothing
+getFocus (Focus i) = Just i
+
+-- | Convert a 'Maybe' 'Int' to a 'Focus'.
+--
+-- >>> maybeToFocus (Just 100)
+-- Focus 100
+--
+-- >>> maybeToFocus Nothing
+-- NoFocus
+--
+-- 'maybeToFocus' and 'getFocus' witness an isomorphism.
+--
+-- prop> focus == maybeToFocus (getFocus focus)
+--
+-- prop> maybeInt == getFocus (maybeToFocus maybeInt)
+--
+-- /complexity/: @O(1)@
+maybeToFocus :: Maybe Int -> Focus
+maybeToFocus Nothing = NoFocus
+maybeToFocus (Just i) = Focus i
+
+-- | Unsafely get the focus index from a 'Focus'.
+--
+-- Returns an error if 'NoFocus'.
+--
+-- >>> unsafeGetFocus (Focus 50)
+-- 50
+--
+-- >>> unsafeGetFocus NoFocus
+-- *** Exception: ...
+-- ...
+--
+-- /complexity/: @O(1)@
 unsafeGetFocus :: Focus -> Int
 unsafeGetFocus NoFocus = error "unsafeGetFocus: NoFocus"
 unsafeGetFocus (Focus i) = i
 
--- TODO: Probably be better
--- implemented as an Order statistic tree
--- (https://en.wikipedia.org/wiki/Order_statistic_tree).
+-- | A list with a given element having the 'Focus'.
+--
+-- 'FocusList' has some invariants that must be protected.  You should not use
+-- the 'FocusList' constructor or the 'focusListFocus' or 'focusList'
+-- accessors.
+--
+-- Implemented under the hood as a 'Seq'.
 data FocusList a = FocusList
   { focusListFocus :: !Focus
-  , focusListLen :: {-# UNPACK #-} !Int
-  , focusList :: !(IntMap a)
-  } deriving (Eq, Generic)
+  , focusList :: !(Seq a)
+  } deriving (Eq, Functor, Generic)
 
 $(makeLensesFor
     [ ("focusListFocus", "lensFocusListFocus")
-    , ("focusListLen", "lensFocusListLen")
     , ("focusList", "lensFocusList")
     ]
     ''FocusList
  )
 
-instance Functor FocusList where
-  fmap :: (a -> b) -> FocusList a -> FocusList b
-  fmap f (FocusList focus len intmap) = FocusList focus len (fmap f intmap)
-
 instance Foldable FocusList where
-  foldr f b (FocusList _ _ intmap) = Foldable.foldr f b intmap
+  foldr f b (FocusList _ fls) = foldr f b fls
+
+  length = lengthFL
 
 instance Traversable FocusList where
   traverse :: Applicative f => (a -> f b) -> FocusList a -> f (FocusList b)
-  traverse f (FocusList focus len intmap) = FocusList focus len <$> traverse f intmap
+  traverse f (FocusList focus fls) = FocusList focus <$> traverse f fls
 
 type instance Element (FocusList a) = a
 
 instance MonoFunctor (FocusList a)
 
-instance MonoFoldable (FocusList a)
+instance MonoFoldable (FocusList a) where
+  olength = lengthFL
 
 instance MonoTraversable (FocusList a)
 
+instance GrowingAppend (FocusList a)
+
+instance SemiSequence (FocusList a) where
+  type Index (FocusList a) = Int
+
+  intersperse = intersperseFL
+
+  reverse = reverseFL
+
+  find = findFL
+
+  sortBy = sortByFL
+
+  cons = prependFL
+
+  snoc = appendFL
+
+-- | Given a 'Gen' for @a@, generate a valid 'FocusList'.
+genValidFL :: forall a. Gen a -> Gen (FocusList a)
+genValidFL genA = do
+  newFL <- genFL
+  if invariantFL newFL
+    then pure newFL
+    else error "genValidFL generated an invalid FocusList!  This should never happen!"
+  where
+    genFL :: Gen (FocusList a)
+    genFL = do
+      arbList <- liftArbitrary genA
+      case arbList of
+        [] -> pure emptyFL
+        (_:_) -> do
+          let listLen = length arbList
+          len <- choose (0, listLen - 1)
+          pure $ unsafeFromListFL (Focus len) arbList
+
 instance Arbitrary1 FocusList where
-  liftArbitrary :: Gen a -> Gen (FocusList a)
-  liftArbitrary genA = do
-    arbList <- liftArbitrary genA
-    case arbList of
-      [] -> pure emptyFL
-      (_:_) -> do
-        let listLen = length arbList
-        len <- choose (0, listLen - 1)
-        pure $ unsafeFLFromList (Focus len) arbList
+  liftArbitrary = genValidFL
 
 instance Arbitrary a => Arbitrary (FocusList a) where
   arbitrary = arbitrary1
 
 instance CoArbitrary a => CoArbitrary (FocusList a)
 
-debugFL :: Show a => FocusList a -> String
-debugFL FocusList{..} =
-  showString "FocusList {" .
-  showString "focusListFocus = " .
-  showsPrec 0 focusListFocus .
-  showString ", " .
-  showString "focusListLen = " .
-  showsPrec 0 focusListLen .
-  showString ", " .
-  showString "focusList = " .
-  showsPrec 0 focusList $
-  showString "}" ""
-
 instance Show a => Show (FocusList a) where
   showsPrec :: Int -> FocusList a -> ShowS
   showsPrec d FocusList{..} =
-    let list = fmap snd $ sortOn fst $ mapToList focusList
-    in
     showParen (d > 10) $
       showString "FocusList " .
       showsPrec 11 focusListFocus .
       showString " " .
-      showsPrec 11 list
+      showsPrec 11 (toList focusList)
 
-lensFocusListAt :: Int -> Lens' (FocusList a) (Maybe a)
-lensFocusListAt i = lensFocusList . at i
+-- | Get the underlying 'Seq' in a 'FocusList'.
+--
+-- /complexity/: @O(1)@
+toSeqFL :: FocusList a -> Seq a
+toSeqFL FocusList{focusList = fls} = fls
+
+-- | Return the length of a 'FocusList'.
+--
+-- >>> let Just fl = fromListFL (Focus 2) ["hello", "bye", "parrot"]
+-- >>> lengthFL fl
+-- 3
+--
+-- /complexity/: @O(1)@
+lengthFL :: FocusList a -> Int
+lengthFL = length . focusList
 
 -- | This is an invariant that the 'FocusList' must always protect.
+--
+-- The functions in this module should generally protect this invariant.  If
+-- they do not, it is generally a bug.
+--
+-- The invariants are as follows:
+--
+-- - The 'Focus' in a 'FocusList' can never be negative.
+--
+-- - If there is a 'Focus', then it actually exists in
+--   the 'FocusList'.
+--
+-- - There needs to be a 'Focus' if the length of the
+--   'FocusList' is greater than 0.
+--
+-- /complexity/: @O(log n)@, where @n@ is the length of the 'FocusList'.
 invariantFL :: FocusList a -> Bool
 invariantFL fl =
   invariantFocusNotNeg &&
   invariantFocusInMap &&
-  invariantFocusIfLenGT0 &&
-  invariantLenIsCorrect &&
-  invariantNoSkippedNumsInMap
+  invariantFocusIfLenGT0
   where
     -- This makes sure that the 'Focus' in a 'FocusList' can never be negative.
     invariantFocusNotNeg :: Bool
@@ -149,7 +342,7 @@ invariantFL fl =
       case fl ^. lensFocusListFocus of
         NoFocus -> length (fl ^. lensFocusList) == 0
         Focus i ->
-          case lookup i (fl ^. lensFocusList) of
+          case Sequence.lookup i (fl ^. lensFocusList) of
             Nothing -> False
             Just _ -> True
 
@@ -157,77 +350,71 @@ invariantFL fl =
     -- 'FocusList' is greater than 0.
     invariantFocusIfLenGT0 :: Bool
     invariantFocusIfLenGT0 =
-      let len = fl ^. lensFocusListLen
+      let len = lengthFL fl
           focus = fl ^. lensFocusListFocus
       in
       case focus of
         Focus _ -> len /= 0
         NoFocus -> len == 0
 
-    -- | Make sure that the length of the 'FocusList' is actually the number of
-    -- elements in the inner 'IntMap'.
-    invariantLenIsCorrect :: Bool
-    invariantLenIsCorrect =
-      let len = fl ^. lensFocusListLen
-          intmap = fl ^. lensFocusList
-      in len == length intmap
-
-    -- | Make sure that there are no numbers that have been skipped in the
-    -- inner 'IntMap'.
-    invariantNoSkippedNumsInMap :: Bool
-    invariantNoSkippedNumsInMap =
-      let len = fl ^. lensFocusListLen
-          intmap = fl ^. lensFocusList
-          indexes = sort $ fmap fst $ mapToList intmap
-      in indexes == [0..(len - 1)]
-
-
 -- | Unsafely create a 'FocusList'.  This does not check that the focus
--- actually exists in the list.
+-- actually exists in the list.  This is an internal function and should
+-- generally not be used.  It is only safe to use if you ALREADY know
+-- the 'Focus' is within the list.
 --
--- >>> let fl = unsafeFLFromList (Focus 1) [0..2]
--- >>> debugFL fl
--- "FocusList {focusListFocus = Focus 1, focusListLen = 3, focusList = fromList [(0,0),(1,1),(2,2)]}"
+-- Instead, you should generally use 'fromListFL'.
 --
--- >>> let fl = unsafeFLFromList NoFocus []
--- >>> debugFL fl
--- "FocusList {focusListFocus = NoFocus, focusListLen = 0, focusList = fromList []}"
-unsafeFLFromList :: Focus -> [a] -> FocusList a
-unsafeFLFromList focus list =
-  let len = length list
-  in
+-- The following is an example of using 'unsafeFromListFL' correctly.
+--
+-- >>> unsafeFromListFL (Focus 1) [0..2]
+-- FocusList (Focus 1) [0,1,2]
+--
+-- >>> unsafeFromListFL NoFocus []
+-- FocusList NoFocus []
+--
+-- 'unsafeFromListFL' can also be used uncorrectly.  The following is an
+-- example of 'unsafeFromListFL' allowing you to create a 'FocusList' that does
+-- not pass 'invariantFL'.
+--
+-- >>> unsafeFromListFL (Focus 100) [0..2]
+-- FocusList (Focus 100) [0,1,2]
+--
+-- If 'fromListFL' returns a 'Just' 'FocusList', then 'unsafeFromListFL' should
+-- return the same 'FocusList'.
+--
+-- /complexity/: @O(n)@ where @n@ is the length of the input list.
+unsafeFromListFL :: Focus -> [a] -> FocusList a
+unsafeFromListFL focus list =
   FocusList
     { focusListFocus = focus
-    , focusListLen = len
-    , focusList = mapFromList $ zip [0..] list
+    , focusList = fromList list
     }
-
-focusItemGetter :: Getter (FocusList a) (Maybe a)
-focusItemGetter = to getFLFocusItem
 
 -- | Safely create a 'FocusList' from a list.
 --
--- >>> flFromList (Focus 1) ["cat","dog","goat"]
+-- >>> fromListFL (Focus 1) ["cat","dog","goat"]
 -- Just (FocusList (Focus 1) ["cat","dog","goat"])
 --
--- >>> flFromList NoFocus []
+-- >>> fromListFL NoFocus []
 -- Just (FocusList NoFocus [])
 --
 -- If the 'Focus' is out of range for the list, then 'Nothing' will be returned.
 --
--- >>> flFromList (Focus (-1)) ["cat","dog","goat"]
+-- >>> fromListFL (Focus (-1)) ["cat","dog","goat"]
 -- Nothing
 --
--- >>> flFromList (Focus 3) ["cat","dog","goat"]
+-- >>> fromListFL (Focus 3) ["cat","dog","goat"]
 -- Nothing
 --
--- >>> flFromList NoFocus ["cat","dog","goat"]
+-- >>> fromListFL NoFocus ["cat","dog","goat"]
 -- Nothing
-flFromList :: Focus -> [a] -> Maybe (FocusList a)
-flFromList NoFocus [] = Just emptyFL
-flFromList _ [] = Nothing
-flFromList NoFocus (_:_) = Nothing
-flFromList (Focus i) list =
+--
+-- /complexity/: @O(n)@ where @n@ is the length of the input list.
+fromListFL :: Focus -> [a] -> Maybe (FocusList a)
+fromListFL NoFocus [] = Just emptyFL
+fromListFL _ [] = Nothing
+fromListFL NoFocus (_:_) = Nothing
+fromListFL (Focus i) list =
   let len = length list
   in
   if i < 0 || i >= len
@@ -236,31 +423,43 @@ flFromList (Focus i) list =
       Just $
         FocusList
           { focusListFocus = Focus i
-          , focusListLen = len
-          , focusList = mapFromList $ zip [0..] list
+          , focusList = fromList list
           }
+
+-- | Create a 'FocusList' from any 'Foldable' container.
+--
+-- This just calls 'toList' on the 'Foldable', and then passes the result to
+-- 'fromListFL'.
+--
+-- prop> fromFoldableFL foc (foldable :: Data.Sequence.Seq Int) == fromListFL foc (toList foldable)
+--
+-- /complexity/: @O(n)@ where @n@ is the length of the 'Foldable'
+fromFoldableFL :: Foldable f => Focus -> f a -> Maybe (FocusList a)
+fromFoldableFL foc as = fromListFL foc (toList as)
 
 -- | Create a 'FocusList' with a single element.
 --
 -- >>> singletonFL "hello"
 -- FocusList (Focus 0) ["hello"]
+--
+-- /complexity/: @O(1)@
 singletonFL :: a -> FocusList a
 singletonFL a =
   FocusList
     { focusListFocus = Focus 0
-    , focusListLen = 1
-    , focusList = singletonMap 0 a
+    , focusList = singleton a
     }
 
 -- | Create an empty 'FocusList' without a 'Focus'.
 --
 -- >>> emptyFL
 -- FocusList NoFocus []
+--
+-- /complexity/: @O(1)@
 emptyFL :: FocusList a
 emptyFL =
   FocusList
     { focusListFocus = NoFocus
-    , focusListLen = 0
     , focusList = mempty
     }
 
@@ -273,8 +472,14 @@ emptyFL =
 -- False
 --
 -- Any 'FocusList' with a 'Focus' should never be empty.
+--
+-- prop> hasFocusFL fl ==> not (isEmptyFL fl)
+--
+-- The opposite is also true.
+--
+-- /complexity/: @O(1)@
 isEmptyFL :: FocusList a -> Bool
-isEmptyFL fl = fl ^. lensFocusListLen == 0
+isEmptyFL fl = (lengthFL fl) == 0
 
 -- | Append a value to the end of a 'FocusList'.
 --
@@ -289,22 +494,28 @@ isEmptyFL fl = fl ^. lensFocusListLen == 0
 -- Appending a value to an empty 'FocusList' is the same as using 'singletonFL'.
 --
 -- prop> appendFL emptyFL a == singletonFL a
+--
+-- /complexity/: @O(log n)@ where @n@ is the length of the 'FocusList'.
 appendFL :: FocusList a -> a -> FocusList a
 appendFL fl a =
   if isEmptyFL fl
     then singletonFL a
-    else unsafeInsertNewFL (fl ^. lensFocusListLen) a fl
+    else insertFL (length $ focusList fl) a fl
 
 -- | A combination of 'appendFL' and 'setFocusFL'.
 --
--- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "tree"]
+-- >>> let Just fl = fromListFL (Focus 1) ["hello", "bye", "tree"]
 -- >>> appendSetFocusFL fl "pie"
 -- FocusList (Focus 3) ["hello","bye","tree","pie"]
 --
--- prop> (appendSetFocusFL fl a) ^. lensFocusListFocus /= fl ^. lensFocusListFocus
+-- The 'Focus' will always be updated after calling 'appendSetFocusFL'.
+--
+-- prop> getFocusFL (appendSetFocusFL fl a) > getFocusFL fl
+--
+-- /complexity/: @O(log n)@ where @n@ is the length of the 'FocusList'.
 appendSetFocusFL :: FocusList a -> a -> FocusList a
 appendSetFocusFL fl a =
-  let oldLen = fl ^. lensFocusListLen
+  let oldLen = length $ focusList fl
   in
   case setFocusFL oldLen (appendFL fl a) of
     Nothing -> error "Internal error with setting the focus.  This should never happen."
@@ -324,247 +535,220 @@ appendSetFocusFL fl a =
 --
 -- Prepending to a 'FocusList' will always update the 'Focus':
 --
--- prop> (fl ^. lensFocusListFocus) < (prependFL a fl ^. lensFocusListFocus)
+-- prop> getFocusFL fl < getFocusFL (prependFL a fl)
+--
+-- /complexity/: @O(1)@
 prependFL :: a -> FocusList a -> FocusList a
-prependFL a fl =
-  if isEmptyFL fl
-    then singletonFL a
-    else unsafeInsertNewFL 0 a $ unsafeShiftUpFrom 0 fl
+prependFL a fl@FocusList{ focusListFocus = focus, focusList = fls}  =
+  case focus of
+    NoFocus -> singletonFL a
+    Focus i ->
+      fl
+        { focusListFocus = Focus (i+1)
+        , focusList = a <| fls
+        }
 
 -- | Unsafely get the 'Focus' from a 'FocusList'.  If the 'Focus' is
 -- 'NoFocus', this function returns 'error'.
-unsafeGetFLFocus :: FocusList a -> Int
-unsafeGetFLFocus fl =
+--
+-- This function is only safe if you already have knowledge that
+-- the 'FocusList' has a 'Focus'.
+--
+-- Generally, 'getFocusFL' should be used instead of this function.
+--
+-- >>> let Just fl = fromListFL (Focus 1) [0..9]
+-- >>> unsafeGetFocusFL fl
+-- 1
+--
+-- >>> unsafeGetFocusFL emptyFL
+-- *** Exception: ...
+-- ...
+--
+-- /complexity/: @O(1)@
+unsafeGetFocusFL :: FocusList a -> Int
+unsafeGetFocusFL fl =
   let focus = fl ^. lensFocusListFocus
   in
   case focus of
-    NoFocus -> error "unsafeGetFLFocus: the focus list doesn't have a focus"
+    NoFocus -> error "unsafeGetFocusFL: the focus list doesn't have a focus"
     Focus i -> i
+
+-- | Return 'True' if the 'Focus' in a 'FocusList' exists.
+--
+-- Return 'False' if the 'Focus' in a 'FocusList' is 'NoFocus'.
+--
+-- >>> hasFocusFL $ singletonFL "hello"
+-- True
+--
+-- >>> hasFocusFL emptyFL
+-- False
+--
+-- /complexity/: @O(1)@
+hasFocusFL :: FocusList a -> Bool
+hasFocusFL = hasFocus . getFocusFL
+
+-- | Get the 'Focus' from a 'FocusList'.
+--
+-- >>> getFocusFL $ singletonFL "hello"
+-- Focus 0
+--
+-- >>> let Just fl = fromListFL (Focus 3) [0..9]
+-- >>> getFocusFL fl
+-- Focus 3
+--
+-- >>> getFocusFL emptyFL
+-- NoFocus
+--
+-- /complexity/: @O(1)@
+getFocusFL :: FocusList a -> Focus
+getFocusFL FocusList{focusListFocus} = focusListFocus
 
 -- | Unsafely get the value of the 'Focus' from a 'FocusList'.  If the 'Focus' is
 -- 'NoFocus', this function returns 'error'.
-unsafeGetFLFocusItem :: FocusList a -> a
-unsafeGetFLFocusItem fl =
+--
+-- This function is only safe if you already have knowledge that the 'FocusList'
+-- has a 'Focus'.
+--
+-- Generally, 'getFocusItemFL' should be used instead of this function.
+--
+-- >>> let Just fl = fromListFL (Focus 0) ['a'..'c']
+-- >>> unsafeGetFocusItemFL fl
+-- 'a'
+--
+-- >>> unsafeGetFocusFL emptyFL
+-- *** Exception: ...
+-- ...
+--
+-- /complexity/: @O(log(min(i, n - i)))@ where @i@ is the 'Focus', and @n@
+-- is the length of the 'FocusList'.
+unsafeGetFocusItemFL :: FocusList a -> a
+unsafeGetFocusItemFL fl =
   let focus = fl ^. lensFocusListFocus
   in
   case focus of
-    NoFocus -> error "unsafeGetFLFocusItem: the focus list doesn't have a focus"
+    NoFocus -> error "unsafeGetFocusItemFL: the focus list doesn't have a focus"
     Focus i ->
-      let intmap = fl ^. lensFocusList
+      let fls = fl ^. lensFocusList
       in
-      case lookup i intmap of
+      case Sequence.lookup i fls of
         Nothing ->
           error $
-            "unsafeGetFLFocusItem: internal error, i (" <>
+            "unsafeGetFocusItemFL: internal error, i (" <>
             show i <>
-            ") doesnt exist in intmap"
+            ") doesnt exist in sequence"
         Just a -> a
 
-getFLFocusItem :: FocusList a -> Maybe a
-getFLFocusItem fl =
+-- | Get the item the 'FocusList' is focusing on.  Return 'Nothing' if the
+-- 'FocusList' is empty.
+--
+-- >>> let Just fl = fromListFL (Focus 0) ['a'..'c']
+-- >>> getFocusItemFL fl
+-- Just 'a'
+--
+-- >>> getFocusItemFL emptyFL
+-- Nothing
+--
+-- This will always return 'Just' if there is a 'Focus'.
+--
+-- prop> hasFocusFL fl ==> isJust (getFocusItemFL fl)
+--
+-- /complexity/: @O(log(min(i, n - i)))@ where @i@ is the 'Focus', and @n@
+-- is the length of the 'FocusList'.
+getFocusItemFL :: FocusList a -> Maybe a
+getFocusItemFL fl =
   let focus = fl ^. lensFocusListFocus
   in
   case focus of
     NoFocus -> Nothing
     Focus i ->
-      let intmap = fl ^. lensFocusList
+      let fls = fl ^. lensFocusList
       in
-      case lookup i intmap of
+      case Sequence.lookup i fls of
         Nothing ->
           error $
-            "getFLFocusItem: internal error, i (" <>
+            "getFocusItemFL: internal error, i (" <>
             show i <>
-            ") doesnt exist in intmap"
+            ") doesnt exist in sequence"
         Just a -> Just a
 
--- | Unsafely insert a new @a@ in a 'FocusList'.  This sets the 'Int' value to
--- @a@.  The length of the 'FocusList' will be increased by 1.  The
--- 'FocusList's 'Focus' is not changed.
+-- | Lookup the element at the specified index, counting from 0.
 --
--- If there is some value in the 'FocusList' already at the 'Int', then it will
--- be overwritten.  Also, the 'Int' is not checked to make sure it is above 0.
+-- >>> let Just fl = fromListFL (Focus 0) ['a'..'c']
+-- >>> lookupFL 0 fl
+-- Just 'a'
 --
--- This function is meant to be used after 'unsafeShiftUpFrom'.
+-- Returns 'Nothing' if the index is out of bounds.
 --
--- >>> let fl = unsafeShiftUpFrom 2 $ unsafeFLFromList (Focus 1) [0,1,200]
--- >>> debugFL $ unsafeInsertNewFL 2 100 fl
--- "FocusList {focusListFocus = Focus 1, focusListLen = 4, focusList = fromList [(0,0),(1,1),(2,100),(3,200)]}"
+-- >>> let Just fl = fromListFL (Focus 0) ['a'..'c']
+-- >>> lookupFL 100 fl
+-- Nothing
+-- >>> lookupFL (-1) fl
+-- Nothing
 --
--- >>> let fl = unsafeFLFromList NoFocus []
--- >>> debugFL $ unsafeInsertNewFL 0 100 fl
--- "FocusList {focusListFocus = NoFocus, focusListLen = 1, focusList = fromList [(0,100)]}"
-unsafeInsertNewFL :: Int -> a -> FocusList a -> FocusList a
-unsafeInsertNewFL i a fl =
-  fl &
-    lensFocusListLen +~ 1 &
-    lensFocusListAt i ?~ a
-
--- | This unsafely shifts all values up in a 'FocusList' starting at a given
--- index.  It also updates the 'Focus' of the 'FocusList' if it has been
--- shifted.  This does not change the length of the 'FocusList'.
+-- Always returns 'Nothing' if the 'FocusList' is empty.
 --
--- It does not check that the 'Int' is greater than 0.  It also does not check
--- that there is a 'Focus'.
+-- prop> lookupFL i emptyFL == Nothing
 --
--- ==== __EXAMPLES__
---
--- >>> let fl = unsafeShiftUpFrom 2 $ unsafeFLFromList (Focus 1) [0,1,200]
--- >>> debugFL fl
--- "FocusList {focusListFocus = Focus 1, focusListLen = 3, focusList = fromList [(0,0),(1,1),(3,200)]}"
---
--- >>> let fl = unsafeShiftUpFrom 1 $ unsafeFLFromList (Focus 1) [0,1,200]
--- >>> debugFL fl
--- "FocusList {focusListFocus = Focus 2, focusListLen = 3, focusList = fromList [(0,0),(2,1),(3,200)]}"
---
--- >>> let fl = unsafeShiftUpFrom 0 $ unsafeFLFromList (Focus 1) [0,1,200]
--- >>> debugFL fl
--- "FocusList {focusListFocus = Focus 2, focusListLen = 3, focusList = fromList [(1,0),(2,1),(3,200)]}"
---
--- >>> let fl = unsafeShiftUpFrom 0 $ unsafeFLFromList (Focus 1) [0,1,200]
--- >>> debugFL fl
--- "FocusList {focusListFocus = Focus 2, focusListLen = 3, focusList = fromList [(1,0),(2,1),(3,200)]}"
-unsafeShiftUpFrom :: forall a. Int -> FocusList a -> FocusList a
-unsafeShiftUpFrom i fl =
-  let intMap = fl ^. lensFocusList
-      lastElemIdx = (fl ^. lensFocusListLen) - 1
-      newIntMap = go i lastElemIdx intMap
-      oldFocus = unsafeGetFLFocus fl
-      newFocus = if i > oldFocus then oldFocus else oldFocus + 1
-  in
-  fl &
-    lensFocusList .~ newIntMap &
-    lensFocusListFocus .~ Focus newFocus
-  where
-    go :: Int -> Int -> IntMap a -> IntMap a
-    go idxToInsert idxToShiftUp intMap
-      | idxToInsert <= idxToShiftUp =
-        let val = unsafeLookup idxToShiftUp intMap
-            newMap =
-              insertMap (idxToShiftUp + 1) val (deleteMap idxToShiftUp intMap)
-        in go idxToInsert (idxToShiftUp - 1) newMap
-      | otherwise = intMap
-
--- | This is an unsafe lookup function.  This assumes that the 'Int' exists in
--- the 'IntMap'.
-unsafeLookup :: Int -> IntMap a -> a
-unsafeLookup i intmap =
-  case lookup i intmap of
-    Nothing -> error $ "unsafeLookup: key " <> show i <> " not found in intmap"
-    Just a -> a
-
-lookupFL :: Int -> FocusList a -> Maybe a
-lookupFL i fl = lookup i (fl ^. lensFocusList)
+-- /complexity/: @O(log(min(i, n - i)))@ where @i@ is the index you want to look up, and @n@
+-- is the length of the 'FocusList'.
+lookupFL
+  :: Int  -- ^ Index to lookup.
+  -> FocusList a
+  -> Maybe a
+lookupFL i fl = Sequence.lookup i (fl ^. lensFocusList)
 
 -- | Insert a new value into the 'FocusList'.  The 'Focus' of the list is
 -- changed appropriately.
 --
--- >>> insertFL 0 "hello" emptyFL
--- Just (FocusList (Focus 0) ["hello"])
+-- Inserting an element into an empty 'FocusList' will set the 'Focus' on
+-- that element.
 --
--- >>> insertFL 0 "hello" (singletonFL "bye")
--- Just (FocusList (Focus 1) ["hello","bye"])
+-- >>> insertFL 0 "hello" emptyFL
+-- FocusList (Focus 0) ["hello"]
+--
+-- The 'Focus' will not be changed if you insert a new element after the
+-- current 'Focus'.
 --
 -- >>> insertFL 1 "hello" (singletonFL "bye")
--- Just (FocusList (Focus 0) ["bye","hello"])
+-- FocusList (Focus 0) ["bye","hello"]
 --
--- This returns 'Nothing' if the index at which to insert the new value is
--- either less than 0 or greater than the length of the list.
+-- The 'Focus' will be bumped up by one if you insert a new element before
+-- the current 'Focus'.
+--
+-- >>> insertFL 0 "hello" (singletonFL "bye")
+-- FocusList (Focus 1) ["hello","bye"]
+--
+-- Behaves like @Data.Sequence.'Data.Sequence.insertAt'@. If the index is out of bounds, it will be
+-- inserted at the nearest available index
 --
 -- >>> insertFL 100 "hello" emptyFL
--- Nothing
+-- FocusList (Focus 0) ["hello"]
 --
 -- >>> insertFL 100 "bye" (singletonFL "hello")
--- Nothing
+-- FocusList (Focus 0) ["hello","bye"]
 --
 -- >>> insertFL (-1) "bye" (singletonFL "hello")
--- Nothing
+-- FocusList (Focus 1) ["bye","hello"]
+--
+-- /complexity/: @O(log(min(i, n - i)))@ where @i@ is the index you want to insert at, and @n@
+-- is the length of the 'FocusList'.
 insertFL
-  :: Int  -- ^ The index at which to insert the value.
-  -> a
-  -> FocusList a
-  -> Maybe (FocusList a)
-insertFL i a fl
-  | i < 0 || i > (fl ^. lensFocusListLen) =
-    -- Return Nothing if the insertion position is out of bounds.
-    Nothing
-  | i == 0 && isEmptyFL fl =
-    -- Return a 'FocusList' with one element if the insertion position is 0
-    -- and the 'FocusList' is empty.
-    Just $ singletonFL a
-  | otherwise =
-     -- Shift all existing values up one and insert the new
-     -- value in the opened place.
-     let shiftedUpFL = unsafeShiftUpFrom i fl
-     in Just $ unsafeInsertNewFL i a shiftedUpFL
-
--- | Unsafely remove a value from a 'FocusList'.  It effectively leaves a hole
--- inside the 'FocusList'.  It updates the length of the 'FocusList'.
---
--- This function does not check that a value actually exists in the
--- 'FocusList'.  It also does not update the 'Focus'.
---
--- This function does update the length of the 'FocusList'.
---
--- >>> debugFL $ unsafeRemove 1 $ unsafeFLFromList (Focus 0) [0..2]
--- "FocusList {focusListFocus = Focus 0, focusListLen = 2, focusList = fromList [(0,0),(2,2)]}"
---
--- >>> debugFL $ unsafeRemove 0 $ unsafeFLFromList (Focus 0) [0..2]
--- "FocusList {focusListFocus = Focus 0, focusListLen = 2, focusList = fromList [(1,1),(2,2)]}"
---
--- Trying to remove the last element is completely safe (unless, of course, it
--- is the 'Focus'):
---
--- >>> debugFL $ unsafeRemove 2 $ unsafeFLFromList (Focus 2) [0..2]
--- "FocusList {focusListFocus = Focus 2, focusListLen = 2, focusList = fromList [(0,0),(1,1)]}"
---
--- If this function is passed an empty 'FocusList', it will make the length -1.
---
--- >>> debugFL $ unsafeRemove 0 emptyFL
--- "FocusList {focusListFocus = NoFocus, focusListLen = -1, focusList = fromList []}"
-unsafeRemove
-  :: Int
+  :: Int  -- ^ The index at which to insert the new element.
+  -> a    -- ^ The new element.
   -> FocusList a
   -> FocusList a
-unsafeRemove i fl =
-  fl &
-    lensFocusListLen -~ 1 &
-    lensFocusListAt i .~ Nothing
-
--- | This shifts all the values down in a 'FocusList' starting at a given
--- index.  It does not change the 'Focus' of the 'FocusList'.  It does not change the
--- length of the 'FocusList'.
---
--- It does not check that shifting elements down will not overwrite other elements.
--- This function is meant to be called after 'unsafeRemove'.
---
--- >>> let fl = unsafeRemove 1 $ unsafeFLFromList (Focus 0) [0..2]
--- >>> debugFL $ unsafeShiftDownFrom 1 fl
--- "FocusList {focusListFocus = Focus 0, focusListLen = 2, focusList = fromList [(0,0),(1,2)]}"
---
--- >>> let fl = unsafeRemove 0 $ unsafeFLFromList (Focus 0) [0..2]
--- >>> debugFL $ unsafeShiftDownFrom 0 fl
--- "FocusList {focusListFocus = Focus 0, focusListLen = 2, focusList = fromList [(0,1),(1,2)]}"
---
--- Trying to shift down from the last element after it has been removed is a no-op:
---
--- >>> let fl = unsafeRemove 2 $ unsafeFLFromList (Focus 0) [0..2]
--- >>> debugFL $ unsafeShiftDownFrom 2 fl
--- "FocusList {focusListFocus = Focus 0, focusListLen = 2, focusList = fromList [(0,0),(1,1)]}"
-unsafeShiftDownFrom :: forall a. Int -> FocusList a -> FocusList a
-unsafeShiftDownFrom i fl =
-  let intMap = fl ^. lensFocusList
-      len = fl ^. lensFocusListLen
-      newIntMap = go (i + 1) len intMap
-  in fl & lensFocusList .~ newIntMap
-  where
-    go :: Int -> Int -> IntMap a -> IntMap a
-    go idxToShiftDown len intMap
-      | idxToShiftDown < len + 1 =
-        let val = unsafeLookup idxToShiftDown intMap
-            newMap =
-              insertMap (idxToShiftDown - 1) val (deleteMap idxToShiftDown intMap)
-        in go (idxToShiftDown + 1) len newMap
-      | otherwise = intMap
+insertFL _ a FocusList {focusListFocus = NoFocus} = singletonFL a
+insertFL i a fl@FocusList{focusListFocus = Focus focus, focusList = fls} =
+  if i > focus
+    then
+      fl
+        { focusList = insertAt i a fls
+        }
+    else
+      fl
+        { focusList = insertAt i a fls
+        , focusListFocus = Focus $ focus + 1
+        }
 
 -- | Remove an element from a 'FocusList'.
 --
@@ -574,38 +758,38 @@ unsafeShiftDownFrom i fl =
 -- For example, if the 'Focus' is on index 1, and we have removed index 2, then
 -- the focus is not affected, so it is not changed.
 --
--- >>> let focusList = unsafeFLFromList (Focus 1) ["cat","goat","dog","hello"]
+-- >>> let focusList = unsafeFromListFL (Focus 1) ["cat","goat","dog","hello"]
 -- >>> removeFL 2 focusList
 -- Just (FocusList (Focus 1) ["cat","goat","hello"])
 --
 -- If the 'Focus' is on index 2 and we have removed index 1, then the 'Focus'
 -- will be moved back one element to set to index 1.
 --
--- >>> let focusList = unsafeFLFromList (Focus 2) ["cat","goat","dog","hello"]
+-- >>> let focusList = unsafeFromListFL (Focus 2) ["cat","goat","dog","hello"]
 -- >>> removeFL 1 focusList
 -- Just (FocusList (Focus 1) ["cat","dog","hello"])
 --
 -- If we remove the 'Focus', then the next item is set to have the 'Focus'.
 --
--- >>> let focusList = unsafeFLFromList (Focus 0) ["cat","goat","dog","hello"]
+-- >>> let focusList = unsafeFromListFL (Focus 0) ["cat","goat","dog","hello"]
 -- >>> removeFL 0 focusList
 -- Just (FocusList (Focus 0) ["goat","dog","hello"])
 --
 -- If the element to remove is the only element in the list, then the 'Focus'
 -- will be set to 'NoFocus'.
 --
--- >>> let focusList = unsafeFLFromList (Focus 0) ["hello"]
+-- >>> let focusList = unsafeFromListFL (Focus 0) ["hello"]
 -- >>> removeFL 0 focusList
 -- Just (FocusList NoFocus [])
 --
 -- If the 'Int' for the index to remove is either less than 0 or greater then
 -- the length of the list, then 'Nothing' is returned.
 --
--- >>> let focusList = unsafeFLFromList (Focus 0) ["hello"]
+-- >>> let focusList = unsafeFromListFL (Focus 0) ["hello"]
 -- >>> removeFL (-1) focusList
 -- Nothing
 --
--- >>> let focusList = unsafeFLFromList (Focus 1) ["hello","bye","cat"]
+-- >>> let focusList = unsafeFromListFL (Focus 1) ["hello","bye","cat"]
 -- >>> removeFL 3 focusList
 -- Nothing
 --
@@ -613,21 +797,23 @@ unsafeShiftDownFrom i fl =
 --
 -- >>> removeFL 0 emptyFL
 -- Nothing
+--
+-- /complexity/: @O(log(min(i, n - i)))@ where @i@ is index of the element to remove, and @n@
+-- is the length of the 'FocusList'.
 removeFL
   :: Int          -- ^ Index of the element to remove from the 'FocusList'.
   -> FocusList a  -- ^ The 'FocusList' to remove an element from.
   -> Maybe (FocusList a)
-removeFL i fl
-  | i < 0 || i >= (fl ^. lensFocusListLen) || isEmptyFL fl =
+removeFL i fl@FocusList{focusList = fls}
+  | i < 0 || i >= (lengthFL fl) || isEmptyFL fl =
     -- Return Nothing if the removal position is out of bounds.
     Nothing
-  | fl ^. lensFocusListLen == 1 =
+  | lengthFL fl == 1 =
     -- Return an empty focus list if there is currently only one element
     Just emptyFL
   | otherwise =
-    let newFLWithHole = unsafeRemove i fl
-        newFL = unsafeShiftDownFrom i newFLWithHole
-        focus = unsafeGetFLFocus fl
+    let newFL = fl {focusList = deleteAt i fls}
+        focus = unsafeGetFocusFL fl
     in
     if focus >= i && focus /= 0
       then Just $ newFL & lensFocusListFocus . _Focus -~ 1
@@ -635,49 +821,46 @@ removeFL i fl
 
 -- | Find the index of the first element in the 'FocusList'.
 --
--- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "tree"]
+-- >>> let Just fl = fromListFL (Focus 1) ["hello", "bye", "tree"]
 -- >>> indexOfFL "hello" fl
 -- Just 0
 --
 -- If more than one element exists, then return the index of the first one.
 --
--- >>> let Just fl = flFromList (Focus 1) ["dog", "cat", "cat"]
+-- >>> let Just fl = fromListFL (Focus 1) ["dog", "cat", "cat"]
 -- >>> indexOfFL "cat" fl
 -- Just 1
 --
 -- If the element doesn't exist, then return 'Nothing'
 --
--- >>> let Just fl = flFromList (Focus 1) ["foo", "bar", "baz"]
+-- >>> let Just fl = fromListFL (Focus 1) ["foo", "bar", "baz"]
 -- >>> indexOfFL "hogehoge" fl
 -- Nothing
 indexOfFL :: Eq a => a -> FocusList a -> Maybe Int
-indexOfFL a fl =
-  let intmap = focusList fl
-      keyVals = sortOn fst $ mapToList intmap
-      maybeKeyVal = find (\(_, val) -> val == a) keyVals
-  in fmap fst maybeKeyVal
+indexOfFL a FocusList{focusList = fls} =
+  elemIndexL a fls
 
 -- | Delete an element from a 'FocusList'.
 --
--- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "tree"]
+-- >>> let Just fl = fromListFL (Focus 0) ["hello", "bye", "tree"]
 -- >>> deleteFL "bye" fl
 -- FocusList (Focus 0) ["hello","tree"]
 --
 -- The focus will be updated if an item before it is deleted.
 --
--- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "tree"]
+-- >>> let Just fl = fromListFL (Focus 1) ["hello", "bye", "tree"]
 -- >>> deleteFL "hello" fl
 -- FocusList (Focus 0) ["bye","tree"]
 --
 -- If there are multiple matching elements in the 'FocusList', remove them all.
 --
--- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "bye"]
+-- >>> let Just fl = fromListFL (Focus 0) ["hello", "bye", "bye"]
 -- >>> deleteFL "bye" fl
 -- FocusList (Focus 0) ["hello"]
 --
 -- If there are no matching elements, return the original 'FocusList'.
 --
--- >>> let Just fl = flFromList (Focus 2) ["hello", "good", "bye"]
+-- >>> let Just fl = fromListFL (Focus 2) ["hello", "good", "bye"]
 -- >>> deleteFL "frog" fl
 -- FocusList (Focus 2) ["hello","good","bye"]
 deleteFL
@@ -703,15 +886,17 @@ deleteFL item = go
 
 -- | Set the 'Focus' for a 'FocusList'.
 --
--- This is just like 'updateFocusFL', but doesn't return the new focused item.
+-- This is just like 'updateFocusFL', but doesn't return the newly focused item.
 --
 -- prop> setFocusFL i fl == fmap snd (updateFocusFL i fl)
+--
+-- /complexity/: @O(1)@
 setFocusFL :: Int -> FocusList a -> Maybe (FocusList a)
 setFocusFL i fl
   -- Can't set a 'Focus' for an empty 'FocusList'.
   | isEmptyFL fl = Nothing
   | otherwise =
-    let len = fl ^. lensFocusListLen
+    let len = lengthFL fl
     in
     if i < 0 || i >= len
       then Nothing
@@ -719,7 +904,7 @@ setFocusFL i fl
 
 -- | Update the 'Focus' for a 'FocusList' and get the new focused element.
 --
--- >>> updateFocusFL 1 =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
+-- >>> updateFocusFL 1 =<< fromListFL (Focus 2) ["hello","bye","dog","cat"]
 -- Just ("bye",FocusList (Focus 1) ["hello","bye","dog","cat"])
 --
 -- If the 'FocusList' is empty, then return 'Nothing'.
@@ -730,80 +915,92 @@ setFocusFL i fl
 -- If the new focus is less than 0, or greater than or equal to the length of
 -- the 'FocusList', then return 'Nothing'.
 --
--- >>> updateFocusFL (-1) =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
+-- >>> updateFocusFL (-1) =<< fromListFL (Focus 2) ["hello","bye","dog","cat"]
 -- Nothing
 --
--- >>> updateFocusFL 4 =<< flFromList (Focus 2) ["hello","bye","dog","cat"]
+-- >>> updateFocusFL 4 =<< fromListFL (Focus 2) ["hello","bye","dog","cat"]
 -- Nothing
-updateFocusFL :: Int -> FocusList a -> Maybe (a, FocusList a)
+--
+-- /complexity/: @O(log(min(i, n - i)))@ where @i@ is the new index to put the 'Focus' on,
+-- and @n@ -- is the length of the 'FocusList'.
+updateFocusFL
+  :: Int  -- ^ The new index to put the 'Focus' on.
+  -> FocusList a
+  -> Maybe (a, FocusList a)
+  -- ^ A tuple of the new element that gets the 'Focus', and the new
+  -- 'FocusList'.
 updateFocusFL i fl
   | isEmptyFL fl = Nothing
   | otherwise =
-    let len = fl ^. lensFocusListLen
+    let len = lengthFL fl
     in
     if i < 0 || i >= len
       then Nothing
       else
         let newFL = fl & lensFocusListFocus . _Focus .~ i
-        in Just (unsafeGetFLFocusItem newFL, newFL)
+        in Just (unsafeGetFocusItemFL newFL, newFL)
 
 -- | Find a value in a 'FocusList'.  Similar to @Data.List.'Data.List.find'@.
 --
--- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "tree"]
--- >>> findFL (\_ a -> a == "hello") fl
--- Just (0,"hello")
+-- >>> let Just fl = fromListFL (Focus 1) ["hello", "bye", "tree"]
+-- >>> findFL (\a -> a == "hello") fl
+-- Just "hello"
 --
 -- This will only find the first value.
 --
--- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "bye"]
--- >>> findFL (\_ a -> a == "bye") fl
--- Just (1,"bye")
+-- >>> let Just fl = fromListFL (Focus 0) ["hello", "bye", "bye"]
+-- >>> findFL (\a -> a == "bye") fl
+-- Just "bye"
 --
 -- If no values match the comparison, this will return 'Nothing'.
 --
--- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "parrot"]
--- >>> findFL (\_ a -> a == "ball") fl
+-- >>> let Just fl = fromListFL (Focus 1) ["hello", "bye", "parrot"]
+-- >>> findFL (\a -> a == "ball") fl
 -- Nothing
-findFL :: (Int -> a -> Bool) -> FocusList a -> Maybe (Int, a)
-findFL f fl =
-  let intmap = fl ^. lensFocusList
-      vals = sortOn fst $ mapToList intmap
-  in find (\(i, a) -> f i a) vals
-
+--
+-- /complexity/: @O(n)@ where @n@ is the length of the 'FocusList'.
+findFL :: (a -> Bool) -> FocusList a -> Maybe (a)
+findFL p fl =
+  let fls = fl ^. lensFocusList
+  in find p fls
 
 -- | Move an existing item in a 'FocusList' to a new index.
 --
 -- The 'Focus' gets updated appropriately when moving items.
 --
--- >>> let Just fl = flFromList (Focus 1) ["hello", "bye", "parrot"]
+-- >>> let Just fl = fromListFL (Focus 1) ["hello", "bye", "parrot"]
 -- >>> moveFromToFL 0 1 fl
 -- Just (FocusList (Focus 0) ["bye","hello","parrot"])
 --
 -- The 'Focus' may not get updated if it is not involved.
 --
--- >>> let Just fl = flFromList (Focus 0) ["hello", "bye", "parrot"]
+-- >>> let Just fl = fromListFL (Focus 0) ["hello", "bye", "parrot"]
 -- >>> moveFromToFL 1 2 fl
 -- Just (FocusList (Focus 0) ["hello","parrot","bye"])
 --
--- If the element with the 'Focus' is moved, then the 'Focus' will be updated appropriately.
+-- If the element with the 'Focus' is moved, then the 'Focus' will be updated
+-- appropriately.
 --
--- >>> let Just fl = flFromList (Focus 2) ["hello", "bye", "parrot"]
+-- >>> let Just fl = fromListFL (Focus 2) ["hello", "bye", "parrot"]
 -- >>> moveFromToFL 2 0 fl
 -- Just (FocusList (Focus 0) ["parrot","hello","bye"])
 --
 -- If the index of the item to move is out bounds, then 'Nothing' will be returned.
 --
--- >>> let Just fl = flFromList (Focus 2) ["hello", "bye", "parrot"]
+-- >>> let Just fl = fromListFL (Focus 2) ["hello", "bye", "parrot"]
 -- >>> moveFromToFL 3 0 fl
 -- Nothing
 --
 -- If the new index is out of bounds, then 'Nothing' wil be returned.
 --
--- >>> let Just fl = flFromList (Focus 2) ["hello", "bye", "parrot"]
+-- >>> let Just fl = fromListFL (Focus 2) ["hello", "bye", "parrot"]
 -- >>> moveFromToFL 1 (-1) fl
 -- Nothing
+--
+-- /complexity/: @O(log n)@ where @n@ is the length of the 'FocusList'.
 moveFromToFL
-  :: Show a => Int  -- ^ Index of the item to move.
+  :: Show a
+  => Int  -- ^ Index of the item to move.
   -> Int  -- ^ New index for the item.
   -> FocusList a
   -> Maybe (FocusList a)
@@ -819,12 +1016,187 @@ moveFromToFL oldPos newPos fl
         case removeFL oldPos fl of
           Nothing -> error "moveFromToFL should have been able to remove old position"
           Just flAfterRemove ->
-            case insertFL newPos item flAfterRemove of
-              Nothing -> error "moveFromToFL should have been able to reinsert the item"
-              Just flAfterInsert ->
+            let flAfterInsert = insertFL newPos item flAfterRemove in
                 if Focus oldPos == oldFocus
                   then
                     case setFocusFL newPos flAfterInsert of
                       Nothing -> error "moveFromToFL should have been able to reset the focus"
                       Just flWithUpdatedFocus -> Just flWithUpdatedFocus
                   else Just flAfterInsert
+
+-- | Intersperse a new element between existing elements in the 'FocusList'.
+--
+-- >>> let Just fl = fromListFL (Focus 0) ["hello", "bye", "cat"]
+-- >>> intersperseFL "foo" fl
+-- FocusList (Focus 0) ["hello","foo","bye","foo","cat"]
+--
+-- The 'Focus' is updated accordingly.
+--
+-- >>> let Just fl = fromListFL (Focus 2) ["hello", "bye", "cat", "goat"]
+-- >>> intersperseFL "foo" fl
+-- FocusList (Focus 4) ["hello","foo","bye","foo","cat","foo","goat"]
+--
+-- The item with the 'Focus' should never change after calling 'intersperseFL'.
+--
+-- prop> getFocusItemFL (fl :: FocusList Int) == getFocusItemFL (intersperseFL a fl)
+--
+-- 'intersperseFL' should not have any effect on a 'FocusList' with less than
+-- two items.
+--
+-- prop> emptyFL == intersperseFL x emptyFL
+-- prop> singletonFL a == intersperseFL x (singletonFL a)
+--
+-- /complexity/: @O(n)@ where @n@ is the length of the 'FocusList'.
+intersperseFL :: a -> FocusList a -> FocusList a
+intersperseFL _ FocusList{focusListFocus = NoFocus} = emptyFL
+intersperseFL a FocusList{focusList = fls, focusListFocus = Focus foc} =
+  let newFLS = intersperse a fls
+  in
+  FocusList
+    { focusList = newFLS
+    , focusListFocus = Focus (foc * 2)
+    }
+
+-- | Reverse a 'FocusList'.  The 'Focus' is updated accordingly.
+--
+-- >>> let Just fl = fromListFL (Focus 0) ["hello", "bye", "cat"]
+-- >>> reverseFL fl
+-- FocusList (Focus 2) ["cat","bye","hello"]
+--
+-- >>> let Just fl = fromListFL (Focus 2) ["hello", "bye", "cat", "goat"]
+-- >>> reverseFL fl
+-- FocusList (Focus 1) ["goat","cat","bye","hello"]
+--
+-- The item with the 'Focus' should never change after calling 'intersperseFL'.
+--
+-- prop> getFocusItemFL (fl :: FocusList Int) == getFocusItemFL (reverseFL fl)
+--
+-- Reversing twice should not change anything.
+--
+-- prop> (fl :: FocusList Int) == reverseFL (reverseFL fl)
+--
+-- Reversing empty lists and single lists should not do anything.
+--
+-- prop> emptyFL == reverseFL emptyFL
+-- prop> singletonFL a == reverseFL (singletonFL a)
+--
+-- /complexity/: @O(n)@ where @n@ is the length of the 'FocusList'.
+reverseFL :: FocusList a -> FocusList a
+reverseFL FocusList{focusListFocus = NoFocus} = emptyFL
+reverseFL FocusList{focusList = fls, focusListFocus = Focus foc} =
+  let newFLS = reverse fls
+      newFLSLen = length newFLS
+  in
+  FocusList
+    { focusList = newFLS
+    , focusListFocus = Focus (newFLSLen - foc - 1)
+    }
+
+-- | Sort a 'FocusList'.
+--
+-- The 'Focus' will stay with the element that has the 'Focus'.
+--
+-- >>> let Just fl = fromListFL (Focus 2) ["b", "c", "a"]
+-- >>> sortByFL compare fl
+-- FocusList (Focus 0) ["a","b","c"]
+--
+-- Nothing will happen if you try to sort an empty 'FocusList', or a
+-- 'FocusList' with only one element.
+--
+-- prop> emptyFL == sortByFL compare emptyFL
+-- prop> singletonFL a == sortByFL compare (singletonFL a)
+--
+-- The element with the 'Focus' should be the same before and after sorting.
+--
+-- prop> getFocusItemFL (fl :: FocusList Int) == getFocusItemFL (sortByFL compare fl)
+--
+-- Sorting a 'FocusList' and getting the underlying 'Seq' should be the same as
+-- getting the underlying 'Seq' and then sorting it.
+--
+-- prop> toSeqFL (sortByFL compare (fl :: FocusList Int)) == sortBy compare (toSeqFL fl)
+--
+-- __WARNING__: The computational complexity for this is very bad. It should be
+-- able to be done in @O(n * log n)@, but the current implementation is
+-- @O(n^2)@ (or worse), where @n@ is the length of the 'FocusList'.  This
+-- function could be implemented the same way
+-- @Data.Sequence.'Data.Sequence.sortBy'@ is implemented.  However, a small
+-- change needs to be added to that function to keep track of the 'Focus' in
+-- the 'FocusList' and make sure it gets updated properly.  If you're
+-- interested in fixing this, please send a PR.
+sortByFL
+  :: forall a
+   . (a -> a -> Ordering) -- ^ The function to use to compare elements.
+  -> FocusList a
+  -> FocusList a
+sortByFL _ FocusList{focusListFocus = NoFocus} = emptyFL
+sortByFL cmpFunc FocusList{focusList = fls, focusListFocus = Focus foc} =
+  let (res, maybeNewFoc) = go fls (Just foc)
+  in
+  case maybeNewFoc of
+    Nothing -> error "sortByFL: A sequence should never lose its focus."
+    Just newFoc ->
+      FocusList
+        { focusList = res
+        , focusListFocus = Focus newFoc
+        }
+  where
+    go
+      :: Seq a -- ^ The sequence that needs to be sorted.
+      -> Maybe Int
+         -- ^ Whether or not we are tracking a 'Focus' that needs to be updated.
+      -> (Seq a, Maybe Int)
+    -- Trying to sort an empty sequence with a 'Focus'.  This should never happen.
+    go Empty (Just _) =
+      error "sortByFL: go: this should never happen, sort empty with focus."
+    -- Trying to sort an empty sequence.
+    go Empty Nothing = (Empty, Nothing)
+    -- Trying to sort a non-empty sequence with no focus.
+    go (a :<| as) Nothing =
+      let res = go as Nothing
+      in
+      case res of
+        (_, Just _) -> error "sortByFL: go: this should never happen, no focus case"
+        (Empty, Nothing) -> (a :<| Empty, Nothing)
+        (b :<| bs, Nothing) ->
+          case cmpFunc a b of
+            LT -> (a :<| b :<| bs, Nothing)
+            EQ -> (a :<| b :<| bs, Nothing)
+            GT -> (b :<| fst (go (a :<| bs) Nothing), Nothing)
+    -- Trying to sort a non-empty sequence with the top element having the focus.
+    go (a :<| as) (Just 0) =
+      let res = go as Nothing
+      in
+      case res of
+        (_, Just _) -> error "sortByFL: go: this should never happen, top elem has focus case"
+        (Empty, Nothing) -> (a :<| Empty, Just 0)
+        (b :<| bs, Nothing) ->
+          case cmpFunc a b of
+            LT -> (a :<| b :<| bs, Just 0)
+            EQ -> (a :<| b :<| bs, Just 0)
+            GT ->
+              let (newSeq, maybeNewFoc) = go (a :<| bs) (Just 0)
+              in
+              case maybeNewFoc of
+                Nothing -> error "sortByFL: go: this should never happen, lost the focus"
+                Just newFoc -> (b :<| newSeq, Just (newFoc + 1))
+    -- Trying to sort a non-empty sequence where some element other than the
+    -- top element has the focus.
+    go (a :<| as) (Just n) =
+      let res = go as (Just (n - 1))
+      in
+      case res of
+        (_, Nothing) -> error "sortByFL: go: this should never happen, no focus"
+        (Empty, Just _) -> error "sortByFL: go: this should never happen, focus but no elems"
+        (b :<| bs, Just newFoc) ->
+          case cmpFunc a b of
+            LT -> (a :<| b :<| bs, Just (newFoc + 1))
+            EQ -> (a :<| b :<| bs, Just (newFoc + 1))
+            GT ->
+              case newFoc of
+                0 -> (b :<| fst (go (a :<| bs) Nothing), Just 0)
+                gt0 ->
+                  let (newSeq, maybeNewFoc') = go (a :<| bs) (Just gt0)
+                  in
+                  case maybeNewFoc' of
+                    Nothing -> error "sortByFL: go: this should never happen, lost the focus again"
+                    Just newFoc' -> (b :<| newSeq, Just (newFoc' + 1))

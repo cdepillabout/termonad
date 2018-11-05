@@ -5,6 +5,7 @@ import Termonad.Prelude
 
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
 import Control.Lens ((&), (.~), (^.))
+import Data.Sequence (findIndexR)
 import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
 import GI.Gio
   ( ApplicationFlags(ApplicationFlagsFlagsNone)
@@ -85,7 +86,7 @@ import Termonad.Lenses
   , lensTMStateNotebook
   , lensTerm
   )
-import Termonad.FocusList (findFL, moveFromToFL, updateFocusFL)
+import Termonad.FocusList (focusList, moveFromToFL, updateFocusFL)
 import Termonad.Gtk (appNew, objFromBuildUnsafe)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Term (createTerm, relabelTabs, termExitFocused, setShowTabs)
@@ -160,8 +161,8 @@ createFontDesc tmConfig = do
       fontDescriptionSetAbsoluteSize fontDesc $ units * fromIntegral SCALE
   pure fontDesc
 
-compareScrolledWinAndTab :: ScrolledWindow -> a -> TMNotebookTab -> Bool
-compareScrolledWinAndTab scrollWin _ flTab =
+compareScrolledWinAndTab :: ScrolledWindow -> TMNotebookTab -> Bool
+compareScrolledWinAndTab scrollWin flTab =
   let ScrolledWindow managedPtrFLTab = tmNotebookTabTermContainer flTab
       foreignPtrFLTab = managedForeignPtr managedPtrFLTab
       ScrolledWindow managedPtrScrollWin = scrollWin
@@ -298,14 +299,15 @@ setupTermonad tmConfig app win builder = do
       Just scrollWin -> do
         TMState{tmStateNotebook} <- readMVar mvarTMState
         let fl = tmStateNotebook ^. lensTMNotebookTabs
-        let maybeOldPosition = findFL (compareScrolledWinAndTab scrollWin) fl
+        let maybeOldPosition =
+              findIndexR (compareScrolledWinAndTab scrollWin) (focusList fl)
         case maybeOldPosition of
           Nothing ->
             fail $
               "In setupTermonad, in callback for onNotebookPageReordered, " <>
               "the ScrolledWindow is not already in the FocusList.\n" <>
               "Don't know how to continue.\n"
-          Just (oldPos, _) -> do
+          Just oldPos -> do
             updateFLTabPos mvarTMState oldPos (fromIntegral pageNum)
             relabelTabs mvarTMState
 

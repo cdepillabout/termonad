@@ -57,6 +57,7 @@ library
                      , classy-prelude
                      , colour
                      , constraints
+                     , containers
                      , data-default
                      , directory >= 1.3.1.0
                      , distributive
@@ -70,6 +71,7 @@ library
                      , gi-vte >= 2.91.19
                      , haskell-gi-base >= 0.21.2
                      , lens
+                     , mono-traversable
                      , pretty-simple
                      , QuickCheck
                      , singletons
@@ -137,6 +139,7 @@ test-suite termonad-test
   other-modules:       Test.FocusList
                      , Test.FocusList.Invariants
   build-depends:       base
+                     , genvalidity-containers
                      , genvalidity-hspec
                      , hedgehog
                      , lens

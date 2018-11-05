@@ -3,7 +3,6 @@ module Test.FocusList.Invariants where
 
 import Termonad.Prelude
 
-import Control.Lens ((^.))
 import Hedgehog
   ( Gen
   , Property
@@ -20,13 +19,12 @@ import Hedgehog.Range (constant, linear)
 
 import Termonad.FocusList
   ( FocusList
-  , debugFL
   , deleteFL
   , emptyFL
   , insertFL
   , invariantFL
   , isEmptyFL
-  , lensFocusListLen
+  , lengthFL
   , lookupFL
   , removeFL
   )
@@ -53,7 +51,7 @@ genInsertFL valGen fl
       val <- valGen
       pure $ InsertFL 0 val
   | otherwise = Just $ do
-      let len = fl ^. lensFocusListLen
+      let len = lengthFL fl
       key <- int $ constant 0 len
       val <- valGen
       pure $ InsertFL key val
@@ -62,7 +60,7 @@ genRemoveFL :: FocusList a -> Maybe (Gen (Action a))
 genRemoveFL fl
   | isEmptyFL fl = Nothing
   | otherwise = Just $ do
-      let len = fl ^. lensFocusListLen
+      let len = lengthFL fl
       keyToRemove <- int $ constant 0 (len - 1)
       pure $ RemoveFL keyToRemove
 
@@ -70,7 +68,7 @@ genDeleteFL :: Show a => FocusList a -> Maybe (Gen (Action a))
 genDeleteFL fl
   | isEmptyFL fl = Nothing
   | otherwise = Just $ do
-      let len = fl ^. lensFocusListLen
+      let len = lengthFL fl
       keyForItemToDelete <- int $ constant 0 (len - 1)
       let maybeItemToDelete = lookupFL keyForItemToDelete fl
       case maybeItemToDelete of
@@ -81,7 +79,7 @@ genDeleteFL fl
                 "\nkey: " <>
                 show keyForItemToDelete <>
                 "\nfocus list: " <>
-                debugFL fl
+                show fl
           in error msg
         Just item -> pure $ DeleteFL item
 
@@ -97,13 +95,13 @@ generateAction valGen fl = do
     [] ->
       let msg =
             "No generators available for fl:\n" <>
-            debugFL fl
+            show fl
       in error msg
     _ -> do
       choice generators
 
 performAction :: Eq a => FocusList a -> Action a -> Maybe (FocusList a)
-performAction fl (InsertFL key val) = insertFL key val fl
+performAction fl (InsertFL key val) = Just $ insertFL key val fl
 performAction fl (RemoveFL keyToRemove) = removeFL keyToRemove fl
 performAction fl (DeleteFL valToDelete) = Just $ deleteFL valToDelete fl
 

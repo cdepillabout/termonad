@@ -86,7 +86,7 @@ import System.FilePath ((</>))
 import System.Directory (getSymbolicLinkTarget)
 import System.Environment (lookupEnv)
 
-import Termonad.FocusList (appendFL, deleteFL, getFLFocusItem)
+import Termonad.FocusList (appendFL, deleteFL, getFocusItemFL)
 import Termonad.Lenses
   ( lensConfirmExit
   , lensOptions
@@ -133,7 +133,7 @@ termExitFocused :: TMState -> IO ()
 termExitFocused mvarTMState = do
   tmState <- readMVar mvarTMState
   let maybeTab =
-        tmState ^. lensTMStateNotebook . lensTMNotebookTabs . to getFLFocusItem
+        tmState ^. lensTMStateNotebook . lensTMNotebookTabs . to getFocusItemFL
   case maybeTab of
     Nothing -> pure ()
     Just tab -> termClose tab mvarTMState
@@ -297,7 +297,7 @@ createTerm handleKeyPress mvarTMState = do
   scrolledWin <- createScrolledWin mvarTMState
   TMState{tmStateAppWin, tmStateFontDesc, tmStateConfig, tmStateNotebook=currNote} <-
     readMVar mvarTMState
-  let maybeCurrFocusedTabPid = pid . tmNotebookTabTerm <$> getFLFocusItem (tmNotebookTabs currNote)
+  let maybeCurrFocusedTabPid = pid . tmNotebookTabTerm <$> getFocusItemFL (tmNotebookTabs currNote)
   maybeCurrDir <- maybe (pure Nothing) cwdOfPid maybeCurrFocusedTabPid
   vteTerm <- terminalNew
   terminalSetFont vteTerm (Just tmStateFontDesc)
