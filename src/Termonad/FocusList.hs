@@ -8,7 +8,7 @@ module Termonad.FocusList
     FocusList(FocusList, focusListFocus, focusList)
     -- ** Conversions
   , fromListFL
-  , fromFoldable
+  , fromFoldableFL
   , toSeqFL
     -- ** Query
   , lengthFL
@@ -136,7 +136,7 @@ _NoFocus = prism' (const NoFocus) (foldFocus (Just ()) (const Nothing))
 -- >>> hasFocus NoFocus
 -- False
 --
--- @O(1)@
+-- /complexity/: @O(1)@
 hasFocus :: Focus -> Bool
 hasFocus NoFocus = False
 hasFocus (Focus _) = True
@@ -149,7 +149,7 @@ hasFocus (Focus _) = True
 -- >>> getFocus NoFocus
 -- Nothing
 --
--- @O(1)@
+-- /complexity/: @O(1)@
 getFocus :: Focus -> Maybe Int
 getFocus NoFocus = Nothing
 getFocus (Focus i) = Just i
@@ -168,7 +168,7 @@ getFocus (Focus i) = Just i
 --
 -- prop> maybeInt == getFocus (maybeToFocus maybeInt)
 --
--- @O(1)@
+-- /complexity/: @O(1)@
 maybeToFocus :: Maybe Int -> Focus
 maybeToFocus Nothing = NoFocus
 maybeToFocus (Just i) = Focus i
@@ -184,16 +184,18 @@ maybeToFocus (Just i) = Focus i
 -- *** Exception: ...
 -- ...
 --
--- @O(1)@
+-- /complexity/: @O(1)@
 unsafeGetFocus :: Focus -> Int
 unsafeGetFocus NoFocus = error "unsafeGetFocus: NoFocus"
 unsafeGetFocus (Focus i) = i
 
 -- | A list with a given element having the 'Focus'.
 --
--- Implemented under the hood as a 'S.Seq'.  The 'FocusList' has some
--- invariants that must be protected.  You should not use the 'FocusList'
--- constructor or the 'focusListFocus' or 'focusList' accessors.
+-- 'FocusList' has some invariants that must be protected.  You should not use
+-- the 'FocusList' constructor or the 'focusListFocus' or 'focusList'
+-- accessors.
+--
+-- Implemented under the hood as a 'S.Seq'.
 data FocusList a = FocusList
   { focusListFocus :: !Focus
   , focusList :: !(S.Seq a)
@@ -278,7 +280,7 @@ instance Show a => Show (FocusList a) where
 
 -- | Get the underlying 'Seq' in a 'FocusList'.
 --
--- @O(1)@
+-- /complexity/: @O(1)@
 toSeqFL :: FocusList a -> Seq a
 toSeqFL FocusList{focusList = fls} = fls
 
@@ -288,7 +290,7 @@ toSeqFL FocusList{focusList = fls} = fls
 -- >>> lengthFL fl
 -- 3
 --
--- @O(1)@
+-- /complexity/: @O(1)@
 lengthFL :: FocusList a -> Int
 lengthFL = S.length . focusList
 
@@ -307,7 +309,7 @@ lengthFL = S.length . focusList
 -- - There needs to be a 'Focus' if the length of the
 --   'FocusList' is greater than 0.
 --
--- @O(log n)@, where @n@ is the length of the 'FocusList'.
+-- /complexity/: @O(log n)@, where @n@ is the length of the 'FocusList'.
 invariantFL :: FocusList a -> Bool
 invariantFL fl =
   invariantFocusNotNeg &&
@@ -368,7 +370,7 @@ invariantFL fl =
 -- If 'fromListFL' returns a 'Just' 'FocusList', then 'unsafeFromListFL' should
 -- return the same 'FocusList'.
 --
--- @O(n)@ where @n@ is the length of the input list.
+-- /complexity/: @O(n)@ where @n@ is the length of the input list.
 unsafeFromListFL :: Focus -> [a] -> FocusList a
 unsafeFromListFL focus list =
   FocusList
@@ -395,7 +397,7 @@ unsafeFromListFL focus list =
 -- >>> fromListFL NoFocus ["cat","dog","goat"]
 -- Nothing
 --
--- @O(n)@ where @n@ is the length of the input list.
+-- /complexity/: @O(n)@ where @n@ is the length of the input list.
 fromListFL :: Focus -> [a] -> Maybe (FocusList a)
 fromListFL NoFocus [] = Just emptyFL
 fromListFL _ [] = Nothing
@@ -419,7 +421,7 @@ fromListFL (Focus i) list =
 --
 -- prop> fromFoldableFL foc (foldable :: Data.Sequence.Seq Int) == fromListFL foc (toList foldable)
 --
--- @O(n)@
+-- /complexity/: @O(n)@ where @n@ is the length of the 'Foldable'
 fromFoldableFL :: Foldable f => Focus -> f a -> Maybe (FocusList a)
 fromFoldableFL foc as = fromListFL foc (Foldable.toList as)
 
@@ -428,7 +430,7 @@ fromFoldableFL foc as = fromListFL foc (Foldable.toList as)
 -- >>> singletonFL "hello"
 -- FocusList (Focus 0) ["hello"]
 --
--- @O(1)@
+-- /complexity/: @O(1)@
 singletonFL :: a -> FocusList a
 singletonFL a =
   FocusList
@@ -441,7 +443,7 @@ singletonFL a =
 -- >>> emptyFL
 -- FocusList NoFocus []
 --
--- @O(1)@
+-- /complexity/: @O(1)@
 emptyFL :: FocusList a
 emptyFL =
   FocusList
@@ -463,7 +465,7 @@ emptyFL =
 --
 -- The opposite is also true.
 --
--- @O(1)@
+-- /complexity/: @O(1)@
 isEmptyFL :: FocusList a -> Bool
 isEmptyFL fl = (lengthFL fl) == 0
 
@@ -481,7 +483,7 @@ isEmptyFL fl = (lengthFL fl) == 0
 --
 -- prop> appendFL emptyFL a == singletonFL a
 --
--- @O(log n)@ where @n@ is the length of the 'FocusList'.
+-- /complexity/: @O(log n)@ where @n@ is the length of the 'FocusList'.
 appendFL :: FocusList a -> a -> FocusList a
 appendFL fl a =
   if isEmptyFL fl
@@ -498,7 +500,7 @@ appendFL fl a =
 --
 -- prop> (appendSetFocusFL fl a) ^. lensFocusListFocus /= fl ^. lensFocusListFocus
 --
--- @O(log n)@ where @n@ is the length of the 'FocusList'.
+-- /complexity/: @O(log n)@ where @n@ is the length of the 'FocusList'.
 appendSetFocusFL :: FocusList a -> a -> FocusList a
 appendSetFocusFL fl a =
   let oldLen = length $ focusList fl
@@ -523,7 +525,7 @@ appendSetFocusFL fl a =
 --
 -- prop> (fl ^. lensFocusListFocus) < (prependFL a fl ^. lensFocusListFocus)
 --
--- @O(1)@
+-- /complexity/: @O(1)@
 prependFL :: a -> FocusList a -> FocusList a
 prependFL a fl@FocusList{ focusListFocus = focus, focusList = fls}  =
   case focus of
@@ -550,7 +552,7 @@ prependFL a fl@FocusList{ focusListFocus = focus, focusList = fls}  =
 -- *** Exception: ...
 -- ...
 --
--- @O(1)@
+-- /complexity/: @O(1)@
 unsafeGetFocusFL :: FocusList a -> Int
 unsafeGetFocusFL fl =
   let focus = fl ^. lensFocusListFocus
@@ -569,7 +571,7 @@ unsafeGetFocusFL fl =
 -- >>> hasFocusFL emptyFL
 -- False
 --
--- @O(1)@
+-- /complexity/: @O(1)@
 hasFocusFL :: FocusList a -> Bool
 hasFocusFL = hasFocus . getFocusFL
 
@@ -585,7 +587,7 @@ hasFocusFL = hasFocus . getFocusFL
 -- >>> getFocusFL emptyFL
 -- NoFocus
 --
--- @O(1)@
+-- /complexity/: @O(1)@
 getFocusFL :: FocusList a -> Focus
 getFocusFL FocusList{focusListFocus} = focusListFocus
 
@@ -605,7 +607,7 @@ getFocusFL FocusList{focusListFocus} = focusListFocus
 -- *** Exception: ...
 -- ...
 --
--- @O(log(min(i, n - i)))@ where @i@ is the 'Focus', and @n@
+-- /complexity/: @O(log(min(i, n - i)))@ where @i@ is the 'Focus', and @n@
 -- is the length of the 'FocusList'.
 unsafeGetFocusItemFL :: FocusList a -> a
 unsafeGetFocusItemFL fl =
@@ -638,7 +640,7 @@ unsafeGetFocusItemFL fl =
 --
 -- prop> hasFocusFL fl ==> isJust (getFocusItemFL fl)
 --
--- @O(log(min(i, n - i)))@ where @i@ is the 'Focus', and @n@
+-- /complexity/: @O(log(min(i, n - i)))@ where @i@ is the 'Focus', and @n@
 -- is the length of the 'FocusList'.
 getFocusItemFL :: FocusList a -> Maybe a
 getFocusItemFL fl =
@@ -675,7 +677,7 @@ getFocusItemFL fl =
 --
 -- prop> lookupFL i emptyFL == Nothing
 --
--- @O(log(min(i, n - i)))@ where @i@ is the index you want to look up, and @n@
+-- /complexity/: @O(log(min(i, n - i)))@ where @i@ is the index you want to look up, and @n@
 -- is the length of the 'FocusList'.
 lookupFL
   :: Int  -- ^ Index to lookup.
@@ -716,7 +718,7 @@ lookupFL i fl = S.lookup i (fl ^. lensFocusList)
 -- >>> insertFL (-1) "bye" (singletonFL "hello")
 -- FocusList (Focus 1) ["bye","hello"]
 --
--- @O(log(min(i, n - i)))@ where @i@ is the index you want to insert at, and @n@
+-- /complexity/: @O(log(min(i, n - i)))@ where @i@ is the index you want to insert at, and @n@
 -- is the length of the 'FocusList'.
 insertFL
   :: Int  -- ^ The index at which to insert the new element.
@@ -784,7 +786,7 @@ insertFL i a fl@FocusList{focusListFocus = Focus focus, focusList = fls} =
 -- >>> removeFL 0 emptyFL
 -- Nothing
 --
--- @O(log(min(i, n - i)))@ where @i@ is index of the element to remove, and @n@
+-- /complexity/: @O(log(min(i, n - i)))@ where @i@ is index of the element to remove, and @n@
 -- is the length of the 'FocusList'.
 removeFL
   :: Int          -- ^ Index of the element to remove from the 'FocusList'.
@@ -876,7 +878,7 @@ deleteFL item = go
 --
 -- prop> setFocusFL i fl == fmap snd (updateFocusFL i fl)
 --
--- @O(1)@
+-- /complexity/: @O(1)@
 setFocusFL :: Int -> FocusList a -> Maybe (FocusList a)
 setFocusFL i fl
   -- Can't set a 'Focus' for an empty 'FocusList'.
@@ -907,7 +909,7 @@ setFocusFL i fl
 -- >>> updateFocusFL 4 =<< fromListFL (Focus 2) ["hello","bye","dog","cat"]
 -- Nothing
 --
--- @O(log(min(i, n - i)))@ where @i@ is the new index to put the 'Focus' on,
+-- /complexity/: @O(log(min(i, n - i)))@ where @i@ is the new index to put the 'Focus' on,
 -- and @n@ -- is the length of the 'FocusList'.
 updateFocusFL
   :: Int  -- ^ The new index to put the 'Focus' on.
@@ -944,7 +946,7 @@ updateFocusFL i fl
 -- >>> findFL (\a -> a == "ball") fl
 -- Nothing
 --
--- @O(n)@ where @n@ is the length of the 'FocusList'.
+-- /complexity/: @O(n)@ where @n@ is the length of the 'FocusList'.
 findFL :: (a -> Bool) -> FocusList a -> Maybe (a)
 findFL p fl =
   let fls = fl ^. lensFocusList
@@ -983,7 +985,7 @@ findFL p fl =
 -- >>> moveFromToFL 1 (-1) fl
 -- Nothing
 --
--- @O(log n)@ where @n@ is the length of the 'FocusList'.
+-- /complexity/: @O(log n)@ where @n@ is the length of the 'FocusList'.
 moveFromToFL
   :: Show a
   => Int  -- ^ Index of the item to move.
@@ -1032,7 +1034,7 @@ moveFromToFL oldPos newPos fl
 -- prop> emptyFL == intersperseFL x emptyFL
 -- prop> singletonFL a == intersperseFL x (singletonFL a)
 --
--- @O(n)@ where @n@ is the length of the 'FocusList'.
+-- /complexity/: @O(n)@ where @n@ is the length of the 'FocusList'.
 intersperseFL :: a -> FocusList a -> FocusList a
 intersperseFL _ FocusList{focusListFocus = NoFocus} = emptyFL
 intersperseFL a FocusList{focusList = fls, focusListFocus = Focus foc} =
@@ -1066,7 +1068,7 @@ intersperseFL a FocusList{focusList = fls, focusListFocus = Focus foc} =
 -- prop> emptyFL == reverseFL emptyFL
 -- prop> singletonFL a == reverseFL (singletonFL a)
 --
--- @O(n)@ where @n@ is the length of the 'FocusList'.
+-- /complexity/: @O(n)@ where @n@ is the length of the 'FocusList'.
 reverseFL :: FocusList a -> FocusList a
 reverseFL FocusList{focusListFocus = NoFocus} = emptyFL
 reverseFL FocusList{focusList = fls, focusListFocus = Focus foc} =
