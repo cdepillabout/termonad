@@ -71,6 +71,7 @@ library
                      , gi-vte >= 2.91.19
                      , haskell-gi-base >= 0.21.2
                      , lens
+                     , mono-traversable
                      , pretty-simple
                      , QuickCheck
                      , singletons

@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -67,12 +66,19 @@ module Termonad.FocusList
   , unsafeGetFocus
   ) where
 
-import Termonad.Prelude
+import Prelude hiding (reverse)
 
 import Control.Lens (Prism', (^.), (.~), (-~), makeLensesFor, prism')
+import Data.Foldable (toList)
 import qualified Data.Foldable as Foldable
+import Data.Function ((&))
+import Data.MonoTraversable
+  (Element, GrowingAppend, MonoFoldable, MonoFunctor, MonoTraversable, olength)
 import qualified Data.Sequence as S
 import Data.Sequence (Seq((:<|), Empty))
+import Data.Sequences
+  (Index, SemiSequence, cons, find, intersperse, reverse, snoc, sortBy)
+import GHC.Generics (Generic)
 import Test.QuickCheck
   ( Arbitrary, Arbitrary1, CoArbitrary, Gen, arbitrary, arbitrary1, choose
   , frequency, liftArbitrary
@@ -82,6 +88,7 @@ import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 -- $setup
 -- >>> :set -XFlexibleContexts
 -- >>> :set -XScopedTypeVariables
+-- >>> import Data.Maybe (isJust)
 
 -- | A 'Focus' for the 'FocusList'.
 --
@@ -213,7 +220,7 @@ $(makeLensesFor
  )
 
 instance Foldable FocusList where
-  foldr f b (FocusList _ fls) = Foldable.foldr f b fls
+  foldr f b (FocusList _ fls) = foldr f b fls
 
   length = lengthFL
 
@@ -427,7 +434,7 @@ fromListFL (Focus i) list =
 --
 -- /complexity/: @O(n)@ where @n@ is the length of the 'Foldable'
 fromFoldableFL :: Foldable f => Focus -> f a -> Maybe (FocusList a)
-fromFoldableFL foc as = fromListFL foc (Foldable.toList as)
+fromFoldableFL foc as = fromListFL foc (toList as)
 
 -- | Create a 'FocusList' with a single element.
 --
