@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -73,6 +74,9 @@ import qualified Data.Foldable as Foldable
 import qualified Data.Sequence as S
 import Data.Sequence (Seq((:<|), Empty))
 import Test.QuickCheck
+  ( Arbitrary, Arbitrary1, CoArbitrary, Gen, arbitrary, arbitrary1, choose
+  , frequency, liftArbitrary
+  )
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
 -- $setup
