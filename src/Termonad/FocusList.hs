@@ -3,7 +3,68 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Termonad.FocusList
-  where
+  (
+    -- * FocusList
+    FocusList(FocusList, focusListFocus, focusList)
+    -- ** Conversions
+  , fromListFL
+  , fromFoldable
+  , toSeqFL
+    -- ** Query
+  , lengthFL
+  , isEmptyFL
+  , getFocusItemFL
+  , lookupFL
+  , indexOfFL
+  , findFL
+    -- *** Query 'Focus'
+  , hasFocusFL
+  , getFocusFL
+    -- ** Manipulate
+  , prependFL
+  , appendFL
+  , appendSetFocusFL
+  , insertFL
+  , removeFL
+  , deleteFL
+  , moveFromToFL
+  , intersperseFL
+  , reverseFL
+    -- *** Manipulate 'Focus'
+  , setFocusFL
+  , updateFocusFL
+    -- ** Sort
+  , sortByFL
+    -- ** Construction
+  , emptyFL
+  , singletonFL
+    -- ** Unsafe Functions
+  , unsafeFromListFL
+  , unsafeGetFocusFL
+  , unsafeGetFocusItemFL
+    -- ** Invariants
+  , invariantFL
+    -- ** Testing
+  , genValidFL
+    -- ** Optics
+    -- | These optics allow you to get/set the internal state of a 'FocusList'.
+    -- You should make sure not to directly set the internal state of a
+    -- 'FocusList' unless you are sure that the invariants for the 'FocusList'
+    -- are protected.  See 'invariantFL'.
+  , lensFocusListFocus
+  , lensFocusList
+    -- * Focus
+  , Focus(Focus, NoFocus)
+    , hasFocus
+    , getFocus
+    , maybeToFocus
+    , foldFocus
+    -- ** Optics
+  , _Focus
+  , _NoFocus
+    -- ** Unsafe Functions
+  , unsafeGetFocus
+  ) where
 
 import Termonad.Prelude
 
