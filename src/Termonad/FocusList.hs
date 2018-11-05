@@ -498,7 +498,7 @@ appendFL fl a =
 --
 -- The 'Focus' will always be updated after calling 'appendSetFocusFL'.
 --
--- prop> (appendSetFocusFL fl a) ^. lensFocusListFocus /= fl ^. lensFocusListFocus
+-- prop> getFocusFL (appendSetFocusFL fl a) > getFocusFL fl
 --
 -- /complexity/: @O(log n)@ where @n@ is the length of the 'FocusList'.
 appendSetFocusFL :: FocusList a -> a -> FocusList a
@@ -523,7 +523,7 @@ appendSetFocusFL fl a =
 --
 -- Prepending to a 'FocusList' will always update the 'Focus':
 --
--- prop> (fl ^. lensFocusListFocus) < (prependFL a fl ^. lensFocusListFocus)
+-- prop> getFocusFL fl < getFocusFL (prependFL a fl)
 --
 -- /complexity/: @O(1)@
 prependFL :: a -> FocusList a -> FocusList a
