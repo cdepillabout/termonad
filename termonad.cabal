@@ -18,7 +18,6 @@ extra-source-files:  README.md
                    , .nix-helpers/nixops.nix
                    , .nix-helpers/nixpkgs.nix
                    , .nix-helpers/stack-nix-shell.nix
-                   , .nix-helpers/termonad.nix
                    , .nix-helpers/termonad-with-packages.nix
                    , shell.nix
 data-files:          img/termonad-lambda.png

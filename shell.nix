@@ -24,7 +24,7 @@
 # will also index the Termonad libraries, however this will mean the environment
 # will need to be rebuilt every time the termonad source changes.
 
-{ compiler ? "ghc843", indexTermonad ? false }:
+{ compiler ? "ghc844", indexTermonad ? false }:
 
 let
   nixpkgs = (import .nix-helpers/nixpkgs.nix { inherit compiler; });
