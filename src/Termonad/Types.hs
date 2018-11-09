@@ -4,6 +4,7 @@ module Termonad.Types where
 
 import Termonad.Prelude
 
+import Data.FocusList (FocusList, emptyFL, singletonFL, getFocusItemFL, lengthFL)
 import Data.Unique (Unique, hashUnique, newUnique)
 import GI.Gtk
   ( Application
@@ -22,7 +23,6 @@ import GI.Vte (Terminal, CursorBlinkMode(CursorBlinkModeOn))
 import Text.Pretty.Simple (pPrint)
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
-import Termonad.FocusList (FocusList, emptyFL, singletonFL, getFocusItemFL, lengthFL)
 import Termonad.Gtk (widgetEq)
 
 -- | A wrapper around a VTE 'Terminal'.  This also stores the process ID of the

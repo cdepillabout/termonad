@@ -6,6 +6,7 @@ import Termonad.Prelude
 
 import Control.Lens ((^.), (&), (.~), set, to)
 import Data.Colour.SRGB (Colour, RGB(RGB), toSRGB)
+import Data.FocusList (appendFL, deleteFL, getFocusItemFL)
 import GI.Gdk
   ( EventKey
   , RGBA
@@ -86,7 +87,6 @@ import System.FilePath ((</>))
 import System.Directory (getSymbolicLinkTarget)
 import System.Environment (lookupEnv)
 
-import Termonad.FocusList (appendFL, deleteFL, getFocusItemFL)
 import Termonad.Lenses
   ( lensConfirmExit
   , lensOptions
