@@ -18,7 +18,6 @@ extra-source-files:  README.md
                    , .nix-helpers/nixops.nix
                    , .nix-helpers/nixpkgs.nix
                    , .nix-helpers/stack-nix-shell.nix
-                   , .nix-helpers/termonad.nix
                    , .nix-helpers/termonad-with-packages.nix
                    , shell.nix
 data-files:          img/termonad-lambda.png
@@ -43,7 +42,6 @@ library
                      , Termonad.Config
                      , Termonad.Config.Colour
                      , Termonad.Config.Vec
-                     , Termonad.FocusList
                      , Termonad.Gtk
                      , Termonad.Keys
                      , Termonad.Lenses
@@ -63,6 +61,7 @@ library
                      , distributive
                      , dyre
                      , filepath
+                     , focuslist
                      , gi-gdk
                      , gi-gio
                      , gi-glib
@@ -136,8 +135,8 @@ test-suite termonad-test
   type:                exitcode-stdio-1.0
   main-is:             Test.hs
   hs-source-dirs:      test
-  other-modules:       Test.FocusList
-                     , Test.FocusList.Invariants
+  -- other-modules:       Test.FocusList
+  --                    , Test.FocusList.Invariants
   build-depends:       base
                      , genvalidity-containers
                      , genvalidity-hspec

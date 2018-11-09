@@ -88,10 +88,16 @@
 # ```
 
 let
-  defaultPackages = haskellPackages: [ haskellPackages.colour haskellPackages.lens ];
+  # Default Haskell packages that you can use in your Termonad configuration.
+  # This is only used if the user doesn't specify the extraHaskellPackages
+  # option.
+  defaultPackages = haskellPackages: with haskellPackages; [
+    colour
+    lens
+  ];
 in
 
-{ extraHaskellPackages ? defaultPackages, compiler ? "ghc843" }:
+{ extraHaskellPackages ? defaultPackages, compiler ? "ghc844" }:
 
 with (import ./nixpkgs.nix { inherit compiler; });
 

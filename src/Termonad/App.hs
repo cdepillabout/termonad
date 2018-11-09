@@ -5,6 +5,7 @@ import Termonad.Prelude
 
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
 import Control.Lens ((&), (.~), (^.))
+import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
 import Data.Sequence (findIndexR)
 import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
 import GI.Gio
@@ -86,7 +87,6 @@ import Termonad.Lenses
   , lensTMStateNotebook
   , lensTerm
   )
-import Termonad.FocusList (focusList, moveFromToFL, updateFocusFL)
 import Termonad.Gtk (appNew, objFromBuildUnsafe)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Term (createTerm, relabelTabs, termExitFocused, setShowTabs)
