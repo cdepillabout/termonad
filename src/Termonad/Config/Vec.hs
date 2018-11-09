@@ -147,12 +147,6 @@ $(singletons [d|
   n24 :: Peano
   n24 = multPeano n4 n6
 
-  -- fromIntegerPeano :: Integer -> Peano
-  -- fromIntegerPeano n = if n <= 0 then Z else S (fromIntegerPeano (n - 1))
-
-  -- fromNatPeano :: forall (n :: Nat). Sing n -> Peano
-  -- fromNatPeano n = Z
-
   instance Num Peano where
     (+) = addPeano
 
@@ -165,9 +159,11 @@ $(singletons [d|
     signum Z = Z
     signum (S _) = S Z
 
-    fromInteger _ = error "fromInteger for Peano not supported"
-
-
+    fromInteger n =
+      if n < 0
+        then error "Num Peano fromInteger: n is negative"
+        else
+          if n == 0 then Z else S (fromInteger (n - 1))
   |])
 
 ---------
