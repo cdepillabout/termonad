@@ -408,35 +408,35 @@ start tmConfig = do
 
 -- | Run Termonad with the given 'TMConfig'.
 --
--- This function will check if there is a @~/.config/termonad/termonad.hs@ file
--- and a @~/.cache/termonad/termonad-linux-x86_64@ binary.  Termonad will
+-- This function will check if there is a @~\/.config\/termonad\/termonad.hs@ file
+-- and a @~\/.cache\/termonad\/termonad-linux-x86_64@ binary.  Termonad will
 -- perform different actions based on whether or not these two files exist.
 --
 -- Here are the four different possible actions based on the existence of these
 -- two files.
 --
--- - @~/.config/termonad/termonad.hs@ exists, @~/.cache/termonad/termonad-linux-x86_64@ exists
+-- - @~\/.config\/termonad\/termonad.hs@ exists, @~\/.cache\/termonad\/termonad-linux-x86_64@ exists
 --
 --   The timestamps of these two files are checked.  If the
---   @~/.config/termonad/termonad.hs@ file has been modified after the
---   @~/.cache/termonad/termonad-linux-x86_64@ binary, then Termonad will use
---   GHC to recompile the @~/.config/termonad/termonad.hs@ file, producing a
---   new binary at @~/.cache/termonad/termonad-linux-x86_64@.  This new binary
+--   @~\/.config\/termonad\/termonad.hs@ file has been modified after the
+--   @~\/.cache\/termonad\/termonad-linux-x86_64@ binary, then Termonad will use
+--   GHC to recompile the @~\/.config\/termonad\/termonad.hs@ file, producing a
+--   new binary at @~\/.cache\/termonad\/termonad-linux-x86_64@.  This new binary
 --   will be re-executed.  The 'TMConfig' passed to this 'defaultMain' will be
 --   effectively thrown away.
 --
---   If GHC fails to recompile the @~/.config/termonad/termonad.hs@ file, then
+--   If GHC fails to recompile the @~\/.config\/termonad\/termonad.hs@ file, then
 --   Termonad will just execute 'start' with the 'TMConfig' passed in.
 --
---   If the @~/.cache/termonad/termonad-linux-x86_64@ binary has been modified
---   after the @~/.config/termonad/termonad.hs@ file, then Termonad will
---   re-exec the @~/.cache/termonad/termonad-linux-x86_64@ binary.  The
+--   If the @~\/.cache\/termonad\/termonad-linux-x86_64@ binary has been modified
+--   after the @~\/.config\/termonad\/termonad.hs@ file, then Termonad will
+--   re-exec the @~\/.cache\/termonad\/termonad-linux-x86_64@ binary.  The
 --   'TMConfig' passed to this 'defaultMain' will be effectively thrown away.
 --
--- - @~/.config/termonad/termonad.hs@ exists, @~/.cache/termonad/termonad-linux-x86_64@ does not exist
+-- - @~\/.config\/termonad\/termonad.hs@ exists, @~\/.cache\/termonad\/termonad-linux-x86_64@ does not exist
 --
---   Termonad will use GHC to recompile the @~/.config/termonad/termonad.hs@
---   file, producing a new binary at @~/.cache/termonad/termonad-linux-x86_64@.
+--   Termonad will use GHC to recompile the @~\/.config\/termonad\/termonad.hs@
+--   file, producing a new binary at @~\/.cache\/termonad\/termonad-linux-x86_64@.
 --   This new binary will be re-executed.  The 'TMConfig' passed to this
 --   'defaultMain' will be effectively thrown away.
 --

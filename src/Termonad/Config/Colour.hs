@@ -7,7 +7,7 @@
 -- Stability   : experimental
 -- Portability : POSIX
 --
--- To use this config extension in your @~/.config/termonad/termonad.hs@, first
+-- To use this config extension in your @~\/.config\/termonad\/termonad.hs@, first
 -- import this module. Create a new 'ColourExtension' with the 'createColourExtension' function.
 -- Then add the 'ColourExtension' to your 'TMConfig' with the 'addColourExtension' function.
 --
@@ -448,7 +448,7 @@ colourHook mvarColourConf _ vteTerm = do
   colourConf <- readMVar mvarColourConf
   terminalSetColors vteTerm Nothing Nothing . Just
     =<< traverse toRGBA (paletteToList . palette $ colourConf)
-  -- PR#28/IS#29: Setting the background colour is broken in gi-vte or VTE.  If
+  -- PR #28 / issue #29: Setting the background colour is broken in gi-vte or VTE.  If
   -- this next line is called, then you are no longer able to set the
   -- background color using the palette.
   -- terminalSetColorBackground vteTerm =<< toRGBA (backgroundColour colourConf)
