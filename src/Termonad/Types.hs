@@ -311,27 +311,54 @@ whenSet = \case
   Unset -> \_ -> mempty
   Set x -> \f -> f x
 
+-- | Whether or not to show the scroll bar in a terminal.
 data ShowScrollbar
-  = ShowScrollbarNever
-  | ShowScrollbarAlways
-  | ShowScrollbarIfNeeded
+  = ShowScrollbarNever -- ^ Never show the scroll bar, even if there are too
+                       -- many lines on the terminal to show all at once.  You
+                       -- should still be able to scroll with the mouse wheel.
+  | ShowScrollbarAlways -- ^ Always show the scrollbar, even if it is not
+                        -- needed.
+  | ShowScrollbarIfNeeded -- ^ Only show the scrollbar if there are too many
+                          -- lines on the terminal to show all at once.
   deriving (Eq, Show)
 
+-- | Whether or not to show the tab bar for switching tabs.
 data ShowTabBar
-  = ShowTabBarNever
-  | ShowTabBarAlways
-  | ShowTabBarIfNeeded
+  = ShowTabBarNever -- ^ Never show the tab bar, even if there are multiple tabs
+                    -- open.  This may be confusing if you plan on using multiple tabs.
+  | ShowTabBarAlways -- ^ Always show the tab bar, even if you only have one tab open.
+  | ShowTabBarIfNeeded  -- ^ Only show the tab bar if you have multiple tabs open.
   deriving (Eq, Show)
 
+-- | Configuration options for Termonad.
+--
+-- See 'defaultConfigOptions' for the default values.
 data ConfigOptions = ConfigOptions
   { fontConfig :: !FontConfig
+    -- ^ Specific options for fonts.
   , showScrollbar :: !ShowScrollbar
+    -- ^ When to show the scroll bar.
   , scrollbackLen :: !Integer
+    -- ^ The number of lines to keep in the scroll back history for each terminal.
   , confirmExit :: !Bool
+    -- ^ Whether or not to ask you for confirmation when closing individual
+    -- terminals or Termonad itself.  It is generally safer to keep this as
+    -- 'True'.
   , wordCharExceptions :: !Text
+    -- ^ When double-clicking on text in the terminal with the mouse, Termonad
+    -- will use this value to determine what to highlight.  The individual
+    -- characters in this list will be counted as part of a word.
+    --
+    -- For instance if 'wordCharExceptions' is @""@, then when you double-click
+    -- on the text @http://@, only the @http@ portion will be highlighted.  If
+    -- 'wordCharExceptions' is @":"@, then the @http:@ portion will be
+    -- highlighted.
   , showMenu :: !Bool
+    -- ^ Whether or not to show the @File@ @Edit@ etc menu.
   , showTabBar :: !ShowTabBar
+    -- ^ When to show the tab bar.
   , cursorBlinkMode :: !CursorBlinkMode
+    -- ^ How to handle cursor blink.
   } deriving (Eq, Show)
 
 -- | The default 'ConfigOptions'.
@@ -364,6 +391,7 @@ defaultConfigOptions =
     , cursorBlinkMode = CursorBlinkModeOn
     }
 
+-- | The Termonad 'ConfigOptions' along with the 'ConfigHooks'.
 data TMConfig = TMConfig
   { options :: !ConfigOptions
   , hooks :: !ConfigHooks
@@ -384,12 +412,12 @@ defaultTMConfig =
 ---------------------
 
 -- | Hooks into certain termonad operations and VTE events. Used to modify
---   termonad's behaviour in order to implement new functionality. Fields should
---   have sane @Semigroup@ and @Monoid@ instances so that config extensions can
---   be combined uniformly and new hooks can be added without incident.
+-- termonad's behaviour in order to implement new functionality. Fields should
+-- have sane @Semigroup@ and @Monoid@ instances so that config extensions can
+-- be combined uniformly and new hooks can be added without incident.
 data ConfigHooks = ConfigHooks {
   -- | Produce an IO action to run on creation of new @Terminal@, given @TMState@
-  --   and the @Terminal@ in question.
+  -- and the @Terminal@ in question.
   createTermHook :: TMState -> Terminal -> IO ()
 }
 
