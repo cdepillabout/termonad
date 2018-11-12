@@ -38,6 +38,7 @@ module Termonad.Config.Colour
     , defaultColourCube
     , defaultGreyscale
     -- * Colour
+    -- | Check out the "Data.Colour" module for more info about 'Colour'.
     , Colour
     , sRGB24
     , sRGB24show
