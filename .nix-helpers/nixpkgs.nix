@@ -11,8 +11,8 @@ let
     if isNull nixpkgs
       then
         builtins.fetchTarball {
-          url = "https://github.com/NixOS/nixpkgs/archive/1c49226176d248129c795f4a654cfa9d434889ae.tar.gz";
-          sha256 = "0v8vp38lh6hqazfwxhngr5j96m4cmnk1006kh5shx0ifsphdip62";
+          url = "https://github.com/NixOS/nixpkgs/archive/237285295764fb063ec1ca509c36b17c4990eeb4.tar.gz";
+          sha256 = "1cl40yz7ry6x2nbzpc5pkf0q5p0fxvi0c2n7la0pz5g1n80n4xlq";
         }
       else
         nixpkgs;
@@ -48,6 +48,10 @@ let
       };
     in callCabal2nix "focuslist" src {};
 
+  gobjIntroOverride = oldAttrs: {
+    patches = oldAttrs.patches ++ [ ./macos-gobject-introspection-rpath.patch ];
+  };
+
   haskellPackagesOL = self: super: with super.haskell.lib; {
     haskellPackages = super.haskell.packages.${compilerVersion}.override {
       overrides = hself: hsuper: {
@@ -76,6 +80,16 @@ let
         });
       };
     };
+
+    # Darwin needs a patch to gobject-introspection:
+    # https://github.com/NixOS/nixpkgs/pull/46310
+    gobjectIntrospection = super.gobjectIntrospection.overrideAttrs (oldAttrs: {
+      patches =
+        oldAttrs.patches ++
+        (if self.stdenv.isDarwin
+          then [ ./macos-gobject-introspection-rpath.patch ]
+          else [ ]);
+    });
   };
 
 in import nixpkgsSrc { overlays = [ haskellPackagesOL ]; }
