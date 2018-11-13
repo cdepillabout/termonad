@@ -17,7 +17,7 @@
 #
 # $ nix-env --file default.nix --install
 
-{ compiler ? "ghc844" }:
+{ compiler ? null, nixpkgs ? null }:
 
-import .nix-helpers/termonad-with-packages.nix { inherit compiler; }
+import .nix-helpers/termonad-with-packages.nix { inherit compiler nixpkgs; }
 

@@ -1,0 +1,36 @@
+diff --git a/giscanner/shlibs.py b/giscanner/shlibs.py
+index b905bc9..f340687 100644
+--- a/giscanner/shlibs.py
++++ b/giscanner/shlibs.py
+@@ -68,6 +68,22 @@ def _ldd_library_nix_pattern(library_name):
+     pattern = r'(%s(?:/[^/]*)+lib%s[^A-Za-z0-9_-][^\s\(\)]*)'
+     return re.compile(pattern % (nix_store_dir, re.escape(library_name)))
+ 
++def _sanitize_install_name(install_name):
++    '''
++    On macOS, the dylib can be built with install_name as @rpath/libfoo.so
++    instead of the absolute path to the library, so handle that. The name
++    can also be @loader_path or @executable_path.
++    '''
++    if not install_name.startswith('@'):
++        return install_name
++    if install_name.startswith('@rpath/'):
++        return install_name[7:]
++    if install_name.startswith('@loader_path/'):
++        return install_name[13:]
++    if install_name.startswith('@executable_path/'):
++        return install_name[17:]
++    raise RuntimeError('Unknown install_name {!r}'.format(install_name))
++
+ 
+ # This is a what we do for non-la files. We assume that we are on an
+ # ELF-like system where ldd exists and the soname extracted with ldd is
+@@ -134,7 +150,7 @@ def _resolve_non_libtool(options, binary, libraries):
+                     m = pattern.search(line)
+                 if m:
+                     del patterns[library]
+-                    shlibs.append(os.path.join(options.fallback_libpath, m.group(1)))
++                    shlibs.append(os.path.join(options.fallback_libpath, _sanitize_install_name(m.group(1))))
+                     break
+ 
+         if len(patterns) > 0:
