@@ -146,7 +146,15 @@ The following sections describe each method.
 
 #### Installing with just `nix`
 
-(*currently no instructions available.  please send a PR adding instructions if you get termonad to build using this method.*)
+`nix` can be used to install Termonad with the following steps, assuming you
+have `nix` [installed](https://nixos.org/nix/download.html).  These commands
+clone this repository and build the `termonad` binary at `./result/bin/`:
+
+```sh
+$ git clone https://github.com/cdepillabout/termonad
+$ cd termonad/
+$ nix-build
+```
 
 #### Installing with `stack` using `nix`
 
@@ -194,20 +202,21 @@ If you would like to configure Termonad with your own settings, first you will
 need to create a Haskell file called `~/.config/termonad/termonad.hs`. A following
 section gives an example configuration file.
 
-If this file exists, when the `~/.local/bin/termonad` binary launches, it will
-try to compile it. If it succeeds, it will create a separate binary file called
-something like `~/.cache/termonad/termonad-linux-x86_64`. This binary file can
-be thought of as your own personal Termonad, configured with all your own
-settings.
+If this configuration file exists, when the `~/.local/bin/termonad` binary
+launches, it will try to use GHC to compile the configuration file. If GHC
+is able to successfully compile the configuration file, a separate binary will
+be created called something like `~/.cache/termonad/termonad-linux-x86_64`.
+This binary file can be thought of as your own personal Termonad, configured
+with all your own settings.
 
 When you run `~/.local/bin/termonad`, it will re-exec
 `~/.cache/termonad/termonad-linux-x86_64` if it exists.
 
 However, there is one difficulty with this setup. In order for the
 `~/.local/bin/termonad` binary to be able to compile your
-`~/.config/termonad/termonad.hs` file, it needs to know where GHC is, as well as
-where all your Haskell packages live. This presents some difficulties that will
-be discussed in a following section.
+`~/.config/termonad/termonad.hs` configuration file, Termonad needs to know
+where GHC is, as well as where all your Haskell packages live. This presents
+some difficulties that will be discussed in a following section.
 
 ### Default Keybindings
 
