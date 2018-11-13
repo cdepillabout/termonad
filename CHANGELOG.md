@@ -1,4 +1,12 @@
 
+## 1.0.0.0
+
+* The API for configuring Termonad is now completely different. Many, many
+  changes have gone into this version.  You should approach it as a
+  completely different application.
+
+  The CHANGELOG will be kept up-to-date for future releases.
+
 ## 0.2.1.0
 
 * Make sure the window title is set to "Termonad".
