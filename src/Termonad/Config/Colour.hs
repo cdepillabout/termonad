@@ -347,42 +347,42 @@ defaultGreyscale = genVec_ $ \n ->
 --
 -- * 'cursorFgColour' is 'Set' and 'cursorBgColour' is 'Set'
 --
---   The foreground and background colors of the cursor are as you have set.
+--     The foreground and background colors of the cursor are as you have set.
 --
 -- * 'cursorFgColour' is 'Set' and 'cursorBgColour' is 'Unset'
 --
---   The cursor background color turns completely black so that it is not
---   visible.  The foreground color of the cursor is the color that you have
---   'Set'.  This ends up being mostly unusable, so you are recommended to
---   always 'Set' 'cursorBgColour' when you have 'Set' 'cursorFgColour'.
+--     The cursor background color turns completely black so that it is not
+--     visible.  The foreground color of the cursor is the color that you have
+--     'Set'.  This ends up being mostly unusable, so you are recommended to
+--     always 'Set' 'cursorBgColour' when you have 'Set' 'cursorFgColour'.
 --
 -- * 'cursorFgColour' is 'Unset' and 'cursorBgColour' is 'Set'
 --
---   The cursor background color becomes the color you 'Set', while the cursor
---   foreground color doesn't change from the letter it is over.  For instance,
---   imagine there is a letter on the screen with a black background and a
---   green foreground.  If you bring the cursor overtop of it, the cursor
---   background will be the color you have 'Set', while the cursor foreground
---   will be green.
+--     The cursor background color becomes the color you 'Set', while the cursor
+--     foreground color doesn't change from the letter it is over.  For instance,
+--     imagine there is a letter on the screen with a black background and a
+--     green foreground.  If you bring the cursor overtop of it, the cursor
+--     background will be the color you have 'Set', while the cursor foreground
+--     will be green.
 --
---   This is completely usable, but is slightly annoying if you place the cursor
---   over a letter with the same foreground color as the cursor's background
---   color, because the letter will not be readable. For instance, imagine you
---   have set your cursor background color to red, and somewhere on the screen
---   there is a letter with a black background and a red foreground. If you move
---   your cursor over the letter, the background of the cursor will be red (as
---   you have set), and the cursor foreground will be red (to match the original
---   foreground color of the letter). This will make it so you can't
---   actually read the letter, because the foreground and background are both
---   red.
+--     This is completely usable, but is slightly annoying if you place the cursor
+--     over a letter with the same foreground color as the cursor's background
+--     color, because the letter will not be readable. For instance, imagine you
+--     have set your cursor background color to red, and somewhere on the screen
+--     there is a letter with a black background and a red foreground. If you move
+--     your cursor over the letter, the background of the cursor will be red (as
+--     you have set), and the cursor foreground will be red (to match the original
+--     foreground color of the letter). This will make it so you can't
+--     actually read the letter, because the foreground and background are both
+--     red.
 --
 -- * 'cursorFgColour' is 'Unset' and 'cursorBgColour' is 'Unset'
 --
---   This combination makes the cursor inverse of whatever text it is over.
---   If your cursor is over red text with a black background, the cursor
---   background will be red and the cursor foreground will be black.
+--     This combination makes the cursor inverse of whatever text it is over.
+--     If your cursor is over red text with a black background, the cursor
+--     background will be red and the cursor foreground will be black.
 --
---   This is the default.
+--     This is the default.
 --
 -- See 'defaultColourConfig' for the defaults for 'ColourConfig' used in Termonad.
 data ColourConfig c = ColourConfig
