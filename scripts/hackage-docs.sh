@@ -17,6 +17,5 @@ set -e
 dir=$(mktemp -d dist-docs.XXXXXX)
 trap 'rm -rf "$dir"' EXIT
 
-cabal configure --builddir="$dir"
-cabal haddock --builddir="$dir" --for-hackage --haddock-option=--hyperlinked-source
-cabal upload  --publish -d $dir/*-docs.tar.gz
+cabal new-haddock --builddir="$dir" --haddock-for-hackage --haddock-hyperlink-source # --haddock-quickjump # quickjump option doesn't work???
+cabal upload --publish --documentation $dir/*-docs.tar.gz
