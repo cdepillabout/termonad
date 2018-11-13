@@ -97,9 +97,12 @@ let
   ];
 in
 
-{ extraHaskellPackages ? defaultPackages, compiler ? "ghc844" }:
+{ extraHaskellPackages ? defaultPackages
+, compiler ? null
+, nixpkgs ? null
+}:
 
-with (import ./nixpkgs.nix { inherit compiler; });
+with (import ./nixpkgs.nix { inherit compiler nixpkgs; });
 
 let
   ghcWithPackages = haskellPackages.ghcWithPackages;

@@ -24,12 +24,13 @@
 # will also index the Termonad libraries, however this will mean the environment
 # will need to be rebuilt every time the termonad source changes.
 
-{ compiler ? "ghc844", indexTermonad ? false }:
+{ compiler ? null, indexTermonad ? false, nixpkgs ? null }:
+
+with (import .nix-helpers/nixpkgs.nix { inherit compiler nixpkgs; });
 
 let
-  nixpkgs = (import .nix-helpers/nixpkgs.nix { inherit compiler; });
-  termonadEnv = nixpkgs.haskellPackages.termonad.env;
-  nativeBuildTools = with nixpkgs.haskellPackages; [ cabal-install ghcid open-haddock ];
+  termonadEnv = haskellPackages.termonad.env;
+  nativeBuildTools = with haskellPackages; [ cabal-install ghcid open-haddock ];
 in
 
 if indexTermonad
@@ -38,11 +39,11 @@ if indexTermonad
       nativeBuildInputs =
         oldAttrs.nativeBuildInputs ++
         nativeBuildTools ++
-        [ (nixpkgs.haskellPackages.ghcWithHoogle (haskellPackages: with haskellPackages; [ termonad ]))
+        [ (haskellPackages.ghcWithHoogle (haskellPackages: with haskellPackages; [ termonad ]))
         ];
     })
   else
-    nixpkgs.haskellPackages.shellFor {
+    haskellPackages.shellFor {
       withHoogle = true;
       packages = haskellPackages: [ haskellPackages.termonad ];
       nativeBuildInputs = termonadEnv.nativeBuildInputs ++ nativeBuildTools;

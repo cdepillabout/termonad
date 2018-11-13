@@ -3,14 +3,21 @@
 # GI dependencies, and to use the GHC, VTE, GTK and open-haddock versions we
 # want. It is imported from various other files.
 
-{ compiler ? "ghc844" }:
+{ compiler ? null, nixpkgs ? null }:
 
 let
   # recent version of nixpkgs as of 2018-11-09
-  nixpkgsTarball = builtins.fetchTarball {
-    url = "https://github.com/NixOS/nixpkgs/archive/1c49226176d248129c795f4a654cfa9d434889ae.tar.gz";
-    sha256 = "0v8vp38lh6hqazfwxhngr5j96m4cmnk1006kh5shx0ifsphdip62";
-  };
+  nixpkgsSrc =
+    if isNull nixpkgs
+      then
+        builtins.fetchTarball {
+          url = "https://github.com/NixOS/nixpkgs/archive/1c49226176d248129c795f4a654cfa9d434889ae.tar.gz";
+          sha256 = "0v8vp38lh6hqazfwxhngr5j96m4cmnk1006kh5shx0ifsphdip62";
+        }
+      else
+        nixpkgs;
+
+  compilerVersion = if isNull compiler then "ghc844" else compiler;
 
   # The termonad derivation is generated automatically with `cabal2nix`.
   termonadOverride =
@@ -34,7 +41,7 @@ let
       });
 
   haskellPackagesOL = self: super: with super.haskell.lib; {
-    haskellPackages = super.haskell.packages.${compiler}.override {
+    haskellPackages = super.haskell.packages.${compilerVersion}.override {
       overrides = hself: hsuper: {
         gi-gdk = doHaddock hsuper.gi-gdk;
         gi-gio = doHaddock hsuper.gi-gio;
@@ -56,5 +63,5 @@ let
     };
   };
 
-in import nixpkgsTarball { overlays = [ haskellPackagesOL ]; }
+in import nixpkgsSrc { overlays = [ haskellPackagesOL ]; }
 
