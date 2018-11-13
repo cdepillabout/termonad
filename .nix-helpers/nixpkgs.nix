@@ -40,16 +40,31 @@ let
         doCheck = false;
       });
 
+  myfocuslist = callCabal2nix:
+    let
+      src = builtins.fetchTarball {
+        url = "https://github.com/cdepillabout/focuslist/archive/80bd865e82ab4499ccebcd89989d2dbb221bb381.tar.gz";
+        sha256 = "1b7da9ngk34jc2w4hhqq6qv20pkch5vvi34kr81xpmr3mmiwqmai";
+      };
+    in callCabal2nix "focuslist" src {};
+
   haskellPackagesOL = self: super: with super.haskell.lib; {
     haskellPackages = super.haskell.packages.${compilerVersion}.override {
       overrides = hself: hsuper: {
+        # Only override the version of foculist if it doesn't already exist in
+        # the haskell package set.
+        focuslist = hsuper.focuslist or (myfocuslist hself.callCabal2nix);
+
+        # Set the haskell-gi libraries to generate documentation.
         gi-gdk = doHaddock hsuper.gi-gdk;
         gi-gio = doHaddock hsuper.gi-gio;
         gi-glib = doHaddock hsuper.gi-glib;
         gi-gtk = doHaddock hsuper.gi-gtk;
         gi-pango = doHaddock hsuper.gi-pango;
         gi-vte = doHaddock hsuper.gi-vte;
+
         termonad = termonadOverride self.stdenv.lib self.gnome3 hself.callCabal2nix self.haskell.lib.overrideCabal;
+
         # This is a tool to use to easily open haddocks in the browser.
         open-haddock = hsuper.open-haddock.overrideAttrs (oa: {
           src = super.fetchFromGitHub {
