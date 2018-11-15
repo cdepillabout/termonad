@@ -30,7 +30,7 @@ thought of as the "XMonad" of terminal emulators.
             - [Installing with `stack` using `nix`](#installing-with-stack-using-nix)
         - [Windows](#windows)
     - [How to use Termonad](#how-to-use-termonad)
-        - [Default Keybindings](#default-keybindings)
+        - [Default Key Bindings](#default-key-bindings)
         - [Configuring Termonad](#configuring-termonad)
         - [Compiling Local Settings](#compiling-local-settings)
             - [Running with `stack`](#running-with-stack)
@@ -196,7 +196,7 @@ of what Termonad is like:
 $ ~/.local/bin/termonad
 ```
 
-The following section describes the default keybindings.
+The following section describes the default key bindings.
 
 If you would like to configure Termonad with your own settings, first you will
 need to create a Haskell file called `~/.config/termonad/termonad.hs`. A following
@@ -218,11 +218,11 @@ However, there is one difficulty with this setup. In order for the
 where GHC is, as well as where all your Haskell packages live. This presents
 some difficulties that will be discussed in a following section.
 
-### Default Keybindings
+### Default Key Bindings
 
 Termonad provides the following default key bindings.
 
-| Keybinding | Action |
+| Key binding | Action |
 |------------|--------|
 | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>t</kbd> | Open new tab. |
 | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>w</kbd> | Close tab. |
