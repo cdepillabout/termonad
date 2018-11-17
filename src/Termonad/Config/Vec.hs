@@ -372,6 +372,28 @@ updateAtVec (FS n) f (a :* vec)  = a :* updateAtVec n f vec
 setAtVec :: Fin n -> a -> Vec n a -> Vec n a
 setAtVec fin a = updateAtVec fin (const a)
 
+fromListVec :: Sing n -> [a] -> Maybe (Vec n a)
+fromListVec SZ _ = Just EmptyVec
+fromListVec (SS _) [] = Nothing
+fromListVec (SS n) (a:as) = do
+  tailVec <- fromListVec n as
+  pure $ ConsVec a tailVec
+
+fromListVec_ :: SingI n => [a] -> Maybe (Vec n a)
+fromListVec_ = fromListVec sing
+
+unsafeFromListVec :: Sing n -> [a] -> Vec n a
+unsafeFromListVec n as =
+  case fromListVec n as of
+    Just vec -> vec
+    Nothing ->
+      error $
+        "unsafeFromListVec: couldn't create a length " <>
+        show n <> " vector from the input list"
+
+unsafeFromListVec_ :: SingI n => [a] -> Vec n a
+unsafeFromListVec_ = unsafeFromListVec sing
+
 ------------
 -- Matrix --
 ------------
