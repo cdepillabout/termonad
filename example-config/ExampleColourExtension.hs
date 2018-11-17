@@ -11,11 +11,11 @@ import Termonad
   , start
   )
 import Termonad.Config.Colour
-  ( Colour, ColourConfig, Palette(BasicPalette), addColourExtension
+  ( Colour, ColourConfig, Palette(ExtendedPalette), addColourExtension
   , createColourExtension, cursorBgColour, defaultColourConfig, foregroundColour
   , palette, sRGB24
   )
-import Termonad.Config.Vec (Vec((:*), EmptyVec), N8)
+import Termonad.Config.Vec (Vec((:*), EmptyVec), N8, unsafeFromListVec_)
 import Data.Colour.SRGB (Colour, sRGB24)
 
 -- This is our main 'TMConfig'.  It holds all of the non-colour settings
@@ -43,11 +43,13 @@ myColourConfig =
     { cursorBgColour = Set (sRGB24 120 80 110) -- purple
     -- Set the default foreground colour of text of the terminal.
     , foregroundColour = sRGB24 220 180 210 -- light pink
-    -- Set the basic palette that has 8 colours.
-    , palette = BasicPalette myStandardColours
+    -- Set the extended palette that has 8 colours standard colors and then 8
+    -- light colors.
+    , palette = ExtendedPalette myStandardColours myLightColours
     }
   where
-    -- This is a length-indexed linked-list of colours.
+    -- This is a an example of creating a length-indexed linked-list of colours,
+    -- using 'Vec' constructors.
     myStandardColours :: Vec N8 (Colour Double)
     myStandardColours =
          sRGB24  40  30  20 -- dark brown (used as background colour)
@@ -59,6 +61,22 @@ myColourConfig =
       :* sRGB24  40 160 120 -- teal
       :* sRGB24 180 160 120 -- light brown
       :* EmptyVec
+
+    -- This is an example of creating a length-indenxed linked-list of colours,
+    -- using the 'unsafeFromListVec_' function.  'unsafeFromListVec_' is okay to
+    -- use as long as you're absolutely sure you have 8 elements.
+    myLightColours :: Vec N8 (Colour Double)
+    myLightColours =
+      unsafeFromListVec_
+        [ sRGB24  70  60  50 -- brown
+        , sRGB24 220  30  20 -- light red
+        , sRGB24  40 210  20 -- light green
+        , sRGB24 220 200  20 -- yellow
+        , sRGB24  40  30 180 -- purple
+        , sRGB24 140  30 80  -- dark pink
+        , sRGB24  50 200 160 -- light teal
+        , sRGB24 220 200 150 -- light brown
+        ]
 
 main :: IO ()
 main = do
