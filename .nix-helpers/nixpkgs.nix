@@ -48,10 +48,6 @@ let
       };
     in callCabal2nix "focuslist" src {};
 
-  gobjIntroOverride = oldAttrs: {
-    patches = oldAttrs.patches ++ [ ./macos-gobject-introspection-rpath.patch ];
-  };
-
   haskellPackagesOL = self: super: with super.haskell.lib; {
     haskellPackages = super.haskell.packages.${compilerVersion}.override {
       overrides = hself: hsuper: {
