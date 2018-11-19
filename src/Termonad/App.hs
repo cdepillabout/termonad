@@ -341,7 +341,7 @@ setupTermonad tmConfig app win builder = do
     maybeTerm <- getFocusedTermFromState mvarTMState
     maybe (pure ()) terminalPasteClipboard maybeTerm
   actionMapAddAction app pasteAction
-  applicationSetAccelsForAction app "app.paste" ["<Shift><Ctrl>C"]
+  applicationSetAccelsForAction app "app.paste" ["<Shift><Ctrl>V"]
 
   aboutAction <- simpleActionNew "about" Nothing
   void $ onSimpleActionActivate aboutAction (const $ showAboutDialog app)
