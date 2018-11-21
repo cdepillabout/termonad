@@ -6,13 +6,13 @@
 { compiler ? null, nixpkgs ? null }:
 
 let
-  # recent version of nixpkgs as of 2018-11-09
   nixpkgsSrc =
     if isNull nixpkgs
       then
         builtins.fetchTarball {
-          url = "https://github.com/NixOS/nixpkgs/archive/237285295764fb063ec1ca509c36b17c4990eeb4.tar.gz";
-          sha256 = "1cl40yz7ry6x2nbzpc5pkf0q5p0fxvi0c2n7la0pz5g1n80n4xlq";
+          # version of nixpkgs as of 2018-11-21
+          url = "https://github.com/NixOS/nixpkgs/archive/a370bd1fed5fcce0bb260fb6a5213911f1441eac.tar.gz";
+          sha256 = "17zj2yay3wgmgh1pwmgh6fcpqnrw7fl9riv852z3l38711by5ar4";
         }
       else
         nixpkgs;
@@ -40,6 +40,12 @@ let
         doCheck = false;
       });
 
+  # This is only used when older versions of nixpkgs are being used that don't have
+  # the focuslist package yet.  Eventually this can probably be completely dropped
+  # around July of 2019 or so.
+  #
+  # Also, if Termonad starts depending on a newer version of focuslist, this will
+  # have to be updated.
   myfocuslist = callCabal2nix:
     let
       src = builtins.fetchTarball {
@@ -54,14 +60,6 @@ let
         # Only override the version of foculist if it doesn't already exist in
         # the haskell package set.
         focuslist = hsuper.focuslist or (myfocuslist hself.callCabal2nix);
-
-        # Set the haskell-gi libraries to generate documentation.
-        gi-gdk = doHaddock hsuper.gi-gdk;
-        gi-gio = doHaddock hsuper.gi-gio;
-        gi-glib = doHaddock hsuper.gi-glib;
-        gi-gtk = doHaddock hsuper.gi-gtk;
-        gi-pango = doHaddock hsuper.gi-pango;
-        gi-vte = doHaddock hsuper.gi-vte;
 
         termonad = termonadOverride self.stdenv.lib self.gnome3 hself.callCabal2nix self.haskell.lib.overrideCabal;
 
