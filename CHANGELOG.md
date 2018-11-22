@@ -1,7 +1,14 @@
-## next
+## 1.0.1.0
 
 * Stop using the `widgetSetFocusOnClick` function, which is not supported on
-  older versions of GTK. [#87](https://github.com/cdepillabout/termonad/pull/87).
+  older versions of GTK. This lets Termonad be compiled with older versions
+  of GTK. [#87](https://github.com/cdepillabout/termonad/pull/87).
+* Add CI. [#87](https://github.com/cdepillabout/termonad/pull/87).
+* Support versions of VTE-2.91 older than 0.44.
+  [#87](https://github.com/cdepillabout/termonad/pull/87).
+* Add some functions for converting from a list to a `Vec` in
+  `Termonad.Config.Vec`: `fromListVec` and `fromListVec_`.  Commit 883eb98b5f.
+* Fix the paste hotkey. [#86](https://github.com/cdepillabout/termonad/pull/86).
 
 ## 1.0.0.0
 
