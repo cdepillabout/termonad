@@ -32,6 +32,7 @@ let
             ./..;
         termonad = callCabal2nix "termonad" src {
           inherit (gnome3) gtk3;
+          vte_291 = gnome3.vte;
         };
       in
       overrideCabal termonad (oldAttrs: {

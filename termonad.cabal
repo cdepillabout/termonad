@@ -111,6 +111,7 @@ library
   other-extensions:    TemplateHaskell
                      , UndecidableInstances
   pkgconfig-depends:   gtk+-3.0
+                     , vte-2.91
 
 executable termonad
   main-is:             Main.hs

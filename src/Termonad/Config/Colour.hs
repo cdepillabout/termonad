@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- | Module    : Termonad.Config.Colour
@@ -61,7 +62,9 @@ import GI.Vte
   ( Terminal
   , terminalSetColors
   , terminalSetColorCursor
+#ifdef VTE_VERSION_GEQ_0_44
   , terminalSetColorCursorForeground
+#endif
 --, terminalSetColorBackground
   , terminalSetColorForeground
   )
@@ -457,7 +460,9 @@ colourHook mvarColourConf _ vteTerm = do
   let optPerform setC cField = whenSet (cField colourConf) $ \c ->
         setC vteTerm . Just =<< toRGBA c
   optPerform terminalSetColorCursor cursorBgColour
+#ifdef VTE_VERSION_GEQ_0_44
   optPerform terminalSetColorCursorForeground cursorFgColour
+#endif
   where
     toRGBA :: Colour Double -> IO RGBA
     toRGBA colour = do

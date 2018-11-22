@@ -62,7 +62,6 @@ import GI.Gtk
   , widgetDestroy
   , widgetGrabFocus
   , widgetSetCanFocus
-  , widgetSetFocusOnClick
   , widgetSetHalign
   , widgetSetHexpand
   , widgetShow
@@ -241,11 +240,8 @@ createNotebookTabLabel = do
   containerAdd box label
   containerAdd box button
   widgetSetCanFocus button False
-  widgetSetFocusOnClick button False
   widgetSetCanFocus label False
-  widgetSetFocusOnClick label False
   widgetSetCanFocus box False
-  widgetSetFocusOnClick box False
   widgetShow box
   widgetShow label
   widgetShow button

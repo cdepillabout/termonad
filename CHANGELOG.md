@@ -1,3 +1,7 @@
+## next
+
+* Stop using the `widgetSetFocusOnClick` function, which is not supported on
+  older versions of GTK. [#87](https://github.com/cdepillabout/termonad/pull/87).
 
 ## 1.0.0.0
 
