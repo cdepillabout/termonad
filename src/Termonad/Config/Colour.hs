@@ -387,11 +387,16 @@ defaultGreyscale = genVec_ $ \n ->
 --
 --     This is the default.
 --
+-- 'cursorFgColour' is not supported in @vte-2.91@ versions older than 0.44.
+-- (This is somewhat confusing. Note that @vte-2.91@ is the name of the system
+-- library, and @0.44@ is its version number.)
+--
 -- See 'defaultColourConfig' for the defaults for 'ColourConfig' used in Termonad.
 data ColourConfig c = ColourConfig
   { cursorFgColour :: !(Option c) -- ^ Foreground color of the cursor.  This is
                                   -- the color of the text that the cursor is
-                                  -- over.
+                                  -- over.  This is not supported on older
+                                  -- versions of VTE.
   , cursorBgColour :: !(Option c) -- ^ Background color of the cursor.  This is
                                   -- the color of the cursor itself.
   , foregroundColour :: !c -- ^ Color of the default default foreground text in
