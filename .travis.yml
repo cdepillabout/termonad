@@ -25,7 +25,6 @@ cache:
   - $HOME/.stack
   - $TRAVIS_BUILD_DIR/.stack-work
 
-
 # The different configurations we want to test. We have BUILD=cabal which uses
 # cabal-install, and BUILD=stack which uses Stack. More documentation on each
 # of those below.
@@ -40,17 +39,34 @@ matrix:
   # Make the build finish as soon as all of the non-"allowed_failures" builds
   # are finished building.  Don't wait for the "allowed_failures" to finish.
   fast-finish: true
+
   include:
   # We grab the appropriate GHC and cabal-install versions from hvr's PPA. See:
   # https://github.com/hvr/multi-ghc-travis
+  #- env: BUILD=cabal GHCVER=7.0.4 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
+  #  compiler: ": #GHC 7.0.4"
+  #  addons: {apt: {packages: [cabal-install-1.16,ghc-7.0.4,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+  #- env: BUILD=cabal GHCVER=7.2.2 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
+  #  compiler: ": #GHC 7.2.2"
+  #  addons: {apt: {packages: [cabal-install-1.16,ghc-7.2.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+  #- env: BUILD=cabal GHCVER=7.4.2 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
+  #  compiler: ": #GHC 7.4.2"
+  #  addons: {apt: {packages: [cabal-install-1.16,ghc-7.4.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+  #- env: BUILD=cabal GHCVER=7.6.3 CABALVER=1.16 HAPPYVER=1.19.5 ALEXVER=3.1.7
+  #  compiler: ": #GHC 7.6.3"
+  #  addons: {apt: {packages: [cabal-install-1.16,ghc-7.6.3,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+  #- env: BUILD=cabal GHCVER=7.8.4 CABALVER=1.18 HAPPYVER=1.19.5 ALEXVER=3.1.7
+  #  compiler: ": #GHC 7.8.4"
+  #  addons: {apt: {packages: [cabal-install-1.18,ghc-7.8.4,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+  #- env: BUILD=cabal GHCVER=7.10.3 CABALVER=1.22 HAPPYVER=1.19.5 ALEXVER=3.1.7
+  #  compiler: ": #GHC 7.10.3"
+  #  addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.3,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
   # - env: BUILD=cabal GHCVER=8.0.2 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
   #   compiler: ": #GHC 8.0.2"
   #   addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
-
   # - env: BUILD=cabal GHCVER=8.2.2 CABALVER=2.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
   #   compiler: ": #GHC 8.2.2"
   #   addons: {apt: {packages: [cabal-install-2.0,ghc-8.2.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
-
   - env: BUILD=cabal GHCVER=8.4.3 CABALVER=2.2 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #GHC 8.4.3"
     addons: {apt: {packages: [cabal-install-2.2,ghc-8.4.3,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
@@ -67,24 +83,39 @@ matrix:
     compiler: ": #stack default"
     addons: {apt: {packages: [libgmp-dev]}}
 
-  # - env: BUILD=stack ARGS="--stack-yaml stack-lts-9.yaml"
+  #- env: BUILD=stack ARGS="--resolver lts-2"
+  #  compiler: ": #stack 7.8.4"
+  #  addons: {apt: {packages: [libgmp-dev]}}
+
+  #- env: BUILD=stack ARGS="--resolver lts-3"
+  #  compiler: ": #stack 7.10.2"
+  #  addons: {apt: {packages: [libgmp-dev]}}
+
+  #- env: BUILD=stack ARGS="--resolver lts-6"
+  #  compiler: ": #stack 7.10.3"
+  #  addons: {apt: {packages: [libgmp-dev]}}
+
+  #- env: BUILD=stack ARGS="--resolver lts-7"
+  #  compiler: ": #stack 8.0.1"
+  #  addons: {apt: {packages: [libgmp-dev]}}
+
+  # - env: BUILD=stack ARGS="--resolver lts-9"
   #   compiler: ": #stack 8.0.2"
   #   addons: {apt: {packages: [libgmp-dev]}}
 
-  # - env: BUILD=stack ARGS="--stack-yaml stack-lts-11.yaml"
+  # - env: BUILD=stack ARGS="--resolver lts-11"
   #   compiler: ": #stack 8.2.2"
   #   addons: {apt: {packages: [libgmp-dev]}}
 
-  - env: BUILD=stack ARGS="--stack-yaml stack-lts-12.yaml"
+  - env: BUILD=stack ARGS="--resolver lts-12"
     compiler: ": #stack 8.4.3"
-    dist: xenial
     addons:
-        apt:
-            packages:
-                # - gobject-introspection
-                - libgirepository1.0-dev
-                - libgmp-dev
-                - libvte-2.91-dev
+      apt:
+        packages: [libgmp-dev, libvte-2.91-dev]
+        # - gobject-introspection
+        # - libgirepository1.0-dev
+        # - libgmp-dev
+        # - libvte-2.91-dev
 
   # Nightly builds are allowed to fail
   - env: BUILD=stack ARGS="--resolver nightly"
@@ -96,15 +127,32 @@ matrix:
   #   compiler: ": #stack default osx"
   #   os: osx
 
-  # - env: BUILD=stack ARGS="--stack-yaml stack-lts-9.yaml"
+  # Travis includes an macOS which is incompatible with GHC 7.8.4
+  #- env: BUILD=stack ARGS="--resolver lts-2"
+  #  compiler: ": #stack 7.8.4 osx"
+  #  os: osx
+
+  #- env: BUILD=stack ARGS="--resolver lts-3"
+  #  compiler: ": #stack 7.10.2 osx"
+  #  os: osx
+
+  #- env: BUILD=stack ARGS="--resolver lts-6"
+  #  compiler: ": #stack 7.10.3 osx"
+  #  os: osx
+
+  #- env: BUILD=stack ARGS="--resolver lts-7"
+  #  compiler: ": #stack 8.0.1 osx"
+  #  os: osx
+
+  # - env: BUILD=stack ARGS="--resolver lts-9"
   #   compiler: ": #stack 8.0.2 osx"
   #   os: osx
 
-  # - env: BUILD=stack ARGS="--stack-yaml stack-lts-11.yaml"
+  # - env: BUILD=stack ARGS="--resolver lts-11"
   #   compiler: ": #stack 8.2.2 osx"
   #   os: osx
 
-  # - env: BUILD=stack ARGS="--stack-yaml stack-lts-12.yaml"
+  # - env: BUILD=stack ARGS="--resolver lts-12"
   #   compiler: ": #stack 8.4.3 osx"
   #   os: osx
 
@@ -120,12 +168,6 @@ matrix:
 before_install:
 # Using compiler above sets CC to an invalid value, so unset it
 - unset CC
-
-- apt-cache search libvte | sort
-- dpkg -l | grep -i libvte
-- ls -l /usr/share/gir-1.0
-# - pkg-config --list-all | sort
-# - pkg-config --modversion gobject-introspection-1.0
 
 # We want to always allow newer versions of packages when building on GHC HEAD
 - CABALARGS=""
