@@ -14,6 +14,9 @@ sudo: false
 # Do not choose a language; we provide our own build tools.
 language: generic
 
+# Use Ubuntu 16.04
+dist: xenial
+
 # Caching so the next build will be fast too.
 cache:
   directories:
@@ -40,13 +43,13 @@ matrix:
   include:
   # We grab the appropriate GHC and cabal-install versions from hvr's PPA. See:
   # https://github.com/hvr/multi-ghc-travis
-  - env: BUILD=cabal GHCVER=8.0.2 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: ": #GHC 8.0.2"
-    addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+  # - env: BUILD=cabal GHCVER=8.0.2 CABALVER=1.24 HAPPYVER=1.19.5 ALEXVER=3.1.7
+  #   compiler: ": #GHC 8.0.2"
+  #   addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
 
-  - env: BUILD=cabal GHCVER=8.2.2 CABALVER=2.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: ": #GHC 8.2.2"
-    addons: {apt: {packages: [cabal-install-2.0,ghc-8.2.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+  # - env: BUILD=cabal GHCVER=8.2.2 CABALVER=2.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
+  #   compiler: ": #GHC 8.2.2"
+  #   addons: {apt: {packages: [cabal-install-2.0,ghc-8.2.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
 
   - env: BUILD=cabal GHCVER=8.4.3 CABALVER=2.2 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #GHC 8.4.3"
@@ -64,13 +67,13 @@ matrix:
     compiler: ": #stack default"
     addons: {apt: {packages: [libgmp-dev]}}
 
-  - env: BUILD=stack ARGS="--stack-yaml stack-lts-9.yaml"
-    compiler: ": #stack 8.0.2"
-    addons: {apt: {packages: [libgmp-dev]}}
+  # - env: BUILD=stack ARGS="--stack-yaml stack-lts-9.yaml"
+  #   compiler: ": #stack 8.0.2"
+  #   addons: {apt: {packages: [libgmp-dev]}}
 
-  - env: BUILD=stack ARGS="--stack-yaml stack-lts-11.yaml"
-    compiler: ": #stack 8.2.2"
-    addons: {apt: {packages: [libgmp-dev]}}
+  # - env: BUILD=stack ARGS="--stack-yaml stack-lts-11.yaml"
+  #   compiler: ": #stack 8.2.2"
+  #   addons: {apt: {packages: [libgmp-dev]}}
 
   - env: BUILD=stack ARGS="--stack-yaml stack-lts-12.yaml"
     compiler: ": #stack 8.4.3"
@@ -78,20 +81,15 @@ matrix:
     addons:
         apt:
             packages:
-                - gobject-introspection
+                # - gobject-introspection
                 - libgirepository1.0-dev
                 - libgmp-dev
-                - libgtk-3-dev
-                # Well, this doesn't work.  Travis CI is using Ubuntu 14.04.
-                # Ubuntu 14.04 only has the libvte-2.90-dev system library.
-                # However, the gi-vte Haskell package needs the libvte-2.91-dev
-                # system package.
-                # - libvte-2.91-dev
+                - libvte-2.91-dev
 
   # Nightly builds are allowed to fail
-  # - env: BUILD=stack ARGS="--resolver nightly"
-  #   compiler: ": #stack nightly"
-  #   addons: {apt: {packages: [libgmp-dev]}}
+  - env: BUILD=stack ARGS="--resolver nightly"
+    compiler: ": #stack nightly"
+    addons: {apt: {packages: [libgmp-dev]}}
 
   # Build on macOS in addition to Linux
   # - env: BUILD=stack ARGS=""
