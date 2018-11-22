@@ -69,7 +69,18 @@ matrix:
   #   addons: {apt: {packages: [cabal-install-2.0,ghc-8.2.2,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
   - env: BUILD=cabal GHCVER=8.4.3 CABALVER=2.2 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #GHC 8.4.3"
-    addons: {apt: {packages: [cabal-install-2.2,ghc-8.4.3,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+    addons:
+      apt:
+        sources:
+          - hvr-ghc
+        packages:
+          - alex-3.1.7
+          - cabal-install-2.2
+          - ghc-8.4.3
+          - happy-1.19.5
+          - libgirepository1.0-dev
+          - libgmp-dev
+          - libvte-2.91-dev
 
   # Build with the newest GHC and cabal-install. This is an accepted failure,
   # see below.
@@ -83,7 +94,10 @@ matrix:
     compiler: ": #stack default"
     addons:
       apt:
-        packages: [libgirepository1.0-dev, libgmp-dev, libvte-2.91-dev]
+        packages:
+          - libgirepository1.0-dev
+          - libgmp-dev
+          - libvte-2.91-dev
 
   #- env: BUILD=stack ARGS="--resolver lts-2"
   #  compiler: ": #stack 7.8.4"
@@ -113,14 +127,20 @@ matrix:
     compiler: ": #stack 8.4.3"
     addons:
       apt:
-        packages: [libgirepository1.0-dev, libgmp-dev, libvte-2.91-dev]
+        packages:
+          - libgirepository1.0-dev
+          - libgmp-dev
+          - libvte-2.91-dev
 
   # Nightly builds are allowed to fail
   - env: BUILD=stack ARGS="--resolver nightly"
     compiler: ": #stack nightly"
     addons:
       apt:
-        packages: [libgirepository1.0-dev, libgmp-dev, libvte-2.91-dev]
+        packages:
+          - libgirepository1.0-dev
+          - libgmp-dev
+          - libvte-2.91-dev
 
   # Build on macOS in addition to Linux
   # - env: BUILD=stack ARGS=""
