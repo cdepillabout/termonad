@@ -27,8 +27,8 @@ import Distribution.Verbosity (normal)
 import Distribution.Extra.Doctest (addDoctestsUserHook)
 main :: IO ()
 main = do
-  cppOpts <- getGtkVersionCPPOpts
-  defaultMainWithHooks . addPkgConfigGtkUserHook cppOpts $
+  cppOpts <- getTermonadCPPOpts
+  defaultMainWithHooks . addPkgConfigTermonadUserHook cppOpts $
     addDoctestsUserHook "doctests" simpleUserHooks
 
 #else
@@ -46,21 +46,22 @@ main = do
 
 main :: IO ()
 main = do
-  cppOpts <- getGtkVersionCPPOpts
-  defaultMainWithHooks $ addPkgConfigGtkUserHook cppOpts simpleUserHooks
+  cppOpts <- getTermonadCPPOpts
+  defaultMainWithHooks $ addPkgConfigTermonadUserHook cppOpts simpleUserHooks
 
 #endif
 
--- | Add CPP macros representing the version of the GTK system library.
-addPkgConfigGtkUserHook :: [String] -> UserHooks -> UserHooks
-addPkgConfigGtkUserHook cppOpts oldUserHooks = do
+-- | Add CPP macros representing the version of the GTK and VTE system
+-- libraries.
+addPkgConfigTermonadUserHook :: [String] -> UserHooks -> UserHooks
+addPkgConfigTermonadUserHook cppOpts oldUserHooks = do
   oldUserHooks
-    { preBuild = pkgConfigGtkHook cppOpts $ preBuild oldUserHooks
-    , preRepl = pkgConfigGtkHook cppOpts (preRepl oldUserHooks)
+    { preBuild = pkgConfigTermonadHook cppOpts $ preBuild oldUserHooks
+    , preRepl = pkgConfigTermonadHook cppOpts (preRepl oldUserHooks)
     }
 
-pkgConfigGtkHook :: [String] -> (args -> flags -> IO HookedBuildInfo) -> args -> flags -> IO HookedBuildInfo
-pkgConfigGtkHook cppOpts oldFunc args flags = do
+pkgConfigTermonadHook :: [String] -> (args -> flags -> IO HookedBuildInfo) -> args -> flags -> IO HookedBuildInfo
+pkgConfigTermonadHook cppOpts oldFunc args flags = do
   (maybeOldLibHookedInfo, oldExesHookedInfo) <- oldFunc args flags
   case maybeOldLibHookedInfo of
     Just oldLibHookedInfo -> do
@@ -76,25 +77,34 @@ pkgConfigGtkHook cppOpts oldFunc args flags = do
               }
       pure (Just newLibHookedInfo, oldExesHookedInfo)
 
+getTermonadCPPOpts :: IO [String]
+getTermonadCPPOpts = do
+  gtk <- getGtkVersionCPPOpts
+  vte <- getVteVersionCPPOpts
+  pure $ gtk <> vte
+
+getVteVersionCPPOpts :: IO [String]
+getVteVersionCPPOpts = do
+  maybeVers <- getPkgConfigVersionFor "vte-2.91"
+  case maybeVers of
+    Nothing -> pure []
+    Just vers -> pure $ createVteVersionCPPOpts vers
+
 getGtkVersionCPPOpts :: IO [String]
 getGtkVersionCPPOpts = do
-  pkgDb <- configureProgram normal pkgConfigProgram defaultProgramConfiguration
-  pkgConfigOutput <-
-    getDbProgramOutput normal pkgConfigProgram pkgDb ["--modversion", "gtk+-3.0"]
-  -- Drop the newline on the end of the pkgConfigOutput.
-  -- This should give us a version number like @3.22.11@.
-  let rawGtkVersion = reverse $ drop 1 $ reverse pkgConfigOutput
-  let maybeGtkVersion = simpleParse rawGtkVersion
-  case maybeGtkVersion of
-    Nothing -> do
-      putStrLn "In Setup.hs, in getGtkVersionCPPOpts, could not parse gtk version:"
-      print pkgConfigOutput
-      putStrLn "\nNot defining any CPP macros based on the version of the system GTK library."
-      putStrLn "\nCompilation of termonad may fail."
-      pure []
-    Just gtkVersion -> do
-      let cppOpts = createGtkVersionCPPOpts gtkVersion
-      pure cppOpts
+  maybeVers <- getPkgConfigVersionFor "gtk+-3.0"
+  case maybeVers of
+    Nothing -> pure []
+    Just vers -> pure $ createGtkVersionCPPOpts vers
+
+-- | Just like 'createGtkVersionCPPOpts' but for VTE instead of GTK.
+createVteVersionCPPOpts
+  :: Version
+  -> [String]
+createVteVersionCPPOpts vers =
+  catMaybes $
+    [ if vers >= [0,44] then Just "-DVTE_VERSION_GEQ_0_44" else Nothing
+    ]
 
 -- | Based on the version of the GTK3 library as reported by @pkg-config@, return
 -- a list of CPP macros that contain the GTK version.  These can be used in the
@@ -109,3 +119,24 @@ createGtkVersionCPPOpts gtkVersion =
   catMaybes $
     [ if gtkVersion >= [3,22] then Just "-DGTK_VERSION_GEQ_3_22" else Nothing
     ]
+
+getPkgConfigVersionFor :: String -> IO (Maybe Version)
+getPkgConfigVersionFor program = do
+  pkgDb <- configureProgram normal pkgConfigProgram defaultProgramConfiguration
+  pkgConfigOutput <-
+    getDbProgramOutput normal pkgConfigProgram pkgDb ["--modversion", program]
+  -- Drop the newline on the end of the pkgConfigOutput.
+  -- This should give us a version number like @3.22.11@.
+  let rawProgramVersion = reverse $ drop 1 $ reverse pkgConfigOutput
+  let maybeProgramVersion = simpleParse rawProgramVersion
+  case maybeProgramVersion of
+    Nothing -> do
+      putStrLn $
+        "In Setup.hs, in getPkgConfigVersionFor, could not parse " <>
+        program <> " version: " <> show pkgConfigOutput
+      putStrLn $
+        "\nNot defining any CPP macros based on the version of the system " <>
+        program <> " library."
+      putStrLn "\nCompilation of termonad may fail."
+      pure Nothing
+    Just programVersion -> pure $ Just programVersion
