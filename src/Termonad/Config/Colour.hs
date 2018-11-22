@@ -62,7 +62,9 @@ import GI.Vte
   ( Terminal
   , terminalSetColors
   , terminalSetColorCursor
+#ifdef VTE_VERSION_GEQ_0_44
   , terminalSetColorCursorForeground
+#endif
 --, terminalSetColorBackground
   , terminalSetColorForeground
   )
