@@ -12,7 +12,7 @@
 sudo: false
 
 # Do not choose a language; we provide our own build tools.
-language: generic
+language: nix
 
 # Use Ubuntu 16.04
 dist: xenial
@@ -180,23 +180,26 @@ matrix:
   #   compiler: ": #stack nightly osx"
   #   os: osx
 
+  - env: BUILD_WITH_NIX=1
+
   allow_failures:
   - env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
   - env: BUILD=stack ARGS="--resolver nightly"
   - os: osx
 
 before_install:
-# Using compiler above sets CC to an invalid value, so unset it
-- unset CC
-
-# We want to always allow newer versions of packages when building on GHC HEAD
-- CABALARGS=""
-- if [ "x$GHCVER" = "xhead" ]; then CABALARGS=--allow-newer; fi
-
-# Download and unpack the stack executable
-- export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$HOME/.local/bin:/opt/alex/$ALEXVER/bin:/opt/happy/$HAPPYVER/bin:$HOME/.cabal/bin:$PATH
-- mkdir -p ~/.local/bin
 - |
+  # Using compiler above sets CC to an invalid value, so unset it
+  unset CC
+
+  # We want to always allow newer versions of packages when building on GHC HEAD
+  CABALARGS=""
+  if [ "x$GHCVER" = "xhead" ]; then CABALARGS=--allow-newer; fi
+
+  # Download and unpack the stack executable
+  export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$HOME/.local/bin:/opt/alex/$ALEXVER/bin:/opt/happy/$HAPPYVER/bin:$HOME/.cabal/bin:$PATH
+  mkdir -p ~/.local/bin
+
   if [ `uname` = "Darwin" ]
   then
     travis_retry curl --insecure -L https://get.haskellstack.org/stable/osx-x86_64.tar.gz | tar xz --strip-components=1 --include '*/stack' -C ~/.local/bin
@@ -211,9 +214,9 @@ before_install:
 
 
 install:
-- echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
-- if [ -f configure.ac ]; then autoreconf -i; fi
 - |
+  echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
+  if [ -f configure.ac ]; then autoreconf -i; fi
   set -ex
   case "$BUILD" in
     stack)
