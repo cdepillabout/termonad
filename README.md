@@ -292,6 +292,9 @@ main = do
   defaultMain termonadConf
 ```
 
+There are other example configuration files in the
+[example-config/](./example-config) directory.
+
 ### Compiling Local Settings
 
 If you launch Termonad by calling `~/.local/bin/termonad`, it will try to

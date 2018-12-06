@@ -197,6 +197,18 @@ executable termonad-example-colour-extension
   else
     buildable:         False
 
+executable termonad-example-colour-extension-solarized
+  main-is:             example-config/ExampleSolarizedColourExtension.hs
+  build-depends:       base
+                     , termonad
+                     , colour
+  default-language:    Haskell2010
+
+  if flag(buildexamples)
+    buildable:         True
+  else
+    buildable:         False
+
 source-repository head
   type:     git
   location: https://github.com/cdepillabout/termonad/
