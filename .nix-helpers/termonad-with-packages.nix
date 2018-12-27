@@ -105,17 +105,28 @@ in
 with (import ./nixpkgs.nix { inherit compiler nixpkgs; });
 
 let
-  ghcWithPackages = haskellPackages.ghcWithPackages;
-  env = ghcWithPackages (self: [ self.termonad ] ++ extraHaskellPackages self);
+  env = haskellPackages.ghcWithPackages (self: [
+    self.termonad
+  ] ++ extraHaskellPackages self);
 in
 
 stdenv.mkDerivation {
   name = "termonad-with-packages-${env.version}";
-  nativeBuildInputs = [ makeWrapper ];
+  buildInputs = [ gnome3.adwaita-icon-theme hicolor-icon-theme ];
+  nativeBuildInputs = [ wrapGAppsHook ];
+  preFixup = ''
+    gappsWrapperArgs+=(
+      # Thumbnailers (this probably isn't actually needed, but it is a good example of how to use --prefix)
+      --prefix XDG_DATA_DIRS : "${gdk_pixbuf}/share"
+      --prefix XDG_DATA_DIRS : "${librsvg}/share"
+      --prefix XDG_DATA_DIRS : "${shared-mime-info}/share"
+      --set NIX_GHC "${env}/bin/ghc"
+      )
+    '';
   buildCommand = ''
     mkdir -p $out/bin
-    makeWrapper ${env}/bin/termonad $out/bin/termonad \
-      --set NIX_GHC "${env}/bin/ghc"
+    ln -sf ${env}/bin/termonad $out/bin/termonad
+    wrapGAppsHook
   '';
   preferLocalBuild = true;
   allowSubstitutes = false;

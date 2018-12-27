@@ -26,7 +26,7 @@ let
         src =
           builtins.filterSource
             (path: type: with stdenvLib;
-              ! elem (baseNameOf path) [ ".git" "result" ".stack-work" ] &&
+              ! elem (baseNameOf path) [ ".git" "result" ".stack-work" ".nix-helpers" ] &&
               ! any (flip hasPrefix (baseNameOf path)) [ "dist" ".ghc" ]
             )
             ./..;
@@ -55,14 +55,19 @@ let
       };
     in callCabal2nix "focuslist" src {};
 
-  haskellPackagesOL = self: super: with super.haskell.lib; {
+  haskellPackagesOverlay = self: super: with super.haskell.lib; {
     haskellPackages = super.haskell.packages.${compilerVersion}.override {
       overrides = hself: hsuper: {
         # Only override the version of foculist if it doesn't already exist in
         # the haskell package set.
         focuslist = hsuper.focuslist or (myfocuslist hself.callCabal2nix);
 
-        termonad = termonadOverride self.stdenv.lib self.gnome3 hself.callCabal2nix self.haskell.lib.overrideCabal;
+        termonad =
+          termonadOverride
+            self.stdenv.lib
+            self.gnome3
+            hself.callCabal2nix
+            self.haskell.lib.overrideCabal;
 
         # This is a tool to use to easily open haddocks in the browser.
         open-haddock = hsuper.open-haddock.overrideAttrs (oa: {
@@ -87,5 +92,5 @@ let
     });
   };
 
-in import nixpkgsSrc { overlays = [ haskellPackagesOL ]; }
+in import nixpkgsSrc { overlays = [ haskellPackagesOverlay ]; }
 
