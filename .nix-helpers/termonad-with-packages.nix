@@ -114,18 +114,12 @@ stdenv.mkDerivation {
   name = "termonad-with-packages-${env.version}";
   buildInputs = [ gnome3.adwaita-icon-theme hicolor-icon-theme ];
   nativeBuildInputs = [ wrapGAppsHook ];
-  preFixup = ''
-    gappsWrapperArgs+=(
-      # Thumbnailers (this probably isn't actually needed, but it is a good example of how to use --prefix)
-      --prefix XDG_DATA_DIRS : "${gdk_pixbuf}/share"
-      --prefix XDG_DATA_DIRS : "${librsvg}/share"
-      --prefix XDG_DATA_DIRS : "${shared-mime-info}/share"
-      --set NIX_GHC "${env}/bin/ghc"
-      )
-    '';
   buildCommand = ''
     mkdir -p $out/bin
     ln -sf ${env}/bin/termonad $out/bin/termonad
+    gappsWrapperArgs+=(
+      --set NIX_GHC "${env}/bin/ghc"
+    )
     wrapGAppsHook
   '';
   preferLocalBuild = true;
