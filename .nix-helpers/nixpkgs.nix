@@ -93,4 +93,3 @@ let
   };
 
 in import nixpkgsSrc { overlays = [ haskellPackagesOverlay ]; }
-
