@@ -538,14 +538,14 @@ deriving instance (Show (MatrixTF ns a)) => Show (Matrix ns a)
 
 instance SingI ns => Functor (Matrix ns) where
   fmap :: (a -> b) -> Matrix ns a -> Matrix ns b
-  fmap = fmapSingMatrix (sing @_ @ns)
+  fmap = fmapSingMatrix sing
 
 instance SingI ns => Data.Foldable.Foldable (Matrix ns) where
   foldr :: (a -> b -> b) -> b -> Matrix ns a -> b
-  foldr comb b = Data.Foldable.foldr comb b . toListMatrix (sing @_ @ns)
+  foldr comb b = Data.Foldable.foldr comb b . toListMatrix sing
 
   toList :: Matrix ns a -> [a]
-  toList = toListMatrix (sing @_ @ns)
+  toList = toListMatrix sing
 
 instance SingI ns => Distributive (Matrix ns) where
   distribute :: Functor f => f (Matrix ns a) -> Matrix ns (f a)
