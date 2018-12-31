@@ -4,7 +4,7 @@ module Termonad.App where
 import Termonad.Prelude
 
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
-import Control.Lens ((&), (.~), (^.))
+import Control.Lens ((&), (.~), (^.), (^..))
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
 import Data.Sequence (findIndexR)
 import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
@@ -64,17 +64,23 @@ import qualified GI.Gtk as Gtk
 import GI.Pango
   ( FontDescription
   , pattern SCALE
+  , fontDescriptionGetSize
+  , fontDescriptionGetSizeIsAbsolute
   , fontDescriptionNew
   , fontDescriptionSetFamily
   , fontDescriptionSetSize
   , fontDescriptionSetAbsoluteSize
   )
 import GI.Vte
-  ( terminalCopyClipboard
+  ( Terminal
+  , terminalCopyClipboard
   , terminalPasteClipboard
+  , terminalSetFont
   )
 
 import Paths_termonad (getDataFileName)
+import Termonad.Gtk (appNew, objFromBuildUnsafe)
+import Termonad.Keys (handleKeyPress)
 import Termonad.Lenses
   ( lensConfirmExit
   , lensFontConfig
@@ -84,11 +90,10 @@ import Termonad.Lenses
   , lensTMNotebookTabs
   , lensTMStateApp
   , lensTMStateConfig
+  , lensTMStateFontDesc
   , lensTMStateNotebook
   , lensTerm
   )
-import Termonad.Gtk (appNew, objFromBuildUnsafe)
-import Termonad.Keys (handleKeyPress)
 import Termonad.Term (createTerm, relabelTabs, termExitFocused, setShowTabs)
 import Termonad.Types
   ( FontConfig(fontFamily, fontSize)
@@ -98,6 +103,7 @@ import Termonad.Types
   , TMState
   , TMState'(TMState)
   , getFocusedTermFromState
+  , modFontSize
   , newEmptyTMState
   , tmNotebookTabTermContainer
   , tmNotebookTabs
@@ -149,17 +155,52 @@ setupScreenStyle = do
         cssProvider
         (fromIntegral STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-createFontDesc :: TMConfig -> IO FontDescription
-createFontDesc tmConfig = do
-  fontDesc <- fontDescriptionNew
+createFontDescFromConfig :: TMConfig -> IO FontDescription
+createFontDescFromConfig tmConfig = do
   let fontConf = tmConfig ^. lensOptions . lensFontConfig
-  fontDescriptionSetFamily fontDesc (fontFamily fontConf)
-  case fontSize fontConf of
-    FontSizePoints points ->
-      fontDescriptionSetSize fontDesc $ fromIntegral (points * fromIntegral SCALE)
-    FontSizeUnits units ->
-      fontDescriptionSetAbsoluteSize fontDesc $ units * fromIntegral SCALE
+  createFontDesc (fontSize fontConf) (fontFamily fontConf)
+
+createFontDesc :: FontSize -> Text -> IO FontDescription
+createFontDesc fontSz fontFam = do
+  fontDesc <- fontDescriptionNew
+  fontDescriptionSetFamily fontDesc fontFam
+  setFontDescSize fontDesc fontSz
   pure fontDesc
+
+setFontDescSize :: FontDescription -> FontSize -> IO ()
+setFontDescSize fontDesc (FontSizePoints points) =
+  fontDescriptionSetSize fontDesc $ fromIntegral (points * fromIntegral SCALE)
+setFontDescSize fontDesc (FontSizeUnits units) =
+  fontDescriptionSetAbsoluteSize fontDesc $ units * fromIntegral SCALE
+
+adjustFontDescSize :: (FontSize -> FontSize) -> FontDescription -> IO ()
+adjustFontDescSize f fontDesc = do
+  currSize <- fontDescriptionGetSize fontDesc
+  currAbsolute <- fontDescriptionGetSizeIsAbsolute fontDesc
+  let currFontSz =
+        if currAbsolute
+          then FontSizeUnits $ fromIntegral currSize / fromIntegral SCALE
+          else FontSizePoints $ round (fromIntegral currSize / fromIntegral SCALE)
+  print "current FontSize:"
+  print currFontSz
+  let newFontSz = f currFontSz
+  print "new FontSize:"
+  print newFontSz
+  setFontDescSize fontDesc newFontSz
+
+modifyFontSizeForAllTerms :: (FontSize -> FontSize) -> TMState -> IO ()
+modifyFontSizeForAllTerms modFontSize mvarTMState = do
+  tmState <- readMVar mvarTMState
+  let fontDesc = tmState ^. lensTMStateFontDesc
+  adjustFontDescSize modFontSize fontDesc
+  let terms =
+        tmState ^..
+          lensTMStateNotebook .
+          lensTMNotebookTabs .
+          traverse .
+          lensTMNotebookTabTerm .
+          lensTerm
+  foldMap (\vteTerm -> terminalSetFont vteTerm (Just fontDesc)) terms
 
 compareScrolledWinAndTab :: ScrolledWindow -> TMNotebookTab -> Bool
 compareScrolledWinAndTab scrollWin flTab =
@@ -256,7 +297,7 @@ setupTermonad tmConfig app win builder = do
 
   setupScreenStyle
   box <- objFromBuildUnsafe builder "content_box" Box
-  fontDesc <- createFontDesc tmConfig
+  fontDesc <- createFontDescFromConfig tmConfig
   note <- notebookNew
   widgetSetCanFocus note False
   boxPackStart box note True True 0
@@ -342,6 +383,18 @@ setupTermonad tmConfig app win builder = do
     maybe (pure ()) terminalPasteClipboard maybeTerm
   actionMapAddAction app pasteAction
   applicationSetAccelsForAction app "app.paste" ["<Shift><Ctrl>V"]
+
+  enlargeFontAction <- simpleActionNew "enlargefont" Nothing
+  void $ onSimpleActionActivate enlargeFontAction $ \_ ->
+    modifyFontSizeForAllTerms (modFontSize 1) mvarTMState
+  actionMapAddAction app enlargeFontAction
+  applicationSetAccelsForAction app "app.enlargefont" ["<Ctrl>plus"]
+
+  reduceFontAction <- simpleActionNew "reducefont" Nothing
+  void $ onSimpleActionActivate reduceFontAction $ \_ ->
+    modifyFontSizeForAllTerms (modFontSize (-1)) mvarTMState
+  actionMapAddAction app reduceFontAction
+  applicationSetAccelsForAction app "app.reducefont" ["<Ctrl>minus"]
 
   aboutAction <- simpleActionNew "about" Nothing
   void $ onSimpleActionActivate aboutAction (const $ showAboutDialog app)
