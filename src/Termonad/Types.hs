@@ -267,6 +267,33 @@ data FontSize
 defaultFontSize :: FontSize
 defaultFontSize = FontSizePoints 12
 
+-- | Modify a 'FontSize' by adding some value.
+--
+-- >>> modFontSize 1 (FontSizePoints 13)
+-- FontSizePoints 14
+-- >>> modFontSize 1 (FontSizeUnits 9.0)
+-- FontSizeUnits 10.0
+--
+-- You can reduce the font size by passing a negative value.
+--
+-- >>> modFontSize (-2) (FontSizePoints 13)
+-- FontSizePoints 11
+--
+-- If you try to create a font size less than 1, then the old font size will be
+-- used.
+--
+-- >>> modFontSize (-10) (FontSizePoints 5)
+-- FontSizePoints 5
+-- >>> modFontSize (-1) (FontSizeUnits 1.0)
+-- FontSizeUnits 1.0
+modFontSize :: Int -> FontSize -> FontSize
+modFontSize i (FontSizePoints oldPoints) =
+  let newPoints = oldPoints + i
+  in FontSizePoints $ if newPoints < 1 then oldPoints else newPoints
+modFontSize i (FontSizeUnits oldUnits) =
+  let newUnits = oldUnits + fromIntegral i
+  in FontSizeUnits $ if newUnits < 1 then oldUnits else newUnits
+
 -- | Settings for the font to be used in Termonad.
 data FontConfig = FontConfig
   { fontFamily :: !Text

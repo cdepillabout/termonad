@@ -80,6 +80,17 @@ menuDoc =
           </item>
         </submenu>
         <submenu>
+          <attribute name="label" translatable="yes">View</attribute>
+          <item>
+            <attribute name="label" translatable="yes">_Enlarge Font Size</attribute>
+            <attribute name="action">app.enlargefont</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">_Reduce Font Size</attribute>
+            <attribute name="action">app.reducefont</attribute>
+          </item>
+        </submenu>
+        <submenu>
           <attribute name="label" translatable="yes">Help</attribute>
           <item>
             <attribute name="label" translatable="yes">_About</attribute>
