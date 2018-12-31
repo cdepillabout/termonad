@@ -226,6 +226,8 @@ Termonad provides the following default key bindings.
 |------------|--------|
 | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>t</kbd> | Open new tab. |
 | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>w</kbd> | Close tab. |
+| <kbd>Ctrl</kbd> <kbd>+</kbd> | Increase font size. |
+| <kbd>Ctrl</kbd> <kbd>-</kbd> | Decrease font size. |
 | <kbd>Alt</kbd> <kbd>(number key)</kbd> | Switch to tab `number`.  For example, <kbd>Alt</kbd> <kbd>2</kbd> switches to tab 2. |
 
 ### Configuring Termonad
