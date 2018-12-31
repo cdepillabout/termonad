@@ -181,11 +181,7 @@ adjustFontDescSize f fontDesc = do
         if currAbsolute
           then FontSizeUnits $ fromIntegral currSize / fromIntegral SCALE
           else FontSizePoints $ round (fromIntegral currSize / fromIntegral SCALE)
-  print "current FontSize:"
-  print currFontSz
   let newFontSz = f currFontSz
-  print "new FontSize:"
-  print newFontSz
   setFontDescSize fontDesc newFontSz
 
 modifyFontSizeForAllTerms :: (FontSize -> FontSize) -> TMState -> IO ()
