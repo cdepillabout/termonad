@@ -9,6 +9,8 @@ packages:
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
+  - hedgehog-0.6.1
+  - tasty-hedgehog-0.2.0.0
   # These two packages should be added to a later version of LTS-13:
   # https://github.com/commercialhaskell/lts-haskell/issues/196
   - xml-html-qq-0.1.0.1
