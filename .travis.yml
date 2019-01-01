@@ -82,6 +82,21 @@ matrix:
           - libgmp-dev
           - libvte-2.91-dev
 
+  - env: BUILD=cabal GHCVER=8.6.3 CABALVER=2.4 HAPPYVER=1.19.5 ALEXVER=3.1.7
+    compiler: ": #GHC 8.6.3"
+    addons:
+      apt:
+        sources:
+          - hvr-ghc
+        packages:
+          - alex-3.1.7
+          - cabal-install-2.4
+          - ghc-8.6.3
+          - happy-1.19.5
+          - libgirepository1.0-dev
+          - libgmp-dev
+          - libvte-2.91-dev
+
   # Build with the newest GHC and cabal-install. This is an accepted failure,
   # see below.
   # - env: BUILD=cabal GHCVER=head  CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
@@ -125,6 +140,15 @@ matrix:
 
   - env: BUILD=stack ARGS="--resolver lts-12"
     compiler: ": #stack 8.4.3"
+    addons:
+      apt:
+        packages:
+          - libgirepository1.0-dev
+          - libgmp-dev
+          - libvte-2.91-dev
+
+  - env: BUILD=stack ARGS="--resolver lts-13"
+    compiler: ": #stack 8.6.3"
     addons:
       apt:
         packages:
