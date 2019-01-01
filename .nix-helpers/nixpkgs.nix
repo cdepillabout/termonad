@@ -10,14 +10,14 @@ let
     if isNull nixpkgs
       then
         builtins.fetchTarball {
-          # version of nixpkgs as of 2018-11-21
-          url = "https://github.com/NixOS/nixpkgs/archive/a370bd1fed5fcce0bb260fb6a5213911f1441eac.tar.gz";
-          sha256 = "17zj2yay3wgmgh1pwmgh6fcpqnrw7fl9riv852z3l38711by5ar4";
+          # recent version of nixpkgs master as of 2018-12-23
+          url = "https://github.com/NixOS/nixpkgs/archive/c31c0558ddad7161a4025117694197264cda9750.tar.gz";
+          sha256 = "09xl8fshyyddcm5nw5fkl6fbjlh5szjcdm43ii6jsvykdr516ghp";
         }
       else
         nixpkgs;
 
-  compilerVersion = if isNull compiler then "ghc844" else compiler;
+  compilerVersion = if isNull compiler then "ghc863" else compiler;
 
   # The termonad derivation is generated automatically with `cabal2nix`.
   termonadOverride =
@@ -41,27 +41,9 @@ let
         doCheck = false;
       });
 
-  # This is only used when older versions of nixpkgs are being used that don't have
-  # the focuslist package yet.  Eventually this can probably be completely dropped
-  # around July of 2019 or so.
-  #
-  # Also, if Termonad starts depending on a newer version of focuslist, this will
-  # have to be updated.
-  myfocuslist = callCabal2nix:
-    let
-      src = builtins.fetchTarball {
-        url = "https://github.com/cdepillabout/focuslist/archive/80bd865e82ab4499ccebcd89989d2dbb221bb381.tar.gz";
-        sha256 = "1b7da9ngk34jc2w4hhqq6qv20pkch5vvi34kr81xpmr3mmiwqmai";
-      };
-    in callCabal2nix "focuslist" src {};
-
   haskellPackagesOverlay = self: super: with super.haskell.lib; {
     haskellPackages = super.haskell.packages.${compilerVersion}.override {
       overrides = hself: hsuper: {
-        # Only override the version of foculist if it doesn't already exist in
-        # the haskell package set.
-        focuslist = hsuper.focuslist or (myfocuslist hself.callCabal2nix);
-
         termonad =
           termonadOverride
             self.stdenv.lib
@@ -81,15 +63,15 @@ let
       };
     };
 
-    # Darwin needs a patch to gobject-introspection:
-    # https://github.com/NixOS/nixpkgs/pull/46310
-    gobjectIntrospection = super.gobjectIntrospection.overrideAttrs (oldAttrs: {
-      patches =
-        oldAttrs.patches ++
-        (if self.stdenv.isDarwin
-          then [ ./macos-gobject-introspection-rpath.patch ]
-          else [ ]);
-    });
+    # # Darwin needs a patch to gobject-introspection:
+    # # https://github.com/NixOS/nixpkgs/pull/46310
+    # gobjectIntrospection = super.gobjectIntrospection.overrideAttrs (oldAttrs: {
+    #   patches =
+    #     oldAttrs.patches ++
+    #     (if self.stdenv.isDarwin
+    #       then [ ./macos-gobject-introspection-rpath.patch ]
+    #       else [ ]);
+    # });
   };
 
 in import nixpkgsSrc { overlays = [ haskellPackagesOverlay ]; }
