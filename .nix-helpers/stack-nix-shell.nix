@@ -2,10 +2,10 @@
 # This runs stack commands in an environment created with nix.
 
 let
-  # recent version of nixpkgs as of 2018-10-17
+  # recent version of nixpkgs master as of 2018-12-23
   nixpkgsTarball = builtins.fetchTarball {
-    url = "https://github.com/NixOS/nixpkgs/archive/6a23e11e658b7a7a77f1b61d30d64153b46bc852.tar.gz";
-    sha256 = "03n4bacfk1bbx3v0cx8xcgcmz44l0knswzh7hwih9nx0hj3x41yc";
+    url = "https://github.com/NixOS/nixpkgs/archive/c31c0558ddad7161a4025117694197264cda9750.tar.gz";
+    sha256 = "09xl8fshyyddcm5nw5fkl6fbjlh5szjcdm43ii6jsvykdr516ghp";
   };
 
   # Fixes for individual packages.  Currently none needed.
@@ -31,8 +31,8 @@ haskell.lib.buildStackProject {
     gtk3
     zlib
   ];
-  ghc = haskell.compiler.ghc843;
+  ghc = haskell.compiler.ghc863;
   extraArgs = [
-    "--stack-yaml stack-lts-12.yaml"
+    "--stack-yaml stack-lts-13.yaml"
   ];
 }
