@@ -43,4 +43,4 @@ extra-package-dbs: []
 nix:
     packages: []
     pure: true
-    shell-file: .nix-helpers/stack-nix-shell.nix
+    shell-file: .nix-helpers/stack-shell.nix
