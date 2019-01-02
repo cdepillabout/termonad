@@ -189,7 +189,7 @@ cube d (i :* j :* k :* EmptyVec) =
       affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] black
   where
     coef :: Fin N6 -> b
-    coef fin = fromIntegral (toIntFin fin) / 5
+    coef fin' = fromIntegral (toIntFin fin') / 5
 
 -- | A matrix of a 6 x 6 x 6 color cube. Default value for 'ColourCubePalette'.
 --
