@@ -51,6 +51,7 @@ import Data.Kind (Type)
 import Data.Singletons.Prelude
 import Data.Singletons.TH
 import Text.Show (showParen, showString)
+import Unsafe.Coerce (unsafeCoerce)
 
 --------------------------
 -- Misc VecT Operations --
@@ -166,6 +167,18 @@ $(singletons [d|
           if n == 0 then Z else S (fromInteger (n - 1))
   |])
 
+-- | This is a proof that if we know @'S' n@ is less than @'S' m@, then we
+-- know @n@ is also less than @m@.
+--
+-- >>> ltSuccProof (sing :: Sing N4) (sing :: Sing N5)
+-- Refl
+ltSuccProof ::
+     forall (n :: Peano) (m :: Peano) proxy. ('S n < 'S m) ~ 'True
+  => proxy n
+  -> proxy m
+  -> (n < m) :~: 'True
+ltSuccProof _ _ = unsafeCoerce (Refl :: Int :~: Int)
+
 ---------
 -- Fin --
 ---------
@@ -182,6 +195,27 @@ toIntFin :: Fin n -> Int
 toIntFin FZ = 0
 toIntFin (FS x) = succ $ toIntFin x
 
+-- | Similar to 'ifin' but for 'Fin'.
+--
+-- >>> fin (sing :: Sing N5) (sing :: Sing N1) :: Fin N5
+-- FS FZ
+fin ::
+     forall total n. (n < total) ~ 'True
+  => Sing total
+  -> Sing n
+  -> Fin total
+fin total n = toFinIFin $ ifin total n
+
+-- | Similar to 'ifin_' but for 'Fin'.
+--
+-- >>> fin_ @N4 (sing :: Sing N2) :: Fin N4
+-- FS (FS FZ)
+fin_ ::
+     forall total n. (SingI total, (n < total) ~ 'True)
+  => Sing n
+  -> Fin total
+fin_ n = toFinIFin $ ifin_ n
+
 data instance Sing (z :: Fin n) where
   SFZ :: Sing 'FZ
   SFS :: Sing x -> Sing ('FS x)
@@ -196,12 +230,12 @@ instance SingKind (Fin n) where
   type Demote (Fin n) = Fin n
   fromSing :: forall (a :: Fin n). Sing a -> Fin n
   fromSing SFZ = FZ
-  fromSing (SFS fin) = FS (fromSing fin)
+  fromSing (SFS fin') = FS (fromSing fin')
 
   toSing :: Fin n -> SomeSing (Fin n)
   toSing FZ = SomeSing SFZ
-  toSing (FS fin) =
-    case toSing fin of
+  toSing (FS fin') =
+    case toSing fin' of
       SomeSing n -> SomeSing (SFS n)
 
 instance Show (Sing 'FZ) where
@@ -231,6 +265,32 @@ toFinIFin (IFS n) = FS (toFinIFin n)
 toIntIFin :: IFin n m -> Int
 toIntIFin = toIntFin . toFinIFin
 
+-- | Create an 'IFin'.
+--
+-- >>> ifin (sing :: Sing N5) (sing :: Sing N2) :: IFin N5 N2
+-- IFS (IFS IFZ)
+ifin ::
+     forall total n. ((n < total) ~ 'True)
+  => Sing total
+  -> Sing n
+  -> IFin total n
+ifin (SS _) SZ = IFZ
+ifin (SS total') (SS n') =
+  IFS $
+    case ltSuccProof n' total' of
+      Refl -> ifin total' n'
+ifin _ _ = error "ifin: pattern impossible but GHC doesn't realize it"
+
+-- | Create an 'IFin', but take the total implicitly.
+--
+-- >>> ifin_ @N5 (sing :: Sing N3) :: IFin N5 N3
+-- IFS (IFS (IFS IFZ))
+ifin_ ::
+     forall total n. (SingI total, (n < total) ~ 'True)
+  => Sing n
+  -> IFin total n
+ifin_ = ifin sing
+
 data instance Sing (z :: IFin n m) where
   SIFZ :: Sing 'IFZ
   SIFS :: Sing x -> Sing ('IFS x)
@@ -245,12 +305,12 @@ instance SingKind (IFin n m) where
   type Demote (IFin n m) = IFin n m
   fromSing :: forall (a :: IFin n m). Sing a -> IFin n m
   fromSing SIFZ = IFZ
-  fromSing (SIFS fin) = IFS (fromSing fin)
+  fromSing (SIFS fin') = IFS (fromSing fin')
 
   toSing :: IFin n m -> SomeSing (IFin n m)
   toSing IFZ = SomeSing SIFZ
-  toSing (IFS fin) =
-    case toSing fin of
+  toSing (IFS fin') =
+    case toSing fin' of
       SomeSing n -> SomeSing (SIFS n)
 
 instance Show (Sing 'IFZ) where
@@ -345,7 +405,7 @@ replaceVec (SS n) a = a :* replaceVec n a
 
 imapVec :: forall n a b. (Fin n -> a -> b) -> Vec n a -> Vec n b
 imapVec _ EmptyVec = EmptyVec
-imapVec f (a :* as) = f FZ a :* imapVec (\fin vec -> f (FS fin) vec) as
+imapVec f (a :* as) = f FZ a :* imapVec (\fin' vec -> f (FS fin') vec) as
 
 replaceVec_ :: SingI n => a -> Vec n a
 replaceVec_ = replaceVec sing
@@ -370,7 +430,7 @@ updateAtVec FZ f (a :* vec)  = f a :* vec
 updateAtVec (FS n) f (a :* vec)  = a :* updateAtVec n f vec
 
 setAtVec :: Fin n -> a -> Vec n a -> Vec n a
-setAtVec fin a = updateAtVec fin (const a)
+setAtVec fin' a = updateAtVec fin' (const a)
 
 fromListVec :: Sing n -> [a] -> Maybe (Vec n a)
 fromListVec SZ _ = Just EmptyVec
@@ -506,7 +566,7 @@ imapMatrix :: forall (ns :: [Peano]) a b. Sing ns -> (HList Fin ns -> a -> b) ->
 imapMatrix SNil f (Matrix a) = Matrix (f EmptyHList a)
 imapMatrix (SCons _ ns) f matrix =
   onMatrixTF
-    (imapVec (\fin -> onMatrix (imapMatrix ns (\hlist -> f (ConsHList fin hlist)))))
+    (imapVec (\fin' -> onMatrix (imapMatrix ns (\hlist -> f (ConsHList fin' hlist)))))
     matrix
 
 imapMatrix_ :: SingI ns => (HList Fin ns -> a -> b) -> Matrix ns a -> Matrix ns b
