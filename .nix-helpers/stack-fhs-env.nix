@@ -1,3 +1,16 @@
+# This is a nix derivation that gives us a `stack` binary that will run in a
+# chroot.  This is needed to workaround
+# https://github.com/cdepillabout/termonad/issues/99.
+#
+# This is nice to use if you're having trouble running `stack` on nixos
+# normally.  It generally shouldn't be needed any other time.
+#
+# You can use this by starting a `nix-shell` with it:
+#
+# $ nix-shell --pure .nix-helpers/stack-fhs-env.nix
+#
+# From here, you can run `stack` normally.
+
 let
   # recent version of nixpkgs master as of 2018-12-23
   nixpkgsTarball = builtins.fetchTarball {
@@ -53,4 +66,10 @@ in
 
 with nixpkgs;
 
-mkShell { buildInputs = [ fhsStack ]; }
+mkShell {
+  buildInputs = [
+    fhsStack
+    gitAndTools.gitFull
+    gitAndTools.hub
+  ];
+}
