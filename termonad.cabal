@@ -191,6 +191,7 @@ executable termonad-example-colour-extension
   build-depends:       base
                      , termonad
                      , colour
+                     , singletons
   default-language:    Haskell2010
 
   if flag(buildexamples)
@@ -203,6 +204,7 @@ executable termonad-example-colour-extension-solarized
   build-depends:       base
                      , termonad
                      , colour
+                     , singletons
   default-language:    Haskell2010
 
   if flag(buildexamples)

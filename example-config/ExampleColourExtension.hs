@@ -4,6 +4,8 @@
 
 module Main where
 
+import Data.Colour.SRGB (Colour, sRGB24)
+import Data.Singletons (sing)
 import Termonad
   ( CursorBlinkMode(CursorBlinkModeOff), Option(Set)
   , ShowScrollbar(ShowScrollbarNever), TMConfig, confirmExit, cursorBlinkMode
@@ -15,8 +17,9 @@ import Termonad.Config.Colour
   , createColourExtension, cursorBgColour, defaultColourConfig, foregroundColour
   , palette, sRGB24
   )
-import Termonad.Config.Vec (Vec((:*), EmptyVec), N8, unsafeFromListVec_)
-import Data.Colour.SRGB (Colour, sRGB24)
+import Termonad.Config.Vec
+  ( N4, N8, Sing, Vec((:*), EmptyVec), fin_, setAtVec, unsafeFromListVec_
+  )
 
 -- This is our main 'TMConfig'.  It holds all of the non-colour settings
 -- for Termonad.
@@ -62,7 +65,7 @@ myColourConfig =
       :* sRGB24 180 160 120 -- light brown
       :* EmptyVec
 
-    -- This is an example of creating a length-indenxed linked-list of colours,
+    -- This is an example of creating a length-indexed linked-list of colours,
     -- using the 'unsafeFromListVec_' function.  'unsafeFromListVec_' is okay to
     -- use as long as you're absolutely sure you have 8 elements.
     myLightColours :: Vec N8 (Colour Double)
@@ -77,6 +80,13 @@ myColourConfig =
         , sRGB24  50 200 160 -- light teal
         , sRGB24 220 200 150 -- light brown
         ]
+
+    -- This is an example of updating just a single value in a 'Colour' 'Vec'.
+    -- Here we are updating the 5th 'Colour' (which is at index 4).
+    updateSingleColor :: Vec N8 (Colour Double)
+    updateSingleColor =
+      let fin4 = fin_ (sing :: Sing N4)
+      in setAtVec fin4 (sRGB24 40 30 150) myStandardColours
 
 main :: IO ()
 main = do
