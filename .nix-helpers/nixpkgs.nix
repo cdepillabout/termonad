@@ -1,7 +1,6 @@
 # This file pins the version of nixpkgs to a known good version. The nixpkgs is
-# imported with an overlay overriding haskellPackages to generate haddocks for
-# GI dependencies, and to use the GHC, VTE, GTK and open-haddock versions we
-# want. It is imported from various other files.
+# imported with an overlay adding Termonad. It is imported from various other
+# files.
 
 { compiler ? null, nixpkgs ? null }:
 
