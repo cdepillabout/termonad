@@ -10,9 +10,9 @@ let
     if isNull nixpkgs
       then
         builtins.fetchTarball {
-          # recent version of nixpkgs master as of 2018-12-23
-          url = "https://github.com/NixOS/nixpkgs/archive/c31c0558ddad7161a4025117694197264cda9750.tar.gz";
-          sha256 = "09xl8fshyyddcm5nw5fkl6fbjlh5szjcdm43ii6jsvykdr516ghp";
+          # recent version of nixpkgs master as of 2019-01-09
+          url = "https://github.com/NixOS/nixpkgs/archive/beaf69cee298e092698dd2da2e4758b7811859ad.tar.gz";
+          sha256 = "0863a8bgb9z2cbjcwp2xqspsbqcnq035k7rfylicxa75gsj9xgk1";
         }
       else
         nixpkgs;
@@ -50,6 +50,9 @@ let
             self.gnome3
             hself.callCabal2nix
             self.haskell.lib.overrideCabal;
+
+        # https://github.com/NixOS/nixpkgs/pull/53682
+        genvalidity-hspec = dontCheck hsuper.genvalidity-hspec;
 
         # This is a tool to use to easily open haddocks in the browser.
         open-haddock = hsuper.open-haddock.overrideAttrs (oa: {
