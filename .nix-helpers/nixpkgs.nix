@@ -53,16 +53,6 @@ let
 
         # https://github.com/NixOS/nixpkgs/pull/53682
         genvalidity-hspec = dontCheck hsuper.genvalidity-hspec;
-
-        # This is a tool to use to easily open haddocks in the browser.
-        open-haddock = hsuper.open-haddock.overrideAttrs (oa: {
-          src = super.fetchFromGitHub {
-            owner = "jml";
-            repo = "open-haddock";
-            rev = "472d10d61d7b9262626171af0484a65365863fa6";
-            sha256 = "072d680j1k3n0vkzsbghhnah2p799yxrm7mhvr0nkdvr7iy04gcz";
-          };
-        });
       };
     };
 
