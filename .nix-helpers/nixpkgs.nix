@@ -54,16 +54,6 @@ let
         genvalidity-hspec = dontCheck hsuper.genvalidity-hspec;
       };
     };
-
-    # # Darwin needs a patch to gobject-introspection:
-    # # https://github.com/NixOS/nixpkgs/pull/46310
-    # gobjectIntrospection = super.gobjectIntrospection.overrideAttrs (oldAttrs: {
-    #   patches =
-    #     oldAttrs.patches ++
-    #     (if self.stdenv.isDarwin
-    #       then [ ./macos-gobject-introspection-rpath.patch ]
-    #       else [ ]);
-    # });
   };
 
 in import nixpkgsSrc { overlays = [ haskellPackagesOverlay ]; }
