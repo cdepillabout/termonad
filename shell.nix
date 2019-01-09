@@ -30,7 +30,7 @@ with (import .nix-helpers/nixpkgs.nix { inherit compiler nixpkgs; });
 
 let
   termonadEnv = haskellPackages.termonad.env;
-  nativeBuildTools = with haskellPackages; [ cabal-install ghcid open-haddock ];
+  nativeBuildTools = with haskellPackages; [ cabal-install ghcid ];
 in
 
 if indexTermonad
