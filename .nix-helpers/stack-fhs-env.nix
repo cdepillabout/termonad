@@ -27,6 +27,7 @@ let
         targetPkgs = _: with self; [
             binutils
             cairo
+            cairo.dev
             ghc
             git
             gnome3.atk
@@ -51,6 +52,7 @@ let
         profile = ''
           export STACK_IN_NIX_SHELL=1
           export GI_TYPELIB_PATH=/usr/lib/girepository-1.0
+          echo $XDG_DATA_DIRS
         '';
         extraOutputsToInstall = ["dev"];
       };
