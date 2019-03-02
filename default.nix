@@ -17,7 +17,7 @@
 #
 # $ nix-env --file default.nix --install
 
-{ compiler ? null, nixpkgs ? null }:
+{ compiler ? null, nixpkgs ? null }@args:
 
-import .nix-helpers/termonad-with-packages.nix { inherit compiler nixpkgs; }
+import .nix-helpers/termonad-with-packages.nix args
 

@@ -2,10 +2,10 @@
 # This runs stack commands in an environment created with nix.
 
 let
-  # recent version of nixpkgs master as of 2018-12-23
+  # recent version of nixpkgs master as of 2019-03-02
   nixpkgsTarball = builtins.fetchTarball {
-    url = "https://github.com/NixOS/nixpkgs/archive/c31c0558ddad7161a4025117694197264cda9750.tar.gz";
-    sha256 = "09xl8fshyyddcm5nw5fkl6fbjlh5szjcdm43ii6jsvykdr516ghp";
+    url = "https://github.com/NixOS/nixpkgs/archive/07e2b59812de95deeedde95fb6ba22d581d12fbc.tar.gz";
+    sha256 = "1yxmv04v2dywk0a5lxvi9a2rrfq29nw8qsm33nc856impgxadpgf";
   };
 
   # Fixes for individual packages.  Currently none needed.

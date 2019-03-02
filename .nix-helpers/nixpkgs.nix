@@ -9,9 +9,9 @@ let
     if isNull nixpkgs
       then
         builtins.fetchTarball {
-          # recent version of nixpkgs master as of 2019-01-09
-          url = "https://github.com/NixOS/nixpkgs/archive/beaf69cee298e092698dd2da2e4758b7811859ad.tar.gz";
-          sha256 = "0863a8bgb9z2cbjcwp2xqspsbqcnq035k7rfylicxa75gsj9xgk1";
+          # recent version of nixpkgs master as of 2019-03-02
+          url = "https://github.com/NixOS/nixpkgs/archive/07e2b59812de95deeedde95fb6ba22d581d12fbc.tar.gz";
+          sha256 = "1yxmv04v2dywk0a5lxvi9a2rrfq29nw8qsm33nc856impgxadpgf";
         }
       else
         nixpkgs;
@@ -51,7 +51,7 @@ let
             self.haskell.lib.overrideCabal;
 
         # https://github.com/NixOS/nixpkgs/pull/53682
-        genvalidity-hspec = dontCheck hsuper.genvalidity-hspec;
+        # genvalidity-hspec = dontCheck hsuper.genvalidity-hspec;
       };
     };
   };
