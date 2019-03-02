@@ -2,7 +2,7 @@
 # This runs stack commands in an environment created with nix.
 
 let
-  # recent version of nixpkgs master as of 2019-03-02
+  # Recent version of nixpkgs-19.03 as of 2019-03-02.
   nixpkgsTarball = builtins.fetchTarball {
     url = "https://github.com/NixOS/nixpkgs/archive/07e2b59812de95deeedde95fb6ba22d581d12fbc.tar.gz";
     sha256 = "1yxmv04v2dywk0a5lxvi9a2rrfq29nw8qsm33nc856impgxadpgf";
