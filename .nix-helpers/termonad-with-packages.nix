@@ -112,15 +112,20 @@ in
 
 stdenv.mkDerivation {
   name = "termonad-with-packages-${env.version}";
-  buildInputs = [ gnome3.adwaita-icon-theme hicolor-icon-theme ];
+  buildInputs = [ gdk_pixbuf gnome3.adwaita-icon-theme hicolor-icon-theme ];
   nativeBuildInputs = [ wrapGAppsHook ];
-  buildCommand = ''
+  dontBuild = true;
+  unpackPhase = ":";
+  # Using installPhase instead of buildCommand was recommended here:
+  # https://github.com/cdepillabout/termonad/pull/109
+  installPhase = ''
+    runHook preInstall
     mkdir -p $out/bin
     ln -sf ${env}/bin/termonad $out/bin/termonad
     gappsWrapperArgs+=(
       --set NIX_GHC "${env}/bin/ghc"
     )
-    wrapGAppsHook
+    runHook postInstall
   '';
   preferLocalBuild = true;
   allowSubstitutes = false;
