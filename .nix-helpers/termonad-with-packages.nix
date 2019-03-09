@@ -118,6 +118,9 @@ stdenv.mkDerivation {
     mkdir -p $out/bin
     ln -sf ${env}/bin/termonad $out/bin/termonad
     gappsWrapperArgs+=(
+      --prefix XDG_DATA_DIRS : "${gdk_pixbuf}/share"
+      --prefix XDG_DATA_DIRS : "${librsvg}/share"
+      --prefix XDG_DATA_DIRS : "${shared-mime-info}/share"
       --set NIX_GHC "${env}/bin/ghc"
     )
     wrapGAppsHook
