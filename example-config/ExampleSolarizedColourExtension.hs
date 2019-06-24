@@ -5,7 +5,7 @@
 module Main where
 
 import Termonad
-  ( CursorBlinkMode(CursorBlinkModeOff), Option(Set)
+  ( CursorBlinkMode(CursorBlinkModeOff), DefaultOrUser(User), Option(Set)
   , ShowScrollbar(ShowScrollbarNever), TMConfig, confirmExit, cursorBlinkMode
   , defaultConfigOptions, defaultTMConfig, options, showMenu, showScrollbar
   , start
@@ -39,7 +39,7 @@ solarizedDark :: ColourConfig (Colour Double)
 solarizedDark =
   defaultColourConfig
     -- Set the default foreground colour of text of the terminal.
-    { foregroundColour = sRGB24 131 148 150 -- base0
+    { foregroundColour = User (sRGB24 131 148 150) -- base0
     -- Set the extended palette that has 2 Vecs of 8 Solarized pallette colours
     , palette = ExtendedPalette solarizedDark1 solarizedDark2
     }
@@ -73,7 +73,7 @@ solarizedLight :: ColourConfig (Colour Double)
 solarizedLight =
   defaultColourConfig
     -- Set the default foreground colour of text of the terminal.
-    { foregroundColour = sRGB24 101 123 131 -- base00
+    { foregroundColour = User (sRGB24 101 123 131) -- base00
     -- Set the extended palette that has 2 Vecs of 8 Solarized pallette colours
     , palette = ExtendedPalette solarizedLight1 solarizedLight2
     }

@@ -338,6 +338,12 @@ whenSet = \case
   Unset -> \_ -> mempty
   Set x -> \f -> f x
 
+-- | Type for differentiating between a default value and a value set by user in config.
+-- It is needed for background and foreground colors of a terminal when the palette value
+-- is present.
+data DefaultOrUser a = Default !a | User !a
+  deriving (Eq, Show, Functor)
+
 -- | Whether or not to show the scroll bar in a terminal.
 data ShowScrollbar
   = ShowScrollbarNever -- ^ Never show the scroll bar, even if there are too

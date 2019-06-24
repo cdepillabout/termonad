@@ -57,7 +57,7 @@ import Control.Lens ((%~), makeLensesFor)
 import Data.Colour (Colour, black, affineCombo)
 import Data.Colour.SRGB (RGB(RGB), toSRGB, sRGB24, sRGB24show)
 import qualified Data.Foldable
-import GI.Gdk (RGBA, newZeroRGBA, setRGBABlue, setRGBAGreen, setRGBARed)
+import GI.Gdk (RGBA, newZeroRGBA, setRGBABlue, setRGBAGreen, setRGBARed, setRGBAAlpha)
 import GI.Vte
   ( Terminal
   , terminalSetColors
@@ -65,7 +65,7 @@ import GI.Vte
 #ifdef VTE_VERSION_GEQ_0_44
   , terminalSetColorCursorForeground
 #endif
---, terminalSetColorBackground
+  , terminalSetColorBackground
   , terminalSetColorForeground
   )
 import Text.Show (showString)
@@ -74,6 +74,7 @@ import Termonad.Config.Vec
 import Termonad.Lenses (lensCreateTermHook, lensHooks)
 import Termonad.Types
   ( Option(Unset)
+  , DefaultOrUser(Default, User)
   , TMConfig
   , TMState
   , whenSet
@@ -328,12 +329,6 @@ defaultGreyscale = genVec_ $ \n ->
 -- foreground, it may be a good idea to change some of the colors in the
 -- 'Palette' as well.
 --
--- (__WARNING__: Currently due to issues either with VTE or the bindings generated for
--- Haskell, background colour cannot be set independently of the palette.
--- The @backgroundColour@ field will be ignored and the 0th colour in the
--- palette (by default black) will be used as the background colour. See
--- <https://github.com/cdepillabout/termonad/issues/29 this issue>.
---
 -- VTE works as follows: if you don't explicitly set a background or foreground color,
 -- it takes the 0th colour from the 'palette' to be the background color, and the 7th
 -- colour from the 'palette' to be the foreground color.  If you notice oddities with
@@ -399,10 +394,9 @@ data ColourConfig c = ColourConfig
                                   -- versions of VTE.
   , cursorBgColour :: !(Option c) -- ^ Background color of the cursor.  This is
                                   -- the color of the cursor itself.
-  , foregroundColour :: !c -- ^ Color of the default default foreground text in
+  , foregroundColour :: !(DefaultOrUser c) -- ^ Color of the default default foreground text in
                            -- the terminal.
-  , backgroundColour :: !c -- ^ Background color for the terminal, however, See
-                           -- the __WARNING__ above.
+  , backgroundColour :: !(DefaultOrUser c) -- ^ Background color for the terminal
   , palette :: !(Palette c) -- ^ Color palette for the terminal.  See 'Palette'.
   } deriving (Eq, Show, Functor)
 
@@ -420,8 +414,8 @@ defaultColourConfig :: ColourConfig (Colour Double)
 defaultColourConfig = ColourConfig
   { cursorFgColour = Unset
   , cursorBgColour = Unset
-  , foregroundColour = sRGB24 192 192 192
-  , backgroundColour = black
+  , foregroundColour = Default (sRGB24 192 192 192)
+  , backgroundColour = Default black
   , palette = NoPalette
   }
 
@@ -455,13 +449,23 @@ data ColourExtension = ColourExtension
 colourHook :: MVar (ColourConfig (Colour Double)) -> TMState -> Terminal -> IO ()
 colourHook mvarColourConf _ vteTerm = do
   colourConf <- readMVar mvarColourConf
-  terminalSetColors vteTerm Nothing Nothing . Just
-    =<< traverse toRGBA (paletteToList . palette $ colourConf)
-  -- PR #28 / issue #29: Setting the background colour is broken in gi-vte or VTE.  If
-  -- this next line is called, then you are no longer able to set the
-  -- background color using the palette.
-  -- terminalSetColorBackground vteTerm =<< toRGBA (backgroundColour colourConf)
-  terminalSetColorForeground vteTerm =<< toRGBA (foregroundColour colourConf)
+  case palette colourConf of
+    NoPalette -> do
+      case foregroundColour colourConf of
+        User colour -> terminalSetColorForeground vteTerm =<< toRGBA colour
+        Default colour -> terminalSetColorForeground vteTerm =<< toRGBA colour
+      case backgroundColour colourConf of
+        User colour -> terminalSetColorBackground vteTerm =<< toRGBA colour
+        Default colour -> terminalSetColorBackground vteTerm =<< toRGBA colour
+    _ -> do
+      terminalSetColors vteTerm Nothing Nothing . Just
+        =<< traverse toRGBA (paletteToList . palette $ colourConf)
+      case foregroundColour colourConf of
+        User colour -> terminalSetColorForeground vteTerm =<< toRGBA colour
+        Default _ -> pure ()
+      case backgroundColour colourConf of
+        User colour -> terminalSetColorBackground vteTerm =<< toRGBA colour
+        Default _ -> pure ()
   let optPerform setC cField = whenSet (cField colourConf) $ \c ->
         setC vteTerm . Just =<< toRGBA c
   optPerform terminalSetColorCursor cursorBgColour
@@ -476,6 +480,7 @@ colourHook mvarColourConf _ vteTerm = do
       setRGBARed rgba red
       setRGBAGreen rgba green
       setRGBABlue rgba blue
+      setRGBAAlpha rgba 1
       pure rgba
 
 -- | Create a 'ColourExtension' based on a given 'ColourConfig'.

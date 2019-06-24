@@ -7,7 +7,7 @@ module Main where
 import Data.Colour.SRGB (Colour, sRGB24)
 import Data.Singletons (sing)
 import Termonad
-  ( CursorBlinkMode(CursorBlinkModeOff), Option(Set)
+  ( CursorBlinkMode(CursorBlinkModeOff), DefaultOrUser(User), Option(Set)
   , ShowScrollbar(ShowScrollbarNever), TMConfig, confirmExit, cursorBlinkMode
   , defaultConfigOptions, defaultTMConfig, options, showMenu, showScrollbar
   , start
@@ -45,7 +45,7 @@ myColourConfig =
     -- cursor.
     { cursorBgColour = Set (sRGB24 120 80 110) -- purple
     -- Set the default foreground colour of text of the terminal.
-    , foregroundColour = sRGB24 220 180 210 -- light pink
+    , foregroundColour = User (sRGB24 220 180 210) -- light pink
     -- Set the extended palette that has 8 colours standard colors and then 8
     -- light colors.
     , palette = ExtendedPalette myStandardColours myLightColours

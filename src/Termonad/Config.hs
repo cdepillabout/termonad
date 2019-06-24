@@ -50,6 +50,7 @@ module Termonad.Config
   , FontConfig(..)
   , defaultFontConfig
   -- * Misc
+  , DefaultOrUser(..)
   , Option(..)
   , ShowScrollbar(..)
   , ShowTabBar(..)
