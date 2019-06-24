@@ -72,8 +72,7 @@ import GI.Pango
   , fontDescriptionSetAbsoluteSize
   )
 import GI.Vte
-  ( Terminal
-  , terminalCopyClipboard
+  ( terminalCopyClipboard
   , terminalPasteClipboard
   , terminalSetFont
   )
@@ -180,15 +179,17 @@ adjustFontDescSize f fontDesc = do
   let currFontSz =
         if currAbsolute
           then FontSizeUnits $ fromIntegral currSize / fromIntegral SCALE
-          else FontSizePoints $ round (fromIntegral currSize / fromIntegral SCALE)
+          else
+            let fontRatio :: Double = fromIntegral currSize / fromIntegral SCALE
+            in FontSizePoints $ round fontRatio
   let newFontSz = f currFontSz
   setFontDescSize fontDesc newFontSz
 
 modifyFontSizeForAllTerms :: (FontSize -> FontSize) -> TMState -> IO ()
-modifyFontSizeForAllTerms modFontSize mvarTMState = do
+modifyFontSizeForAllTerms modFontSizeFunc mvarTMState = do
   tmState <- readMVar mvarTMState
   let fontDesc = tmState ^. lensTMStateFontDesc
-  adjustFontDescSize modFontSize fontDesc
+  adjustFontDescSize modFontSizeFunc fontDesc
   let terms =
         tmState ^..
           lensTMStateNotebook .
