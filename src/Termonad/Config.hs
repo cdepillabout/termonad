@@ -56,8 +56,6 @@ module Termonad.Config
   , CursorBlinkMode(..)
   ) where
 
-import Termonad.Prelude hiding ((\\), index)
-
 import GI.Vte (CursorBlinkMode(..))
 
 import Termonad.Types
