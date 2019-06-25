@@ -91,7 +91,7 @@ let
   # Default Haskell packages that you can use in your Termonad configuration.
   # This is only used if the user doesn't specify the extraHaskellPackages
   # option.
-  defaultPackages = haskellPackages: with haskellPackages; [
+  defaultPackages = hpkgs: with hpkgs; [
     colour
     lens
   ];
@@ -100,14 +100,17 @@ in
 { extraHaskellPackages ? defaultPackages
 , compiler ? null
 , nixpkgs ? null
-}:
+, additionalOverlays ? []
+}@args:
 
-with (import ./nixpkgs.nix { inherit compiler nixpkgs; });
+with (import ./nixpkgs.nix { inherit compiler nixpkgs additionalOverlays; });
 
 let
-  env = haskellPackages.ghcWithPackages (self: [
-    self.termonad
-  ] ++ extraHaskellPackages self);
+  # GHC environment that has termonad available, as well as the packages
+  # specified above in extraHaskellPackages.
+  env =
+    termonadKnownWorkingHaskellPkgSet.ghcWithPackages
+      (hpkgs: [ hpkgs.termonad ] ++ extraHaskellPackages hpkgs);
 in
 
 stdenv.mkDerivation {

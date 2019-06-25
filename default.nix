@@ -17,7 +17,7 @@
 #
 # $ nix-env --file default.nix --install
 
-{ compiler ? null, nixpkgs ? null }@args:
+{ compiler ? null, nixpkgs ? null, additionalOverlays ? [] }@args:
 
 import .nix-helpers/termonad-with-packages.nix args
 
