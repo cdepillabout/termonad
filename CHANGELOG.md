@@ -1,3 +1,11 @@
+## 1.2.0.0
+
+* Got the code for setting the backgroud color of the terminal actually
+  working.  Thanks @dakotaclemenceplaza.
+  [#111](https://github.com/cdepillabout/termonad/pull/111)
+  * This changes the type of `ColourConfig` to make the foreground and
+    background colors of the terminal optional.
+* Various cleanup in the nix files.
 
 ## 1.1.0.0
 

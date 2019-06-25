@@ -47,6 +47,10 @@ let
         };
     };
 
+    # A Haskell package set where we know the GHC version works to compile
+    # Termonad.  This is basically just a shortcut so that other Nix files
+    # don't need to figure out the correct compiler version to use when it is
+    # not given by the user.
     termonadKnownWorkingHaskellPkgSet = self.haskell.packages.${compilerVersion};
   };
 
