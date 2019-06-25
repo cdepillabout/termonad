@@ -24,12 +24,21 @@
 # will also index the Termonad libraries, however this will mean the environment
 # will need to be rebuilt every time the termonad source changes.
 
-{ compiler ? null, indexTermonad ? false, nixpkgs ? null }:
+{ compiler ? null, indexTermonad ? false, nixpkgs ? null, additionalOverlays ? [] }:
 
-with (import .nix-helpers/nixpkgs.nix { inherit compiler nixpkgs; });
+with (import .nix-helpers/nixpkgs.nix { inherit compiler nixpkgs additionalOverlays; });
 
 let
-  termonadEnv = haskellPackages.termonad.env;
+  # A Haskell package set for a version of GHC that is known working.
+  haskPkgSet = termonadKnownWorkingHaskellPkgSet;
+
+  # Nix-shell environment for hacking on termonad.
+  termonadEnv = haskPkgSet.termonad.env;
+
+  # Haskell build tools that are nice to have.  It is okay to get these from
+  # any Haskell package set, since they do not depend on the GHC version we are
+  # using.  We get these from the normal haskellPackages pkg set because then
+  # they don't have to be compiled from scratch.
   nativeBuildTools = with haskellPackages; [ cabal-install ghcid ];
 in
 
@@ -37,14 +46,15 @@ if indexTermonad
   then
     termonadEnv.overrideAttrs (oldAttrs: {
       nativeBuildInputs =
-        oldAttrs.nativeBuildInputs ++
-        nativeBuildTools ++
-        [ (haskellPackages.ghcWithHoogle (haskellPackages: with haskellPackages; [ termonad ]))
-        ];
+        let
+          ghcEnvWithTermonad =
+            haskPkgSet.ghcWithHoogle (hpkgs: [ hpkgs.termonad ]);
+        in
+        oldAttrs.nativeBuildInputs ++ nativeBuildTools ++ [ ghcEnvWithTermonad ];
     })
   else
-    haskellPackages.shellFor {
+    haskPkgSet.shellFor {
       withHoogle = true;
-      packages = haskellPackages: [ haskellPackages.termonad ];
+      packages = hpkgs: [ hpkgs.termonad ];
       nativeBuildInputs = termonadEnv.nativeBuildInputs ++ nativeBuildTools;
     }
