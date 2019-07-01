@@ -54,8 +54,8 @@ module Termonad.Config.Colour
 import Termonad.Prelude hiding ((\\), index)
 
 import Control.Lens ((%~), makeLensesFor)
-import Data.Colour (Colour, black, affineCombo)
-import Data.Colour.SRGB (RGB(RGB), toSRGB, sRGB24, sRGB24show)
+import Data.Colour (AlphaColour, Colour, affineCombo, alphaChannel, black, darken, opaque, over)
+import Data.Colour.SRGB (RGB(RGB), toSRGB, toSRGB24, sRGB24, sRGB24show)
 import qualified Data.Foldable
 import GI.Gdk (RGBA, newZeroRGBA, setRGBABlue, setRGBAGreen, setRGBARed, setRGBAAlpha)
 import GI.Vte
@@ -68,6 +68,7 @@ import GI.Vte
   , terminalSetColorBackground
   , terminalSetColorForeground
   )
+import Numeric (showHex)
 import Text.Show (showString)
 
 import Termonad.Config.Vec
@@ -140,15 +141,15 @@ paletteToList = Data.Foldable.toList
 -- True
 --
 -- In general, as an end-user, you shouldn't need to use this.
-coloursFromBits :: forall b. (Ord b, Floating b) => Word8 -> Word8 -> Vec N8 (Colour b)
+coloursFromBits :: forall b. (Ord b, Floating b) => Word8 -> Word8 -> Vec N8 (AlphaColour b)
 coloursFromBits scale offset = genVec_ createElem
   where
-    createElem :: Fin N8 -> Colour b
+    createElem :: Fin N8 -> AlphaColour b
     createElem finN =
       let red = cmp 0 finN
           green = cmp 1 finN
           blue = cmp 2 finN
-          color = sRGB24 red green blue
+          color = opaque $ sRGB24 red green blue
       in color
 
     cmp :: Int -> Fin N8 -> Word8
@@ -161,32 +162,67 @@ coloursFromBits scale offset = genVec_ createElem
 --
 -- >>> showColourVec defaultStandardColours
 -- ["#000000","#c00000","#00c000","#c0c000","#0000c0","#c000c0","#00c0c0","#c0c0c0"]
-defaultStandardColours :: (Ord b, Floating b) => Vec N8 (Colour b)
+defaultStandardColours :: (Ord b, Floating b) => Vec N8 (AlphaColour b)
 defaultStandardColours = coloursFromBits 192 0
 
 -- | A 'Vec' of extended (light) colors.  Default value for 'ExtendedPalette'.
 --
 -- >>> showColourVec defaultLightColours
 -- ["#3f3f3f","#ff3f3f","#3fff3f","#ffff3f","#3f3fff","#ff3fff","#3fffff","#ffffff"]
-defaultLightColours :: (Ord b, Floating b) => Vec N8 (Colour b)
+defaultLightColours :: (Ord b, Floating b) => Vec N8 (AlphaColour b)
 defaultLightColours = coloursFromBits 192 63
 
+
+-- | This function has been taken from:
+-- https://wiki.haskell.org/Colour#Getting_semi-transparent_coordinates
+--
+-- To make this function total we assume that black is the pure color of a fully
+-- transparent color
+pureColour :: (Fractional a, Num a, Ord a) => AlphaColour a -> Colour a
+pureColour ac | a > 0 = darken (recip a) (ac `over` black)
+              | otherwise = black
+  where
+    a = alphaChannel ac
+
+-- |'round's and then clamps @x@ between 0 and 'maxBound'.
+--
+-- Function used to quantize the alpha channel in the same way as the RGB
+-- components. It has been copied from Data.Colour.Internal
+quantize :: (RealFrac a1, Integral a, Bounded a) => a1 -> a
+quantize x | x <= fromIntegral l = l
+           | fromIntegral h <= x = h
+           | otherwise           = round x
+  where
+    l = minBound
+    h = maxBound
+
+-- | This function mimic the Colour API for an AlphaColour
+sRGB32show :: AlphaColour Double -> String
+sRGB32show c = "#" <> showHex2 r <> showHex2 g <> showHex2 b <> showHex2 a
+  where
+    RGB r g b = toSRGB24 $ pureColour c
+    -- This about the same code as in Data.Colour.SRGB.toSRGBBounded
+    a = quantize (m * alphaChannel c) :: Word8
+    m = fromIntegral (maxBound :: Word8)
+    showHex2 x | x <= 0xf = "0" <>  showHex x ""
+               | otherwise = showHex x ""
+
 -- | A helper function for showing all the colors in 'Vec' of colors.
-showColourVec :: forall n. Vec n (Colour Double) -> [String]
-showColourVec = fmap sRGB24show . Data.Foldable.toList
+showColourVec :: forall n. Vec n (AlphaColour Double) -> [String]
+showColourVec = fmap sRGB32show . Data.Foldable.toList
 
 -- | Specify a colour cube with one colour vector for its displacement and three
 -- colour vectors for its edges. Produces a uniform 6x6x6 grid bounded by
 -- and orthognal to the faces.
 cube ::
      forall b. Fractional b
-  => Colour b
-  -> Vec N3 (Colour b)
-  -> Matrix '[ N6, N6, N6] (Colour b)
+  => AlphaColour b
+  -> Vec N3 (AlphaColour b)
+  -> Matrix '[ N6, N6, N6] (AlphaColour b)
 cube d (i :* j :* k :* EmptyVec) =
   genMatrix_ $
     \(x :< y :< z :< EmptyHList) ->
-      affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] black
+      affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] $ opaque black
   where
     coef :: Fin N6 -> b
     coef fin' = fromIntegral (toIntFin fin') / 5
@@ -237,9 +273,9 @@ cube d (i :* j :* k :* EmptyVec) =
 --   , #ffff00, #ffff5f, #ffff87, #ffffaf, #ffffd7, #ffffff
 --   ]
 -- ]
-defaultColourCube :: (Ord b, Floating b) => Matrix '[N6, N6, N6] (Colour b)
+defaultColourCube :: (Ord b, Floating b) => Matrix '[N6, N6, N6] (AlphaColour b)
 defaultColourCube =
-  genMatrix_ $ \(x :< y :< z :< EmptyHList) -> sRGB24 (cmp x) (cmp y) (cmp z)
+  genMatrix_ $ \(x :< y :< z :< EmptyHList) -> opaque $ sRGB24 (cmp x) (cmp y) (cmp z)
   where
     cmp :: Fin N6 -> Word8
     cmp i =
@@ -248,14 +284,14 @@ defaultColourCube =
 
 -- | Helper function for showing all the colors in a color cube. This is used
 -- for debugging.
-showColourCube :: Matrix '[N6, N6, N6] (Colour Double) -> String
+showColourCube :: Matrix '[N6, N6, N6] (AlphaColour Double) -> String
 showColourCube matrix =
   -- TODO: This function will only work with a 6x6x6 matrix, but it could be
   -- generalized to work with any Rank-3 matrix.
   let itemList = Data.Foldable.toList matrix
   in showSColourCube itemList ""
   where
-    showSColourCube :: [Colour Double] -> String -> String
+    showSColourCube :: [AlphaColour Double] -> String -> String
     showSColourCube itemList =
       showString "[ " .
       showSquare 0 itemList .
@@ -271,7 +307,7 @@ showColourCube matrix =
       showSquare 5 itemList .
       showString "]"
 
-    showSquare :: Int -> [Colour Double] -> String -> String
+    showSquare :: Int -> [AlphaColour Double] -> String -> String
     showSquare i colours =
       showString "[ " .
       showRow i 0 colours .
@@ -287,7 +323,7 @@ showColourCube matrix =
       showRow i 5 colours .
       showString "]\n"
 
-    showRow :: Int -> Int -> [Colour Double] -> String -> String
+    showRow :: Int -> Int -> [AlphaColour Double] -> String -> String
     showRow i j colours =
       showCol (headEx $ drop (i * 36 + j * 6 + 0) colours) .
       showString ", " .
@@ -302,17 +338,17 @@ showColourCube matrix =
       showCol (headEx $ drop (i * 36 + j * 6 + 5) colours) .
       showString "\n  "
 
-    showCol :: Colour Double -> String -> String
-    showCol col str = sRGB24show col <> str
+    showCol :: AlphaColour Double -> String -> String
+    showCol col str = sRGB32show col <> str
 
 -- | A 'Vec' of a grey scale.  Default value for 'FullPalette'.
 --
 -- >>> showColourVec defaultGreyscale
 -- ["#080808","#121212","#1c1c1c","#262626","#303030","#3a3a3a","#444444","#4e4e4e","#585858","#626262","#6c6c6c","#767676","#808080","#8a8a8a","#949494","#9e9e9e","#a8a8a8","#b2b2b2","#bcbcbc","#c6c6c6","#d0d0d0","#dadada","#e4e4e4","#eeeeee"]
-defaultGreyscale :: (Ord b, Floating b) => Vec N24 (Colour b)
+defaultGreyscale :: (Ord b, Floating b) => Vec N24 (AlphaColour b)
 defaultGreyscale = genVec_ $ \n ->
   let l = 8 + 10 * fromIntegral (toIntFin n)
-  in sRGB24 l l l
+  in opaque $ sRGB24 l l l
 
 -- | The configuration for the colors used by Termonad.
 --
@@ -408,7 +444,7 @@ data ColourConfig c = ColourConfig
 --
 -- >>> defaultColourConfig
 -- ColourConfig {cursorFgColour = Unset, cursorBgColour = Unset, foregroundColour = Unset, backgroundColour = Unset, palette = NoPalette}
-defaultColourConfig :: ColourConfig (Colour Double)
+defaultColourConfig :: ColourConfig (AlphaColour Double)
 defaultColourConfig = ColourConfig
   { cursorFgColour = Unset
   , cursorBgColour = Unset
@@ -433,7 +469,7 @@ $(makeLensesFor
 
 -- | Extension that allows setting colors for terminals in Termonad.
 data ColourExtension = ColourExtension
-  { colourExtConf :: MVar (ColourConfig (Colour Double))
+  { colourExtConf :: MVar (ColourConfig (AlphaColour Double))
     -- ^ 'MVar' holding the current 'ColourConfig'.  This could potentially be
     -- passed to other extensions or user code.  This would allow changing the
     -- colors for new terminals in realtime.
@@ -444,7 +480,7 @@ data ColourExtension = ColourExtension
 
 -- | The default 'createTermHook' for 'colourExtCreateTermHook'.  Set the colors
 -- for a terminal based on the given 'ColourConfig'.
-colourHook :: MVar (ColourConfig (Colour Double)) -> TMState -> Terminal -> IO ()
+colourHook :: MVar (ColourConfig (AlphaColour Double)) -> TMState -> Terminal -> IO ()
 colourHook mvarColourConf _ vteTerm = do
   colourConf <- readMVar mvarColourConf
   let paletteColourList = paletteToList $ palette colourConf
@@ -461,20 +497,21 @@ colourHook mvarColourConf _ vteTerm = do
     terminalSetColorCursorForeground vteTerm . Just <=< colourToRgba
 #endif
 
-colourToRgba :: Colour Double -> IO RGBA
+colourToRgba :: AlphaColour Double -> IO RGBA
 colourToRgba colour = do
-  let RGB red green blue = toSRGB colour
+  let RGB red green blue = toSRGB $ pureColour colour
+      alpha = alphaChannel colour
   rgba <- newZeroRGBA
   setRGBARed rgba red
   setRGBAGreen rgba green
   setRGBABlue rgba blue
-  setRGBAAlpha rgba 1
+  setRGBAAlpha rgba alpha
   pure rgba
 
 -- | Create a 'ColourExtension' based on a given 'ColourConfig'.
 --
 -- Most users will want to use this.
-createColourExtension :: ColourConfig (Colour Double) -> IO ColourExtension
+createColourExtension :: ColourConfig (AlphaColour Double) -> IO ColourExtension
 createColourExtension conf = do
   mvarConf <- newMVar conf
   pure $
@@ -493,7 +530,7 @@ createDefColourExtension = createColourExtension defaultColourConfig
 
 -- | Add a given 'ColourConfig' to a 'TMConfig'.  This adds 'colourHook' to the
 -- 'createTermHook' in 'TMConfig'.
-addColourConfig :: TMConfig -> ColourConfig (Colour Double) -> IO TMConfig
+addColourConfig :: TMConfig -> ColourConfig (AlphaColour Double) -> IO TMConfig
 addColourConfig tmConf colConf = do
   ColourExtension _ newHook <- createColourExtension colConf
   let newTMConf = tmConf & lensHooks . lensCreateTermHook %~ addColourHook newHook
