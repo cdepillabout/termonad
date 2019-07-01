@@ -161,14 +161,14 @@ coloursFromBits scale offset = genVec_ createElem
 -- | A 'Vec' of standard colors.  Default value for 'BasicPalette'.
 --
 -- >>> showColourVec defaultStandardColours
--- ["#000000","#c00000","#00c000","#c0c000","#0000c0","#c000c0","#00c0c0","#c0c0c0"]
+-- ["#000000ff","#c00000ff","#00c000ff","#c0c000ff","#0000c0ff","#c000c0ff","#00c0c0ff","#c0c0c0ff"]
 defaultStandardColours :: (Ord b, Floating b) => Vec N8 (AlphaColour b)
 defaultStandardColours = coloursFromBits 192 0
 
 -- | A 'Vec' of extended (light) colors.  Default value for 'ExtendedPalette'.
 --
 -- >>> showColourVec defaultLightColours
--- ["#3f3f3f","#ff3f3f","#3fff3f","#ffff3f","#3f3fff","#ff3fff","#3fffff","#ffffff"]
+-- ["#3f3f3fff","#ff3f3fff","#3fff3fff","#ffff3fff","#3f3fffff","#ff3fffff","#3fffffff","#ffffffff"]
 defaultLightColours :: (Ord b, Floating b) => Vec N8 (AlphaColour b)
 defaultLightColours = coloursFromBits 192 63
 
@@ -230,47 +230,47 @@ cube d (i :* j :* k :* EmptyVec) =
 -- | A matrix of a 6 x 6 x 6 color cube. Default value for 'ColourCubePalette'.
 --
 -- >>> putStrLn $ pack $ showColourCube defaultColourCube
--- [ [ #000000, #00005f, #000087, #0000af, #0000d7, #0000ff
---   , #005f00, #005f5f, #005f87, #005faf, #005fd7, #005fff
---   , #008700, #00875f, #008787, #0087af, #0087d7, #0087ff
---   , #00af00, #00af5f, #00af87, #00afaf, #00afd7, #00afff
---   , #00d700, #00d75f, #00d787, #00d7af, #00d7d7, #00d7ff
---   , #00ff00, #00ff5f, #00ff87, #00ffaf, #00ffd7, #00ffff
+-- [ [ #000000ff, #00005fff, #000087ff, #0000afff, #0000d7ff, #0000ffff
+--   , #005f00ff, #005f5fff, #005f87ff, #005fafff, #005fd7ff, #005fffff
+--   , #008700ff, #00875fff, #008787ff, #0087afff, #0087d7ff, #0087ffff
+--   , #00af00ff, #00af5fff, #00af87ff, #00afafff, #00afd7ff, #00afffff
+--   , #00d700ff, #00d75fff, #00d787ff, #00d7afff, #00d7d7ff, #00d7ffff
+--   , #00ff00ff, #00ff5fff, #00ff87ff, #00ffafff, #00ffd7ff, #00ffffff
 --   ]
--- , [ #5f0000, #5f005f, #5f0087, #5f00af, #5f00d7, #5f00ff
---   , #5f5f00, #5f5f5f, #5f5f87, #5f5faf, #5f5fd7, #5f5fff
---   , #5f8700, #5f875f, #5f8787, #5f87af, #5f87d7, #5f87ff
---   , #5faf00, #5faf5f, #5faf87, #5fafaf, #5fafd7, #5fafff
---   , #5fd700, #5fd75f, #5fd787, #5fd7af, #5fd7d7, #5fd7ff
---   , #5fff00, #5fff5f, #5fff87, #5fffaf, #5fffd7, #5fffff
+-- , [ #5f0000ff, #5f005fff, #5f0087ff, #5f00afff, #5f00d7ff, #5f00ffff
+--   , #5f5f00ff, #5f5f5fff, #5f5f87ff, #5f5fafff, #5f5fd7ff, #5f5fffff
+--   , #5f8700ff, #5f875fff, #5f8787ff, #5f87afff, #5f87d7ff, #5f87ffff
+--   , #5faf00ff, #5faf5fff, #5faf87ff, #5fafafff, #5fafd7ff, #5fafffff
+--   , #5fd700ff, #5fd75fff, #5fd787ff, #5fd7afff, #5fd7d7ff, #5fd7ffff
+--   , #5fff00ff, #5fff5fff, #5fff87ff, #5fffafff, #5fffd7ff, #5fffffff
 --   ]
--- , [ #870000, #87005f, #870087, #8700af, #8700d7, #8700ff
---   , #875f00, #875f5f, #875f87, #875faf, #875fd7, #875fff
---   , #878700, #87875f, #878787, #8787af, #8787d7, #8787ff
---   , #87af00, #87af5f, #87af87, #87afaf, #87afd7, #87afff
---   , #87d700, #87d75f, #87d787, #87d7af, #87d7d7, #87d7ff
---   , #87ff00, #87ff5f, #87ff87, #87ffaf, #87ffd7, #87ffff
+-- , [ #870000ff, #87005fff, #870087ff, #8700afff, #8700d7ff, #8700ffff
+--   , #875f00ff, #875f5fff, #875f87ff, #875fafff, #875fd7ff, #875fffff
+--   , #878700ff, #87875fff, #878787ff, #8787afff, #8787d7ff, #8787ffff
+--   , #87af00ff, #87af5fff, #87af87ff, #87afafff, #87afd7ff, #87afffff
+--   , #87d700ff, #87d75fff, #87d787ff, #87d7afff, #87d7d7ff, #87d7ffff
+--   , #87ff00ff, #87ff5fff, #87ff87ff, #87ffafff, #87ffd7ff, #87ffffff
 --   ]
--- , [ #af0000, #af005f, #af0087, #af00af, #af00d7, #af00ff
---   , #af5f00, #af5f5f, #af5f87, #af5faf, #af5fd7, #af5fff
---   , #af8700, #af875f, #af8787, #af87af, #af87d7, #af87ff
---   , #afaf00, #afaf5f, #afaf87, #afafaf, #afafd7, #afafff
---   , #afd700, #afd75f, #afd787, #afd7af, #afd7d7, #afd7ff
---   , #afff00, #afff5f, #afff87, #afffaf, #afffd7, #afffff
+-- , [ #af0000ff, #af005fff, #af0087ff, #af00afff, #af00d7ff, #af00ffff
+--   , #af5f00ff, #af5f5fff, #af5f87ff, #af5fafff, #af5fd7ff, #af5fffff
+--   , #af8700ff, #af875fff, #af8787ff, #af87afff, #af87d7ff, #af87ffff
+--   , #afaf00ff, #afaf5fff, #afaf87ff, #afafafff, #afafd7ff, #afafffff
+--   , #afd700ff, #afd75fff, #afd787ff, #afd7afff, #afd7d7ff, #afd7ffff
+--   , #afff00ff, #afff5fff, #afff87ff, #afffafff, #afffd7ff, #afffffff
 --   ]
--- , [ #d70000, #d7005f, #d70087, #d700af, #d700d7, #d700ff
---   , #d75f00, #d75f5f, #d75f87, #d75faf, #d75fd7, #d75fff
---   , #d78700, #d7875f, #d78787, #d787af, #d787d7, #d787ff
---   , #d7af00, #d7af5f, #d7af87, #d7afaf, #d7afd7, #d7afff
---   , #d7d700, #d7d75f, #d7d787, #d7d7af, #d7d7d7, #d7d7ff
---   , #d7ff00, #d7ff5f, #d7ff87, #d7ffaf, #d7ffd7, #d7ffff
+-- , [ #d70000ff, #d7005fff, #d70087ff, #d700afff, #d700d7ff, #d700ffff
+--   , #d75f00ff, #d75f5fff, #d75f87ff, #d75fafff, #d75fd7ff, #d75fffff
+--   , #d78700ff, #d7875fff, #d78787ff, #d787afff, #d787d7ff, #d787ffff
+--   , #d7af00ff, #d7af5fff, #d7af87ff, #d7afafff, #d7afd7ff, #d7afffff
+--   , #d7d700ff, #d7d75fff, #d7d787ff, #d7d7afff, #d7d7d7ff, #d7d7ffff
+--   , #d7ff00ff, #d7ff5fff, #d7ff87ff, #d7ffafff, #d7ffd7ff, #d7ffffff
 --   ]
--- , [ #ff0000, #ff005f, #ff0087, #ff00af, #ff00d7, #ff00ff
---   , #ff5f00, #ff5f5f, #ff5f87, #ff5faf, #ff5fd7, #ff5fff
---   , #ff8700, #ff875f, #ff8787, #ff87af, #ff87d7, #ff87ff
---   , #ffaf00, #ffaf5f, #ffaf87, #ffafaf, #ffafd7, #ffafff
---   , #ffd700, #ffd75f, #ffd787, #ffd7af, #ffd7d7, #ffd7ff
---   , #ffff00, #ffff5f, #ffff87, #ffffaf, #ffffd7, #ffffff
+-- , [ #ff0000ff, #ff005fff, #ff0087ff, #ff00afff, #ff00d7ff, #ff00ffff
+--   , #ff5f00ff, #ff5f5fff, #ff5f87ff, #ff5fafff, #ff5fd7ff, #ff5fffff
+--   , #ff8700ff, #ff875fff, #ff8787ff, #ff87afff, #ff87d7ff, #ff87ffff
+--   , #ffaf00ff, #ffaf5fff, #ffaf87ff, #ffafafff, #ffafd7ff, #ffafffff
+--   , #ffd700ff, #ffd75fff, #ffd787ff, #ffd7afff, #ffd7d7ff, #ffd7ffff
+--   , #ffff00ff, #ffff5fff, #ffff87ff, #ffffafff, #ffffd7ff, #ffffffff
 --   ]
 -- ]
 defaultColourCube :: (Ord b, Floating b) => Matrix '[N6, N6, N6] (AlphaColour b)
@@ -344,7 +344,7 @@ showColourCube matrix =
 -- | A 'Vec' of a grey scale.  Default value for 'FullPalette'.
 --
 -- >>> showColourVec defaultGreyscale
--- ["#080808","#121212","#1c1c1c","#262626","#303030","#3a3a3a","#444444","#4e4e4e","#585858","#626262","#6c6c6c","#767676","#808080","#8a8a8a","#949494","#9e9e9e","#a8a8a8","#b2b2b2","#bcbcbc","#c6c6c6","#d0d0d0","#dadada","#e4e4e4","#eeeeee"]
+-- ["#080808ff","#121212ff","#1c1c1cff","#262626ff","#303030ff","#3a3a3aff","#444444ff","#4e4e4eff","#585858ff","#626262ff","#6c6c6cff","#767676ff","#808080ff","#8a8a8aff","#949494ff","#9e9e9eff","#a8a8a8ff","#b2b2b2ff","#bcbcbcff","#c6c6c6ff","#d0d0d0ff","#dadadaff","#e4e4e4ff","#eeeeeeff"]
 defaultGreyscale :: (Ord b, Floating b) => Vec N24 (AlphaColour b)
 defaultGreyscale = genVec_ $ \n ->
   let l = 8 + 10 * fromIntegral (toIntFin n)
