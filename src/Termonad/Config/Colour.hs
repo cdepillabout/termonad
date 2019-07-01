@@ -54,7 +54,7 @@ module Termonad.Config.Colour
 import Termonad.Prelude hiding ((\\), index)
 
 import Control.Lens ((%~), makeLensesFor)
-import Data.Colour (Colour, black, affineCombo)
+import Data.Colour (AlphaColour, Colour, black, affineCombo, alphaChannel, over)
 import Data.Colour.SRGB (RGB(RGB), toSRGB, sRGB24, sRGB24show)
 import qualified Data.Foldable
 import GI.Gdk (RGBA, newZeroRGBA, setRGBABlue, setRGBAGreen, setRGBARed, setRGBAAlpha)
@@ -408,7 +408,7 @@ data ColourConfig c = ColourConfig
 --
 -- >>> defaultColourConfig
 -- ColourConfig {cursorFgColour = Unset, cursorBgColour = Unset, foregroundColour = Unset, backgroundColour = Unset, palette = NoPalette}
-defaultColourConfig :: ColourConfig (Colour Double)
+defaultColourConfig :: ColourConfig (AlphaColour Double)
 defaultColourConfig = ColourConfig
   { cursorFgColour = Unset
   , cursorBgColour = Unset
@@ -433,7 +433,7 @@ $(makeLensesFor
 
 -- | Extension that allows setting colors for terminals in Termonad.
 data ColourExtension = ColourExtension
-  { colourExtConf :: MVar (ColourConfig (Colour Double))
+  { colourExtConf :: MVar (ColourConfig (AlphaColour Double))
     -- ^ 'MVar' holding the current 'ColourConfig'.  This could potentially be
     -- passed to other extensions or user code.  This would allow changing the
     -- colors for new terminals in realtime.
@@ -444,7 +444,7 @@ data ColourExtension = ColourExtension
 
 -- | The default 'createTermHook' for 'colourExtCreateTermHook'.  Set the colors
 -- for a terminal based on the given 'ColourConfig'.
-colourHook :: MVar (ColourConfig (Colour Double)) -> TMState -> Terminal -> IO ()
+colourHook :: MVar (ColourConfig (AlphaColour Double)) -> TMState -> Terminal -> IO ()
 colourHook mvarColourConf _ vteTerm = do
   colourConf <- readMVar mvarColourConf
   let paletteColourList = paletteToList $ palette colourConf
@@ -461,23 +461,23 @@ colourHook mvarColourConf _ vteTerm = do
     terminalSetColorCursorForeground vteTerm . Just <=< colourToRgba
 #endif
 
-colourToRgba :: Colour Double -> IO RGBA
+colourToRgba :: AlphaColour Double -> IO RGBA
 colourToRgba colour = do
-  let RGB red green blue = toSRGB colour
+  let RGB red green blue = toSRGB (colour `over` black)
   rgba <- newZeroRGBA
   setRGBARed rgba red
   setRGBAGreen rgba green
   setRGBABlue rgba blue
-  setRGBAAlpha rgba 1
+  setRGBAAlpha rgba (alphaChannel colour)
   pure rgba
 
 -- | Create a 'ColourExtension' based on a given 'ColourConfig'.
 --
 -- Most users will want to use this.
-createColourExtension :: ColourConfig (Colour Double) -> IO ColourExtension
+createColourExtension :: ColourConfig (AlphaColour Double) -> IO ColourExtension
 createColourExtension conf = do
   mvarConf <- newMVar conf
-  pure $
+  pure
     ColourExtension
       { colourExtConf = mvarConf
       , colourExtCreateTermHook = colourHook mvarConf
@@ -493,7 +493,7 @@ createDefColourExtension = createColourExtension defaultColourConfig
 
 -- | Add a given 'ColourConfig' to a 'TMConfig'.  This adds 'colourHook' to the
 -- 'createTermHook' in 'TMConfig'.
-addColourConfig :: TMConfig -> ColourConfig (Colour Double) -> IO TMConfig
+addColourConfig :: TMConfig -> ColourConfig (AlphaColour Double) -> IO TMConfig
 addColourConfig tmConf colConf = do
   ColourExtension _ newHook <- createColourExtension colConf
   let newTMConf = tmConf & lensHooks . lensCreateTermHook %~ addColourHook newHook
