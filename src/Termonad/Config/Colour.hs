@@ -39,25 +39,48 @@ module Termonad.Config.Colour
     , defaultColourCube
     , defaultGreyscale
     -- * Colour
-    -- | Check out the "Data.Colour" module for more info about 'Colour'.
-    , Colour
-    , sRGB24
-    , sRGB24show
+    -- | Check out the "Data.Colour" module for more info about 'AlphaColour'.
+    , AlphaColour
+    , createColour
+    , sRGB32
+    , sRGB32show
+    , opaque
+    , transparent
     -- * Debugging and Internal Methods
     , showColourVec
     , showColourCube
     , paletteToList
     , coloursFromBits
     , cube
+    -- * Doctest setup
+    -- $setup
   ) where
 
 import Termonad.Prelude hiding ((\\), index)
 
 import Control.Lens ((%~), makeLensesFor)
-import Data.Colour (AlphaColour, Colour, affineCombo, alphaChannel, black, darken, opaque, over)
-import Data.Colour.SRGB (RGB(RGB), toSRGB, toSRGB24, sRGB24, sRGB24show)
+import Data.Colour
+  ( AlphaColour
+  , Colour
+  , affineCombo
+  , alphaChannel
+  , black
+  , darken
+  , opaque
+  , over
+  , transparent
+  , withOpacity
+  )
+import Data.Colour.SRGB (RGB(RGB), toSRGB, toSRGB24, sRGB24)
 import qualified Data.Foldable
-import GI.Gdk (RGBA, newZeroRGBA, setRGBABlue, setRGBAGreen, setRGBARed, setRGBAAlpha)
+import GI.Gdk
+  ( RGBA
+  , newZeroRGBA
+  , setRGBAAlpha
+  , setRGBABlue
+  , setRGBAGreen
+  , setRGBARed
+  )
 import GI.Vte
   ( Terminal
   , terminalSetColors
@@ -68,7 +91,7 @@ import GI.Vte
   , terminalSetColorBackground
   , terminalSetColorForeground
   )
-import Numeric (showHex)
+import Text.Printf (printf)
 import Text.Show (showString)
 
 import Termonad.Config.Vec
@@ -79,6 +102,10 @@ import Termonad.Types
   , TMState
   , whenSet
   )
+
+-- $setup
+-- >>> import Data.Colour.Names (green, red)
+-- >>> import Data.Colour.SRGB (sRGB24show)
 
 -------------------
 -- Colour Config --
@@ -173,39 +200,115 @@ defaultLightColours :: (Ord b, Floating b) => Vec N8 (AlphaColour b)
 defaultLightColours = coloursFromBits 192 63
 
 
--- | This function has been taken from:
+-- | Convert an 'AlphaColour' to a 'Colour'.
+--
+-- >>> sRGB24show $ pureColour (opaque green)
+-- "#008000"
+-- >>> sRGB24show $ pureColour (sRGB32 0x30 0x40 0x50 0x80)
+-- "#304050"
+--
+-- We assume that black is the pure color for a fully transparent
+-- 'AlphaColour'.
+--
+-- >>> sRGB24show $ pureColour transparent
+-- "#000000"
+--
+-- This function has been taken from:
 -- https://wiki.haskell.org/Colour#Getting_semi-transparent_coordinates
---
--- To make this function total we assume that black is the pure color of a fully
--- transparent color
-pureColour :: (Fractional a, Num a, Ord a) => AlphaColour a -> Colour a
-pureColour ac | a > 0 = darken (recip a) (ac `over` black)
-              | otherwise = black
+pureColour :: AlphaColour Double -> Colour Double
+pureColour alaphaColour
+  | a > 0 = darken (recip a) (alaphaColour `over` black)
+  | otherwise = black
   where
-    a = alphaChannel ac
+    a :: Double
+    a = alphaChannel alaphaColour
 
--- |'round's and then clamps @x@ between 0 and 'maxBound'.
+-- | 'round's and then clamps the input between 0 and 'maxBound'.
 --
--- Function used to quantize the alpha channel in the same way as the RGB
--- components. It has been copied from Data.Colour.Internal
-quantize :: (RealFrac a1, Integral a, Bounded a) => a1 -> a
-quantize x | x <= fromIntegral l = l
-           | fromIntegral h <= x = h
-           | otherwise           = round x
+-- Rounds the input:
+--
+-- >>> quantize (100.2 :: Double) :: Word8
+-- 100
+--
+-- Clamps to 'minBound' if input is too low:
+--
+-- >>> quantize (-3 :: Double) :: Word8
+-- 0
+--
+-- Clamps to 'maxBound' if input is too high:
+-- >>> quantize (1000 :: Double) :: Word8
+-- 255
+--
+-- Function used to quantize the alpha channel in the same way as the 'RGB'
+-- components. It has been copied from "Data.Colour.Internal".
+quantize :: forall a b. (RealFrac a, Integral b, Bounded b) => a -> b
+quantize x
+  | x <= fromIntegral l = l
+  | fromIntegral h <= x = h
+  | otherwise           = round x
   where
+    l :: b
     l = minBound
+
+    h :: b
     h = maxBound
 
--- | This function mimic the Colour API for an AlphaColour
+-- | Show an 'AlphaColour' in hex.
+--
+-- >>> sRGB32show (opaque red)
+-- "#ff0000ff"
+--
+-- Similar to 'Data.Colour.SRGB.sRGB24show'.
 sRGB32show :: AlphaColour Double -> String
-sRGB32show c = "#" <> showHex2 r <> showHex2 g <> showHex2 b <> showHex2 a
+sRGB32show c = printf "#%02x%02x%02x%02x" r g b a
   where
+    r, g, b :: Word8
     RGB r g b = toSRGB24 $ pureColour c
+
     -- This about the same code as in Data.Colour.SRGB.toSRGBBounded
-    a = quantize (m * alphaChannel c) :: Word8
-    m = fromIntegral (maxBound :: Word8)
-    showHex2 x | x <= 0xf = "0" <>  showHex x ""
-               | otherwise = showHex x ""
+    a :: Word8
+    a = quantize (255 * alphaChannel c)
+
+-- | Create an 'AlphaColour' from a four 'Word8's.
+--
+-- >>> sRGB32show $ sRGB32 64 96 128 255
+-- "#406080ff"
+-- >>> sRGB32show $ sRGB32 0x08 0x10 0x20 0x01
+-- "#08102001"
+--
+-- Note that if you specify the alpha as 0 (which means completely
+-- translucent), all the color channels will be set to 0 as well.
+--
+-- >>> sRGB32show $ sRGB32 100 150 200 0
+-- "#00000000"
+--
+-- Similar to 'sRGB24' but also includes an alpha channel.  Most users will
+-- probably want to use 'createColour' instead.
+sRGB32
+  :: Word8 -- ^ red channel
+  -> Word8 -- ^ green channel
+  -> Word8 -- ^ blue channel
+  -> Word8 -- ^ alpha channel
+  -> AlphaColour Double
+sRGB32 r g b 255 = withOpacity (sRGB24 r g b) 1
+sRGB32 r g b a =
+  let aDouble = fromIntegral a / 255
+  in (withOpacity (sRGB24 r g b) aDouble)
+
+-- | Create an 'AlphaColour' that is fully 'opaque'.
+--
+-- >>> sRGB32show $ createColour 64 96 128
+-- "#406080ff"
+-- >>> sRGB32show $ createColour 0 0 0
+-- "#000000ff"
+--
+-- Similar to 'sRGB24' but for 'AlphaColour'.
+createColour
+  :: Word8 -- ^ red channel
+  -> Word8 -- ^ green channel
+  -> Word8 -- ^ blue channel
+  -> AlphaColour Double
+createColour r g b = sRGB32 r g b 255
 
 -- | A helper function for showing all the colors in 'Vec' of colors.
 showColourVec :: forall n. Vec n (AlphaColour Double) -> [String]

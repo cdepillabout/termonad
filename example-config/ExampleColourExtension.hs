@@ -4,7 +4,6 @@
 
 module Main where
 
-import Data.Colour.SRGB (Colour, sRGB24)
 import Data.Singletons (sing)
 import Termonad
   ( CursorBlinkMode(CursorBlinkModeOff), Option(Set)
@@ -13,9 +12,9 @@ import Termonad
   , start
   )
 import Termonad.Config.Colour
-  ( Colour, ColourConfig, Palette(ExtendedPalette), addColourExtension
-  , createColourExtension, cursorBgColour, defaultColourConfig, foregroundColour
-  , palette, sRGB24
+  ( AlphaColour, ColourConfig, Palette(ExtendedPalette), addColourExtension
+  , createColour, createColourExtension, cursorBgColour, defaultColourConfig
+  , foregroundColour, palette
   )
 import Termonad.Config.Vec
   ( N4, N8, Sing, Vec((:*), EmptyVec), fin_, setAtVec, unsafeFromListVec_
@@ -38,14 +37,14 @@ myTMConfig =
     }
 
 -- This is our 'ColourConfig'.  It holds all of our colour-related settings.
-myColourConfig :: ColourConfig (Colour Double)
+myColourConfig :: ColourConfig (AlphaColour Double)
 myColourConfig =
   defaultColourConfig
     -- Set the cursor background colour.  This is the normal colour of the
     -- cursor.
-    { cursorBgColour = Set (sRGB24 120 80 110) -- purple
+    { cursorBgColour = Set (createColour 120 80 110) -- purple
     -- Set the default foreground colour of text of the terminal.
-    , foregroundColour = Set (sRGB24 220 180 210) -- light pink
+    , foregroundColour = Set (createColour 220 180 210) -- light pink
     -- Set the extended palette that has 8 colours standard colors and then 8
     -- light colors.
     , palette = ExtendedPalette myStandardColours myLightColours
@@ -53,40 +52,40 @@ myColourConfig =
   where
     -- This is a an example of creating a length-indexed linked-list of colours,
     -- using 'Vec' constructors.
-    myStandardColours :: Vec N8 (Colour Double)
+    myStandardColours :: Vec N8 (AlphaColour Double)
     myStandardColours =
-         sRGB24  40  30  20 -- dark brown (used as background colour)
-      :* sRGB24 180  30  20 -- red
-      :* sRGB24  40 160  20 -- green
-      :* sRGB24 180 160  20 -- dark yellow
-      :* sRGB24  40  30 120 -- dark purple
-      :* sRGB24 180  30 120 -- bright pink
-      :* sRGB24  40 160 120 -- teal
-      :* sRGB24 180 160 120 -- light brown
+         createColour  40  30  20 -- dark brown (used as background colour)
+      :* createColour 180  30  20 -- red
+      :* createColour  40 160  20 -- green
+      :* createColour 180 160  20 -- dark yellow
+      :* createColour  40  30 120 -- dark purple
+      :* createColour 180  30 120 -- bright pink
+      :* createColour  40 160 120 -- teal
+      :* createColour 180 160 120 -- light brown
       :* EmptyVec
 
     -- This is an example of creating a length-indexed linked-list of colours,
     -- using the 'unsafeFromListVec_' function.  'unsafeFromListVec_' is okay to
     -- use as long as you're absolutely sure you have 8 elements.
-    myLightColours :: Vec N8 (Colour Double)
+    myLightColours :: Vec N8 (AlphaColour Double)
     myLightColours =
       unsafeFromListVec_
-        [ sRGB24  70  60  50 -- brown
-        , sRGB24 220  30  20 -- light red
-        , sRGB24  40 210  20 -- light green
-        , sRGB24 220 200  20 -- yellow
-        , sRGB24  40  30 180 -- purple
-        , sRGB24 140  30 80  -- dark pink
-        , sRGB24  50 200 160 -- light teal
-        , sRGB24 220 200 150 -- light brown
+        [ createColour  70  60  50 -- brown
+        , createColour 220  30  20 -- light red
+        , createColour  40 210  20 -- light green
+        , createColour 220 200  20 -- yellow
+        , createColour  40  30 180 -- purple
+        , createColour 140  30 80  -- dark pink
+        , createColour  50 200 160 -- light teal
+        , createColour 220 200 150 -- light brown
         ]
 
     -- This is an example of updating just a single value in a 'Colour' 'Vec'.
     -- Here we are updating the 5th 'Colour' (which is at index 4).
-    updateSingleColor :: Vec N8 (Colour Double)
-    updateSingleColor =
+    _updateSingleColor :: Vec N8 (AlphaColour Double)
+    _updateSingleColor =
       let fin4 = fin_ (sing :: Sing N4)
-      in setAtVec fin4 (sRGB24 40 30 150) myStandardColours
+      in setAtVec fin4 (createColour 40 30 150) myStandardColours
 
 main :: IO ()
 main = do
