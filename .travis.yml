@@ -105,14 +105,15 @@ matrix:
 
   # The Stack builds. We can pass in arbitrary Stack arguments via the ARGS
   # variable, such as using --stack-yaml to point to a different file.
-  - env: BUILD=stack ARGS=""
-    compiler: ": #stack default"
-    addons:
-      apt:
-        packages:
-          - libgirepository1.0-dev
-          - libgmp-dev
-          - libvte-2.91-dev
+  # This runs over the 50 minute Travis CI time limit, so it is disabled.
+  # - env: BUILD=stack ARGS=""
+  #   compiler: ": #stack default"
+  #   addons:
+  #     apt:
+  #       packages:
+  #         - libgirepository1.0-dev
+  #         - libgmp-dev
+  #         - libvte-2.91-dev
 
   #- env: BUILD=stack ARGS="--resolver lts-2"
   #  compiler: ": #stack 7.8.4"
