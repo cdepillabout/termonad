@@ -243,7 +243,6 @@ module.
 
 module Main where
 
-import Data.Colour.SRGB (Colour, sRGB24)
 import Termonad.App (defaultMain)
 import Termonad.Config
   ( FontConfig, FontSize(FontSizePoints), Option(Set)
@@ -251,23 +250,23 @@ import Termonad.Config
   , defaultTMConfig, fontConfig, fontFamily, fontSize, options, showScrollbar
   )
 import Termonad.Config.Colour
-  (ColourConfig, addColourExtension, createColourExtension, cursorBgColour
-  , defaultColourConfig
+  ( AlphaColour, ColourConfig, addColourExtension, createColour
+  , createColourExtension, cursorBgColour, defaultColourConfig
   )
 
 -- | This sets the color of the cursor in the terminal.
 --
 -- This uses the "Data.Colour" module to define a dark-red color.
 -- There are many default colors defined in "Data.Colour.Names".
-cursBgColor :: Colour Double
-cursBgColor = sRGB24 204 0 0
+cursBgColour :: AlphaColour Double
+cursBgColour = createColour 204 0 0
 
 -- | This sets the colors used for the terminal.  We only specify the background
 -- color of the cursor.
-colConf :: ColourConfig (Colour Double)
+colConf :: ColourConfig (AlphaColour Double)
 colConf =
   defaultColourConfig
-    { cursorBgColour = Set cursBgColor
+    { cursorBgColour = Set cursBgColour
     }
 
 -- | This defines the font for the terminal.

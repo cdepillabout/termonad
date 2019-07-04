@@ -39,25 +39,48 @@ module Termonad.Config.Colour
     , defaultColourCube
     , defaultGreyscale
     -- * Colour
-    -- | Check out the "Data.Colour" module for more info about 'Colour'.
-    , Colour
-    , sRGB24
-    , sRGB24show
+    -- | Check out the "Data.Colour" module for more info about 'AlphaColour'.
+    , AlphaColour
+    , createColour
+    , sRGB32
+    , sRGB32show
+    , opaque
+    , transparent
     -- * Debugging and Internal Methods
     , showColourVec
     , showColourCube
     , paletteToList
     , coloursFromBits
     , cube
+    -- * Doctest setup
+    -- $setup
   ) where
 
 import Termonad.Prelude hiding ((\\), index)
 
 import Control.Lens ((%~), makeLensesFor)
-import Data.Colour (Colour, black, affineCombo)
-import Data.Colour.SRGB (RGB(RGB), toSRGB, sRGB24, sRGB24show)
+import Data.Colour
+  ( AlphaColour
+  , Colour
+  , affineCombo
+  , alphaChannel
+  , black
+  , darken
+  , opaque
+  , over
+  , transparent
+  , withOpacity
+  )
+import Data.Colour.SRGB (RGB(RGB), toSRGB, toSRGB24, sRGB24)
 import qualified Data.Foldable
-import GI.Gdk (RGBA, newZeroRGBA, setRGBABlue, setRGBAGreen, setRGBARed, setRGBAAlpha)
+import GI.Gdk
+  ( RGBA
+  , newZeroRGBA
+  , setRGBAAlpha
+  , setRGBABlue
+  , setRGBAGreen
+  , setRGBARed
+  )
 import GI.Vte
   ( Terminal
   , terminalSetColors
@@ -68,6 +91,7 @@ import GI.Vte
   , terminalSetColorBackground
   , terminalSetColorForeground
   )
+import Text.Printf (printf)
 import Text.Show (showString)
 
 import Termonad.Config.Vec
@@ -78,6 +102,10 @@ import Termonad.Types
   , TMState
   , whenSet
   )
+
+-- $setup
+-- >>> import Data.Colour.Names (green, red)
+-- >>> import Data.Colour.SRGB (sRGB24show)
 
 -------------------
 -- Colour Config --
@@ -140,15 +168,15 @@ paletteToList = Data.Foldable.toList
 -- True
 --
 -- In general, as an end-user, you shouldn't need to use this.
-coloursFromBits :: forall b. (Ord b, Floating b) => Word8 -> Word8 -> Vec N8 (Colour b)
+coloursFromBits :: forall b. (Ord b, Floating b) => Word8 -> Word8 -> Vec N8 (AlphaColour b)
 coloursFromBits scale offset = genVec_ createElem
   where
-    createElem :: Fin N8 -> Colour b
+    createElem :: Fin N8 -> AlphaColour b
     createElem finN =
       let red = cmp 0 finN
           green = cmp 1 finN
           blue = cmp 2 finN
-          color = sRGB24 red green blue
+          color = opaque $ sRGB24 red green blue
       in color
 
     cmp :: Int -> Fin N8 -> Word8
@@ -160,33 +188,144 @@ coloursFromBits scale offset = genVec_ createElem
 -- | A 'Vec' of standard colors.  Default value for 'BasicPalette'.
 --
 -- >>> showColourVec defaultStandardColours
--- ["#000000","#c00000","#00c000","#c0c000","#0000c0","#c000c0","#00c0c0","#c0c0c0"]
-defaultStandardColours :: (Ord b, Floating b) => Vec N8 (Colour b)
+-- ["#000000ff","#c00000ff","#00c000ff","#c0c000ff","#0000c0ff","#c000c0ff","#00c0c0ff","#c0c0c0ff"]
+defaultStandardColours :: (Ord b, Floating b) => Vec N8 (AlphaColour b)
 defaultStandardColours = coloursFromBits 192 0
 
 -- | A 'Vec' of extended (light) colors.  Default value for 'ExtendedPalette'.
 --
 -- >>> showColourVec defaultLightColours
--- ["#3f3f3f","#ff3f3f","#3fff3f","#ffff3f","#3f3fff","#ff3fff","#3fffff","#ffffff"]
-defaultLightColours :: (Ord b, Floating b) => Vec N8 (Colour b)
+-- ["#3f3f3fff","#ff3f3fff","#3fff3fff","#ffff3fff","#3f3fffff","#ff3fffff","#3fffffff","#ffffffff"]
+defaultLightColours :: (Ord b, Floating b) => Vec N8 (AlphaColour b)
 defaultLightColours = coloursFromBits 192 63
 
+
+-- | Convert an 'AlphaColour' to a 'Colour'.
+--
+-- >>> sRGB24show $ pureColour (opaque green)
+-- "#008000"
+-- >>> sRGB24show $ pureColour (sRGB32 0x30 0x40 0x50 0x80)
+-- "#304050"
+--
+-- We assume that black is the pure color for a fully transparent
+-- 'AlphaColour'.
+--
+-- >>> sRGB24show $ pureColour transparent
+-- "#000000"
+--
+-- This function has been taken from:
+-- https://wiki.haskell.org/Colour#Getting_semi-transparent_coordinates
+pureColour :: AlphaColour Double -> Colour Double
+pureColour alaphaColour
+  | a > 0 = darken (recip a) (alaphaColour `over` black)
+  | otherwise = black
+  where
+    a :: Double
+    a = alphaChannel alaphaColour
+
+-- | 'round's and then clamps the input between 0 and 'maxBound'.
+--
+-- Rounds the input:
+--
+-- >>> quantize (100.2 :: Double) :: Word8
+-- 100
+--
+-- Clamps to 'minBound' if input is too low:
+--
+-- >>> quantize (-3 :: Double) :: Word8
+-- 0
+--
+-- Clamps to 'maxBound' if input is too high:
+-- >>> quantize (1000 :: Double) :: Word8
+-- 255
+--
+-- Function used to quantize the alpha channel in the same way as the 'RGB'
+-- components. It has been copied from "Data.Colour.Internal".
+quantize :: forall a b. (RealFrac a, Integral b, Bounded b) => a -> b
+quantize x
+  | x <= fromIntegral l = l
+  | fromIntegral h <= x = h
+  | otherwise           = round x
+  where
+    l :: b
+    l = minBound
+
+    h :: b
+    h = maxBound
+
+-- | Show an 'AlphaColour' in hex.
+--
+-- >>> sRGB32show (opaque red)
+-- "#ff0000ff"
+--
+-- Similar to 'Data.Colour.SRGB.sRGB24show'.
+sRGB32show :: AlphaColour Double -> String
+sRGB32show c = printf "#%02x%02x%02x%02x" r g b a
+  where
+    r, g, b :: Word8
+    RGB r g b = toSRGB24 $ pureColour c
+
+    -- This about the same code as in Data.Colour.SRGB.toSRGBBounded
+    a :: Word8
+    a = quantize (255 * alphaChannel c)
+
+-- | Create an 'AlphaColour' from a four 'Word8's.
+--
+-- >>> sRGB32show $ sRGB32 64 96 128 255
+-- "#406080ff"
+-- >>> sRGB32show $ sRGB32 0x08 0x10 0x20 0x01
+-- "#08102001"
+--
+-- Note that if you specify the alpha as 0 (which means completely
+-- translucent), all the color channels will be set to 0 as well.
+--
+-- >>> sRGB32show $ sRGB32 100 150 200 0
+-- "#00000000"
+--
+-- Similar to 'sRGB24' but also includes an alpha channel.  Most users will
+-- probably want to use 'createColour' instead.
+sRGB32
+  :: Word8 -- ^ red channel
+  -> Word8 -- ^ green channel
+  -> Word8 -- ^ blue channel
+  -> Word8 -- ^ alpha channel
+  -> AlphaColour Double
+sRGB32 r g b 255 = withOpacity (sRGB24 r g b) 1
+sRGB32 r g b a =
+  let aDouble = fromIntegral a / 255
+  in (withOpacity (sRGB24 r g b) aDouble)
+
+-- | Create an 'AlphaColour' that is fully 'opaque'.
+--
+-- >>> sRGB32show $ createColour 64 96 128
+-- "#406080ff"
+-- >>> sRGB32show $ createColour 0 0 0
+-- "#000000ff"
+--
+-- Similar to 'sRGB24' but for 'AlphaColour'.
+createColour
+  :: Word8 -- ^ red channel
+  -> Word8 -- ^ green channel
+  -> Word8 -- ^ blue channel
+  -> AlphaColour Double
+createColour r g b = sRGB32 r g b 255
+
 -- | A helper function for showing all the colors in 'Vec' of colors.
-showColourVec :: forall n. Vec n (Colour Double) -> [String]
-showColourVec = fmap sRGB24show . Data.Foldable.toList
+showColourVec :: forall n. Vec n (AlphaColour Double) -> [String]
+showColourVec = fmap sRGB32show . Data.Foldable.toList
 
 -- | Specify a colour cube with one colour vector for its displacement and three
 -- colour vectors for its edges. Produces a uniform 6x6x6 grid bounded by
 -- and orthognal to the faces.
 cube ::
      forall b. Fractional b
-  => Colour b
-  -> Vec N3 (Colour b)
-  -> Matrix '[ N6, N6, N6] (Colour b)
+  => AlphaColour b
+  -> Vec N3 (AlphaColour b)
+  -> Matrix '[ N6, N6, N6] (AlphaColour b)
 cube d (i :* j :* k :* EmptyVec) =
   genMatrix_ $
     \(x :< y :< z :< EmptyHList) ->
-      affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] black
+      affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] $ opaque black
   where
     coef :: Fin N6 -> b
     coef fin' = fromIntegral (toIntFin fin') / 5
@@ -194,52 +333,52 @@ cube d (i :* j :* k :* EmptyVec) =
 -- | A matrix of a 6 x 6 x 6 color cube. Default value for 'ColourCubePalette'.
 --
 -- >>> putStrLn $ pack $ showColourCube defaultColourCube
--- [ [ #000000, #00005f, #000087, #0000af, #0000d7, #0000ff
---   , #005f00, #005f5f, #005f87, #005faf, #005fd7, #005fff
---   , #008700, #00875f, #008787, #0087af, #0087d7, #0087ff
---   , #00af00, #00af5f, #00af87, #00afaf, #00afd7, #00afff
---   , #00d700, #00d75f, #00d787, #00d7af, #00d7d7, #00d7ff
---   , #00ff00, #00ff5f, #00ff87, #00ffaf, #00ffd7, #00ffff
+-- [ [ #000000ff, #00005fff, #000087ff, #0000afff, #0000d7ff, #0000ffff
+--   , #005f00ff, #005f5fff, #005f87ff, #005fafff, #005fd7ff, #005fffff
+--   , #008700ff, #00875fff, #008787ff, #0087afff, #0087d7ff, #0087ffff
+--   , #00af00ff, #00af5fff, #00af87ff, #00afafff, #00afd7ff, #00afffff
+--   , #00d700ff, #00d75fff, #00d787ff, #00d7afff, #00d7d7ff, #00d7ffff
+--   , #00ff00ff, #00ff5fff, #00ff87ff, #00ffafff, #00ffd7ff, #00ffffff
 --   ]
--- , [ #5f0000, #5f005f, #5f0087, #5f00af, #5f00d7, #5f00ff
---   , #5f5f00, #5f5f5f, #5f5f87, #5f5faf, #5f5fd7, #5f5fff
---   , #5f8700, #5f875f, #5f8787, #5f87af, #5f87d7, #5f87ff
---   , #5faf00, #5faf5f, #5faf87, #5fafaf, #5fafd7, #5fafff
---   , #5fd700, #5fd75f, #5fd787, #5fd7af, #5fd7d7, #5fd7ff
---   , #5fff00, #5fff5f, #5fff87, #5fffaf, #5fffd7, #5fffff
+-- , [ #5f0000ff, #5f005fff, #5f0087ff, #5f00afff, #5f00d7ff, #5f00ffff
+--   , #5f5f00ff, #5f5f5fff, #5f5f87ff, #5f5fafff, #5f5fd7ff, #5f5fffff
+--   , #5f8700ff, #5f875fff, #5f8787ff, #5f87afff, #5f87d7ff, #5f87ffff
+--   , #5faf00ff, #5faf5fff, #5faf87ff, #5fafafff, #5fafd7ff, #5fafffff
+--   , #5fd700ff, #5fd75fff, #5fd787ff, #5fd7afff, #5fd7d7ff, #5fd7ffff
+--   , #5fff00ff, #5fff5fff, #5fff87ff, #5fffafff, #5fffd7ff, #5fffffff
 --   ]
--- , [ #870000, #87005f, #870087, #8700af, #8700d7, #8700ff
---   , #875f00, #875f5f, #875f87, #875faf, #875fd7, #875fff
---   , #878700, #87875f, #878787, #8787af, #8787d7, #8787ff
---   , #87af00, #87af5f, #87af87, #87afaf, #87afd7, #87afff
---   , #87d700, #87d75f, #87d787, #87d7af, #87d7d7, #87d7ff
---   , #87ff00, #87ff5f, #87ff87, #87ffaf, #87ffd7, #87ffff
+-- , [ #870000ff, #87005fff, #870087ff, #8700afff, #8700d7ff, #8700ffff
+--   , #875f00ff, #875f5fff, #875f87ff, #875fafff, #875fd7ff, #875fffff
+--   , #878700ff, #87875fff, #878787ff, #8787afff, #8787d7ff, #8787ffff
+--   , #87af00ff, #87af5fff, #87af87ff, #87afafff, #87afd7ff, #87afffff
+--   , #87d700ff, #87d75fff, #87d787ff, #87d7afff, #87d7d7ff, #87d7ffff
+--   , #87ff00ff, #87ff5fff, #87ff87ff, #87ffafff, #87ffd7ff, #87ffffff
 --   ]
--- , [ #af0000, #af005f, #af0087, #af00af, #af00d7, #af00ff
---   , #af5f00, #af5f5f, #af5f87, #af5faf, #af5fd7, #af5fff
---   , #af8700, #af875f, #af8787, #af87af, #af87d7, #af87ff
---   , #afaf00, #afaf5f, #afaf87, #afafaf, #afafd7, #afafff
---   , #afd700, #afd75f, #afd787, #afd7af, #afd7d7, #afd7ff
---   , #afff00, #afff5f, #afff87, #afffaf, #afffd7, #afffff
+-- , [ #af0000ff, #af005fff, #af0087ff, #af00afff, #af00d7ff, #af00ffff
+--   , #af5f00ff, #af5f5fff, #af5f87ff, #af5fafff, #af5fd7ff, #af5fffff
+--   , #af8700ff, #af875fff, #af8787ff, #af87afff, #af87d7ff, #af87ffff
+--   , #afaf00ff, #afaf5fff, #afaf87ff, #afafafff, #afafd7ff, #afafffff
+--   , #afd700ff, #afd75fff, #afd787ff, #afd7afff, #afd7d7ff, #afd7ffff
+--   , #afff00ff, #afff5fff, #afff87ff, #afffafff, #afffd7ff, #afffffff
 --   ]
--- , [ #d70000, #d7005f, #d70087, #d700af, #d700d7, #d700ff
---   , #d75f00, #d75f5f, #d75f87, #d75faf, #d75fd7, #d75fff
---   , #d78700, #d7875f, #d78787, #d787af, #d787d7, #d787ff
---   , #d7af00, #d7af5f, #d7af87, #d7afaf, #d7afd7, #d7afff
---   , #d7d700, #d7d75f, #d7d787, #d7d7af, #d7d7d7, #d7d7ff
---   , #d7ff00, #d7ff5f, #d7ff87, #d7ffaf, #d7ffd7, #d7ffff
+-- , [ #d70000ff, #d7005fff, #d70087ff, #d700afff, #d700d7ff, #d700ffff
+--   , #d75f00ff, #d75f5fff, #d75f87ff, #d75fafff, #d75fd7ff, #d75fffff
+--   , #d78700ff, #d7875fff, #d78787ff, #d787afff, #d787d7ff, #d787ffff
+--   , #d7af00ff, #d7af5fff, #d7af87ff, #d7afafff, #d7afd7ff, #d7afffff
+--   , #d7d700ff, #d7d75fff, #d7d787ff, #d7d7afff, #d7d7d7ff, #d7d7ffff
+--   , #d7ff00ff, #d7ff5fff, #d7ff87ff, #d7ffafff, #d7ffd7ff, #d7ffffff
 --   ]
--- , [ #ff0000, #ff005f, #ff0087, #ff00af, #ff00d7, #ff00ff
---   , #ff5f00, #ff5f5f, #ff5f87, #ff5faf, #ff5fd7, #ff5fff
---   , #ff8700, #ff875f, #ff8787, #ff87af, #ff87d7, #ff87ff
---   , #ffaf00, #ffaf5f, #ffaf87, #ffafaf, #ffafd7, #ffafff
---   , #ffd700, #ffd75f, #ffd787, #ffd7af, #ffd7d7, #ffd7ff
---   , #ffff00, #ffff5f, #ffff87, #ffffaf, #ffffd7, #ffffff
+-- , [ #ff0000ff, #ff005fff, #ff0087ff, #ff00afff, #ff00d7ff, #ff00ffff
+--   , #ff5f00ff, #ff5f5fff, #ff5f87ff, #ff5fafff, #ff5fd7ff, #ff5fffff
+--   , #ff8700ff, #ff875fff, #ff8787ff, #ff87afff, #ff87d7ff, #ff87ffff
+--   , #ffaf00ff, #ffaf5fff, #ffaf87ff, #ffafafff, #ffafd7ff, #ffafffff
+--   , #ffd700ff, #ffd75fff, #ffd787ff, #ffd7afff, #ffd7d7ff, #ffd7ffff
+--   , #ffff00ff, #ffff5fff, #ffff87ff, #ffffafff, #ffffd7ff, #ffffffff
 --   ]
 -- ]
-defaultColourCube :: (Ord b, Floating b) => Matrix '[N6, N6, N6] (Colour b)
+defaultColourCube :: (Ord b, Floating b) => Matrix '[N6, N6, N6] (AlphaColour b)
 defaultColourCube =
-  genMatrix_ $ \(x :< y :< z :< EmptyHList) -> sRGB24 (cmp x) (cmp y) (cmp z)
+  genMatrix_ $ \(x :< y :< z :< EmptyHList) -> opaque $ sRGB24 (cmp x) (cmp y) (cmp z)
   where
     cmp :: Fin N6 -> Word8
     cmp i =
@@ -248,14 +387,14 @@ defaultColourCube =
 
 -- | Helper function for showing all the colors in a color cube. This is used
 -- for debugging.
-showColourCube :: Matrix '[N6, N6, N6] (Colour Double) -> String
+showColourCube :: Matrix '[N6, N6, N6] (AlphaColour Double) -> String
 showColourCube matrix =
   -- TODO: This function will only work with a 6x6x6 matrix, but it could be
   -- generalized to work with any Rank-3 matrix.
   let itemList = Data.Foldable.toList matrix
   in showSColourCube itemList ""
   where
-    showSColourCube :: [Colour Double] -> String -> String
+    showSColourCube :: [AlphaColour Double] -> String -> String
     showSColourCube itemList =
       showString "[ " .
       showSquare 0 itemList .
@@ -271,7 +410,7 @@ showColourCube matrix =
       showSquare 5 itemList .
       showString "]"
 
-    showSquare :: Int -> [Colour Double] -> String -> String
+    showSquare :: Int -> [AlphaColour Double] -> String -> String
     showSquare i colours =
       showString "[ " .
       showRow i 0 colours .
@@ -287,7 +426,7 @@ showColourCube matrix =
       showRow i 5 colours .
       showString "]\n"
 
-    showRow :: Int -> Int -> [Colour Double] -> String -> String
+    showRow :: Int -> Int -> [AlphaColour Double] -> String -> String
     showRow i j colours =
       showCol (headEx $ drop (i * 36 + j * 6 + 0) colours) .
       showString ", " .
@@ -302,17 +441,17 @@ showColourCube matrix =
       showCol (headEx $ drop (i * 36 + j * 6 + 5) colours) .
       showString "\n  "
 
-    showCol :: Colour Double -> String -> String
-    showCol col str = sRGB24show col <> str
+    showCol :: AlphaColour Double -> String -> String
+    showCol col str = sRGB32show col <> str
 
 -- | A 'Vec' of a grey scale.  Default value for 'FullPalette'.
 --
 -- >>> showColourVec defaultGreyscale
--- ["#080808","#121212","#1c1c1c","#262626","#303030","#3a3a3a","#444444","#4e4e4e","#585858","#626262","#6c6c6c","#767676","#808080","#8a8a8a","#949494","#9e9e9e","#a8a8a8","#b2b2b2","#bcbcbc","#c6c6c6","#d0d0d0","#dadada","#e4e4e4","#eeeeee"]
-defaultGreyscale :: (Ord b, Floating b) => Vec N24 (Colour b)
+-- ["#080808ff","#121212ff","#1c1c1cff","#262626ff","#303030ff","#3a3a3aff","#444444ff","#4e4e4eff","#585858ff","#626262ff","#6c6c6cff","#767676ff","#808080ff","#8a8a8aff","#949494ff","#9e9e9eff","#a8a8a8ff","#b2b2b2ff","#bcbcbcff","#c6c6c6ff","#d0d0d0ff","#dadadaff","#e4e4e4ff","#eeeeeeff"]
+defaultGreyscale :: (Ord b, Floating b) => Vec N24 (AlphaColour b)
 defaultGreyscale = genVec_ $ \n ->
   let l = 8 + 10 * fromIntegral (toIntFin n)
-  in sRGB24 l l l
+  in opaque $ sRGB24 l l l
 
 -- | The configuration for the colors used by Termonad.
 --
@@ -408,7 +547,7 @@ data ColourConfig c = ColourConfig
 --
 -- >>> defaultColourConfig
 -- ColourConfig {cursorFgColour = Unset, cursorBgColour = Unset, foregroundColour = Unset, backgroundColour = Unset, palette = NoPalette}
-defaultColourConfig :: ColourConfig (Colour Double)
+defaultColourConfig :: ColourConfig (AlphaColour Double)
 defaultColourConfig = ColourConfig
   { cursorFgColour = Unset
   , cursorBgColour = Unset
@@ -433,7 +572,7 @@ $(makeLensesFor
 
 -- | Extension that allows setting colors for terminals in Termonad.
 data ColourExtension = ColourExtension
-  { colourExtConf :: MVar (ColourConfig (Colour Double))
+  { colourExtConf :: MVar (ColourConfig (AlphaColour Double))
     -- ^ 'MVar' holding the current 'ColourConfig'.  This could potentially be
     -- passed to other extensions or user code.  This would allow changing the
     -- colors for new terminals in realtime.
@@ -444,7 +583,7 @@ data ColourExtension = ColourExtension
 
 -- | The default 'createTermHook' for 'colourExtCreateTermHook'.  Set the colors
 -- for a terminal based on the given 'ColourConfig'.
-colourHook :: MVar (ColourConfig (Colour Double)) -> TMState -> Terminal -> IO ()
+colourHook :: MVar (ColourConfig (AlphaColour Double)) -> TMState -> Terminal -> IO ()
 colourHook mvarColourConf _ vteTerm = do
   colourConf <- readMVar mvarColourConf
   let paletteColourList = paletteToList $ palette colourConf
@@ -461,20 +600,21 @@ colourHook mvarColourConf _ vteTerm = do
     terminalSetColorCursorForeground vteTerm . Just <=< colourToRgba
 #endif
 
-colourToRgba :: Colour Double -> IO RGBA
+colourToRgba :: AlphaColour Double -> IO RGBA
 colourToRgba colour = do
-  let RGB red green blue = toSRGB colour
+  let RGB red green blue = toSRGB $ pureColour colour
+      alpha = alphaChannel colour
   rgba <- newZeroRGBA
   setRGBARed rgba red
   setRGBAGreen rgba green
   setRGBABlue rgba blue
-  setRGBAAlpha rgba 1
+  setRGBAAlpha rgba alpha
   pure rgba
 
 -- | Create a 'ColourExtension' based on a given 'ColourConfig'.
 --
 -- Most users will want to use this.
-createColourExtension :: ColourConfig (Colour Double) -> IO ColourExtension
+createColourExtension :: ColourConfig (AlphaColour Double) -> IO ColourExtension
 createColourExtension conf = do
   mvarConf <- newMVar conf
   pure $
@@ -493,7 +633,7 @@ createDefColourExtension = createColourExtension defaultColourConfig
 
 -- | Add a given 'ColourConfig' to a 'TMConfig'.  This adds 'colourHook' to the
 -- 'createTermHook' in 'TMConfig'.
-addColourConfig :: TMConfig -> ColourConfig (Colour Double) -> IO TMConfig
+addColourConfig :: TMConfig -> ColourConfig (AlphaColour Double) -> IO TMConfig
 addColourConfig tmConf colConf = do
   ColourExtension _ newHook <- createColourExtension colConf
   let newTMConf = tmConf & lensHooks . lensCreateTermHook %~ addColourHook newHook

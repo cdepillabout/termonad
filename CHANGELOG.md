@@ -1,3 +1,14 @@
+## 1.3.0.0
+
+* Change all uses of
+  [`Colour`](http://hackage.haskell.org/package/colour-2.3.5/docs/Data-Colour.html#t:Colour)
+  to
+  [`AlphaColour`](http://hackage.haskell.org/package/colour-2.3.5/docs/Data-Colour.html#t:AlphaColour)
+  in `Termonad.Config.Colour`.  Users should now use `AlphaColour` instead of
+  `Colour`.  Also, all uses of `sRGB24` should be replaced with `createColour`.
+  This change is mechanical and should not affect how Termonad works at all.
+  Thanks to @jecaro and @amir! [#116](https://github.com/cdepillabout/termonad/pull/116)
+
 ## 1.2.0.0
 
 * Got the code for setting the backgroud color of the terminal actually
