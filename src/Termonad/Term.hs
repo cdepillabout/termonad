@@ -23,6 +23,7 @@ import GI.GLib
   )
 import GI.Gtk
   ( Align(AlignFill)
+  , ApplicationWindow
   , Box
   , Button
   , IconSize(IconSizeMenu)
@@ -342,6 +343,12 @@ addPage notebookTab tabLabelBox tmState = do
       mvarReturnAction = notebookSetCurrentPage note pageIndex
   pure (newTMState, mvarReturnAction)
 
+-- | Set the keyboard focus on a vte terminal
+setFocusOn :: ApplicationWindow -> Terminal -> IO()
+setFocusOn tmStateAppWin vteTerm = do
+  widgetGrabFocus vteTerm
+  windowSetFocus tmStateAppWin (Just vteTerm)
+
 createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO TMTerm
 createTerm handleKeyPress mvarTMState = do
   -- Check preconditions
@@ -382,8 +389,7 @@ createTerm handleKeyPress mvarTMState = do
   void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState
 
   -- Put the keyboard focus on the term
-  widgetGrabFocus vteTerm
-  windowSetFocus tmStateAppWin (Just vteTerm)
+  setFocusOn tmStateAppWin vteTerm
   -- Make sure the state is still right
   assertInvariantTMState mvarTMState
   createTermHook (hooks tmStateConfig) mvarTMState vteTerm
