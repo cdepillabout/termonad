@@ -68,7 +68,7 @@ import GI.Gtk
   , windowSetFocus
   , windowSetTransientFor
   )
-import GI.Pango (EllipsizeMode(EllipsizeModeMiddle))
+import GI.Pango (EllipsizeMode(EllipsizeModeMiddle), FontDescription)
 import GI.Vte
   ( PtyFlags(PtyFlagsDefault)
   , Terminal
@@ -106,6 +106,7 @@ import Termonad.Types
   , ShowScrollbar(..)
   , ShowTabBar(..)
   , TMConfig(hooks, options)
+  , TMNotebook
   , TMNotebookTab
   , TMState
   , TMState'(TMState, tmStateAppWin, tmStateConfig, tmStateFontDesc, tmStateNotebook)
@@ -286,26 +287,31 @@ cwdOfPid pd = do
 #endif
 #endif
 
-
-createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO TMTerm
-createTerm handleKeyPress mvarTMState = do
-  assertInvariantTMState mvarTMState
-  scrolledWin <- createScrolledWin mvarTMState
-  TMState{tmStateAppWin, tmStateFontDesc, tmStateConfig, tmStateNotebook=currNote} <-
-    readMVar mvarTMState
+-- | Get the directory from the current focused tab of a notebook
+getDirFromFocusedTab :: TMNotebook -> IO (Maybe Text)
+getDirFromFocusedTab currNote = do
   let maybeCurrFocusedTabPid = pid . tmNotebookTabTerm <$> getFocusItemFL (tmNotebookTabs currNote)
-  maybeCurrDir <- maybe (pure Nothing) cwdOfPid maybeCurrFocusedTabPid
+  maybe (pure Nothing) cwdOfPid maybeCurrFocusedTabPid
+
+-- | Create the VTE terminal, set the fonts and options
+createAndInitVteTerm :: FontDescription -> ConfigOptions -> IO (Terminal)
+createAndInitVteTerm tmStateFontDesc curOpts = do
   vteTerm <- terminalNew
   terminalSetFont vteTerm (Just tmStateFontDesc)
-  let curOpts = options tmStateConfig
   terminalSetWordCharExceptions vteTerm $ wordCharExceptions curOpts
   terminalSetScrollbackLines vteTerm (fromIntegral (scrollbackLen curOpts))
   terminalSetCursorBlinkMode vteTerm (cursorBlinkMode curOpts)
   widgetShow vteTerm
+  pure vteTerm
+
+-- | Starts a shell in a terminal and return a new TMTerm
+launchShell :: Terminal -> Maybe (Text) -> IO (TMTerm)
+launchShell vteTerm maybeCurrDir = do
   -- Should probably use GI.Vte.Functions.getUserShell, but contrary to its
   -- documentation it raises an exception rather wrap in Maybe.
   mShell <- lookupEnv "SHELL"
   let argv = fromMaybe ["/usr/bin/env", "bash"] (pure <$> mShell)
+  -- Launch the shell
   terminalProcPid <-
     terminalSpawnSync
       vteTerm
@@ -316,28 +322,57 @@ createTerm handleKeyPress mvarTMState = do
       ([SpawnFlagsDefault] :: [SpawnFlags])
       Nothing
       noCancellable
-  tmTerm <- newTMTerm vteTerm (fromIntegral terminalProcPid)
+  -- Init the state associated to the terminal
+  newTMTerm vteTerm (fromIntegral terminalProcPid)
+
+-- | Add a page to the notebook and update TMState' accordingly
+addPage :: TMNotebookTab -> Box -> TMState' -> IO (TMState', IO())
+addPage notebookTab tabLabelBox tmState = do
+  let notebook = tmStateNotebook tmState
+      note = tmNotebook notebook
+      tabs = tmNotebookTabs notebook
+      scrolledWin = tmNotebookTabTermContainer notebookTab
+  pageIndex <- notebookAppendPage note scrolledWin (Just tabLabelBox)
+  notebookSetTabReorderable note scrolledWin True
+  setShowTabs (tmState ^. lensTMStateConfig) note
+  -- Append the new
+  let newTabs = appendFL tabs notebookTab
+      newTMState =
+        tmState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+      mvarReturnAction = notebookSetCurrentPage note pageIndex
+  pure (newTMState, mvarReturnAction)
+
+createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO TMTerm
+createTerm handleKeyPress mvarTMState = do
+  -- Check preconditions
+  assertInvariantTMState mvarTMState
+
+  -- Read needed data in TMVar
+  TMState{tmStateAppWin, tmStateFontDesc, tmStateConfig, tmStateNotebook=currNote} <-
+    readMVar mvarTMState
+
+  -- Create a new terminal and launch a shell in it
+  vteTerm <- createAndInitVteTerm tmStateFontDesc (options tmStateConfig)
+  maybeCurrDir <- getDirFromFocusedTab currNote
+  tmTerm <- launchShell vteTerm maybeCurrDir
+
+  -- Create the container add the VTE term in it
+  scrolledWin <- createScrolledWin mvarTMState
   containerAdd scrolledWin vteTerm
+
+  -- Create the widget for the tab
   (tabLabelBox, tabLabel, tabCloseButton) <- createNotebookTabLabel
+  -- Create notebook state
   let notebookTab = createTMNotebookTab tabLabel scrolledWin tmTerm
-  void $
-    onButtonClicked tabCloseButton $
-      termClose notebookTab mvarTMState
-  mvarReturnAction <-
-    modifyMVar mvarTMState $ \tmState -> do
-      let notebook = tmStateNotebook tmState
-          note = tmNotebook notebook
-          tabs = tmNotebookTabs notebook
-      pageIndex <- notebookAppendPage note scrolledWin (Just tabLabelBox)
-      notebookSetTabReorderable note scrolledWin True
-      setShowTabs (tmState ^. lensTMStateConfig) note
-      let newTabs = appendFL tabs notebookTab
-          newTMState =
-            tmState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
-          mvarReturnAction = notebookSetCurrentPage note pageIndex
-      pure (newTMState, mvarReturnAction)
-  mvarReturnAction
   relabelTab (tmNotebook currNote) tabLabel scrolledWin vteTerm
+  
+  -- Add a new page and update mvar
+  setCurrentPageAction <-
+    modifyMVar mvarTMState $ addPage notebookTab tabLabelBox
+  setCurrentPageAction
+
+  -- Connect callbacks
+  void $ onButtonClicked tabCloseButton $ termClose notebookTab mvarTMState
   void $ onTerminalWindowTitleChanged vteTerm $ do
     TMState{tmStateNotebook} <- readMVar mvarTMState
     let notebook = tmNotebook tmStateNotebook
@@ -345,8 +380,13 @@ createTerm handleKeyPress mvarTMState = do
   void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
   void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
   void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState
+
+  -- Put the keyboard focus on the term
   widgetGrabFocus vteTerm
   windowSetFocus tmStateAppWin (Just vteTerm)
+  -- Make sure the state is still right
   assertInvariantTMState mvarTMState
   createTermHook (hooks tmStateConfig) mvarTMState vteTerm
   pure tmTerm
+
+
