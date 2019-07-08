@@ -78,6 +78,10 @@ menuDoc =
             <attribute name="label" translatable="yes">_Paste</attribute>
             <attribute name="action">app.paste</attribute>
           </item>
+          <item>
+            <attribute name="label" translatable="yes">_Preferences</attribute>
+            <attribute name="action">app.preferences</attribute>
+          </item>
         </submenu>
         <submenu>
           <attribute name="label" translatable="yes">View</attribute>
