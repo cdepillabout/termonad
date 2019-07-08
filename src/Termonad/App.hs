@@ -391,6 +391,11 @@ setupTermonad tmConfig app win builder = do
   actionMapAddAction app pasteAction
   applicationSetAccelsForAction app "app.paste" ["<Shift><Ctrl>V"]
 
+  preferencesAction <- simpleActionNew "preferences" Nothing
+  void $ onSimpleActionActivate preferencesAction $ \_ -> 
+      putStrLn "show preferences dialog"
+  actionMapAddAction app preferencesAction
+
   enlargeFontAction <- simpleActionNew "enlargefont" Nothing
   void $ onSimpleActionActivate enlargeFontAction $ \_ ->
     modifyFontSizeForAllTerms (modFontSize 1) mvarTMState
