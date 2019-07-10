@@ -309,11 +309,6 @@ setupTermonad tmConfig app win builder = do
       else setShowTabs tmConfig note
 
   void $ onNotebookSwitchPage note $ \_ pageNum -> do
-    maybeRes <- tryTakeMVar mvarTMState
-    case maybeRes of
-      Nothing -> pure ()
-      Just val -> do
-        putMVar mvarTMState val
     modifyMVar_ mvarTMState $ \tmState -> do
       let notebook = tmStateNotebook tmState
           tabs = tmNotebookTabs notebook
