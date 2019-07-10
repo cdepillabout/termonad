@@ -204,12 +204,36 @@ relabelTabs mvarTMState = do
           term' = tmNotebookTab ^. lensTMNotebookTabTerm . lensTerm
       relabelTab notebook label scrolledWin term'
 
+-- | Compute the text for a 'Label' for a GTK Notebook tab.
+--
+-- >>> computeTabLabel 0 (Just "me@machine:~")
+-- "1. me@machine:~"
+--
+-- >>> computeTabLabel 5 (Just "bash process")
+-- "6. bash process"
+--
+-- >>> computeTabLabel 2 Nothing
+-- "3. shell"
+computeTabLabel
+  :: Int
+  -- ^ Tab number.  0 is used for the first tab, 1 for the second, etc.
+  -> Maybe Text
+  -- ^ A possible title for a tab.  If this is 'Nothing', then the string
+  -- @shell@ will be used.
+  -> Text
+computeTabLabel pageNum maybeTitle =
+  let title = fromMaybe "shell" maybeTitle
+  in tshow (pageNum + 1) <> ". " <> title
+
+-- | Update the given 'Label' for a GTK Notebook tab.
+--
+-- The new text for the label is determined by the 'computeTabLabel' function.
 relabelTab :: Notebook -> Label -> ScrolledWindow -> Terminal -> IO ()
 relabelTab notebook label scrolledWin term' = do
-  pageNum <- notebookPageNum notebook scrolledWin
+  tabNum <- notebookPageNum notebook scrolledWin
   maybeTitle <- terminalGetWindowTitle term'
-  let title = fromMaybe "shell" maybeTitle
-  labelSetLabel label $ tshow (pageNum + 1) <> ". " <> title
+  let labelText = computeTabLabel (fromIntegral tabNum) maybeTitle
+  labelSetLabel label labelText
 
 showScrollbarToPolicy :: ShowScrollbar -> PolicyType
 showScrollbarToPolicy ShowScrollbarNever = PolicyTypeNever
@@ -219,7 +243,8 @@ showScrollbarToPolicy ShowScrollbarAlways = PolicyTypeAlways
 createScrolledWin :: TMState -> IO ScrolledWindow
 createScrolledWin mvarTMState = do
   tmState <- readMVar mvarTMState
-  let showScrollbarVal = tmState ^. lensTMStateConfig . lensOptions . lensShowScrollbar
+  let showScrollbarVal =
+        tmState ^. lensTMStateConfig . lensOptions . lensShowScrollbar
       vScrollbarPolicy = showScrollbarToPolicy showScrollbarVal
   scrolledWin <- scrolledWindowNew noAdjustment noAdjustment
   widgetShow scrolledWin
@@ -288,14 +313,22 @@ cwdOfPid pd = do
 #endif
 #endif
 
--- | Get the directory from the current focused tab of a notebook
-getDirFromFocusedTab :: TMNotebook -> IO (Maybe Text)
-getDirFromFocusedTab currNote = do
-  let maybeCurrFocusedTabPid = pid . tmNotebookTabTerm <$> getFocusItemFL (tmNotebookTabs currNote)
-  maybe (pure Nothing) cwdOfPid maybeCurrFocusedTabPid
+-- | Get the current working directory from the shell in the focused tab of a
+-- notebook.
+--
+-- Returns 'Nothing' if there is no focused tab of the notebook, or the
+-- current working directory could not be detected for the shell.
+getCWDFromFocusedTab :: TMNotebook -> IO (Maybe Text)
+getCWDFromFocusedTab currNote = do
+  let maybeFocusedTab = getFocusItemFL (tmNotebookTabs currNote)
+  case maybeFocusedTab of
+    Nothing -> pure Nothing
+    Just focusedNotebookTab -> do
+      let shellPid = pid (tmNotebookTabTerm focusedNotebookTab)
+      cwdOfPid shellPid
 
--- | Create the VTE terminal, set the fonts and options
-createAndInitVteTerm :: FontDescription -> ConfigOptions -> IO (Terminal)
+-- | Create the VTE 'Terminal', set the fonts and options
+createAndInitVteTerm :: FontDescription -> ConfigOptions -> IO Terminal
 createAndInitVteTerm tmStateFontDesc curOpts = do
   vteTerm <- terminalNew
   terminalSetFont vteTerm (Just tmStateFontDesc)
@@ -306,14 +339,21 @@ createAndInitVteTerm tmStateFontDesc curOpts = do
   pure vteTerm
 
 -- | Starts a shell in a terminal and return a new TMTerm
-launchShell :: Terminal -> Maybe (Text) -> IO (TMTerm)
+launchShell
+  :: Terminal
+  -- ^ GTK 'Terminal' to spawn the shell in.
+  -> Maybe Text
+  -- ^ An optional path to the current working directory to start the
+  -- shell in.  If 'Nothing', use the current working directory of the
+  -- termonad process.
+  -> IO Int
 launchShell vteTerm maybeCurrDir = do
   -- Should probably use GI.Vte.Functions.getUserShell, but contrary to its
   -- documentation it raises an exception rather wrap in Maybe.
   mShell <- lookupEnv "SHELL"
   let argv = fromMaybe ["/usr/bin/env", "bash"] (pure <$> mShell)
   -- Launch the shell
-  terminalProcPid <-
+  shellPid <-
     terminalSpawnSync
       vteTerm
       [PtyFlagsDefault]
@@ -323,25 +363,36 @@ launchShell vteTerm maybeCurrDir = do
       ([SpawnFlagsDefault] :: [SpawnFlags])
       Nothing
       noCancellable
-  -- Init the state associated to the terminal
-  newTMTerm vteTerm (fromIntegral terminalProcPid)
+  pure (fromIntegral shellPid)
 
--- | Add a page to the notebook and update TMState' accordingly
-addPage :: TMNotebookTab -> Box -> TMState' -> IO (TMState', IO())
-addPage notebookTab tabLabelBox tmState = do
-  let notebook = tmStateNotebook tmState
-      note = tmNotebook notebook
-      tabs = tmNotebookTabs notebook
-      scrolledWin = tmNotebookTabTermContainer notebookTab
-  pageIndex <- notebookAppendPage note scrolledWin (Just tabLabelBox)
-  notebookSetTabReorderable note scrolledWin True
-  setShowTabs (tmState ^. lensTMStateConfig) note
-  -- Append the new
-  let newTabs = appendFL tabs notebookTab
-      newTMState =
-        tmState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
-      mvarReturnAction = notebookSetCurrentPage note pageIndex
-  pure (newTMState, mvarReturnAction)
+-- | Add a page to the notebook and switch to it.
+addPage
+  :: TMState
+  -> TMNotebookTab
+  -> Box
+  -- ^ The GTK Object holding the label we want to show for the tab of the
+  -- newly created page of the notebook.
+  -> IO ()
+addPage mvarTMState notebookTab tabLabelBox = do
+  -- Append a new notebook page and update the TMState to reflect this.
+  (note, pageIndex) <- modifyMVar mvarTMState appendNotebookPage
+
+  -- Switch the current Notebook page to the the newly added page.
+  notebookSetCurrentPage note pageIndex
+  where
+    appendNotebookPage :: TMState' -> IO (TMState', (Notebook, Int32))
+    appendNotebookPage tmState = do
+      let notebook = tmStateNotebook tmState
+          note = tmNotebook notebook
+          tabs = tmNotebookTabs notebook
+          scrolledWin = tmNotebookTabTermContainer notebookTab
+      pageIndex <- notebookAppendPage note scrolledWin (Just tabLabelBox)
+      notebookSetTabReorderable note scrolledWin True
+      setShowTabs (tmState ^. lensTMStateConfig) note
+      let newTabs = appendFL tabs notebookTab
+          newTMState =
+            tmState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+      pure (newTMState, (note, pageIndex))
 
 -- | Set the keyboard focus on a vte terminal
 setFocusOn :: ApplicationWindow -> Terminal -> IO()
@@ -349,7 +400,12 @@ setFocusOn tmStateAppWin vteTerm = do
   widgetGrabFocus vteTerm
   windowSetFocus tmStateAppWin (Just vteTerm)
 
-createTerm :: (TMState -> EventKey -> IO Bool) -> TMState -> IO TMTerm
+-- | Create a new 'TMTerm', setting it up and adding it to the GTKNotebook.
+createTerm
+  :: (TMState -> EventKey -> IO Bool)
+  -- ^ Funtion for handling key presses on the terminal.
+  -> TMState
+  -> IO TMTerm
 createTerm handleKeyPress mvarTMState = do
   -- Check preconditions
   assertInvariantTMState mvarTMState
@@ -360,23 +416,27 @@ createTerm handleKeyPress mvarTMState = do
 
   -- Create a new terminal and launch a shell in it
   vteTerm <- createAndInitVteTerm tmStateFontDesc (options tmStateConfig)
-  maybeCurrDir <- getDirFromFocusedTab currNote
-  tmTerm <- launchShell vteTerm maybeCurrDir
+  maybeCurrDir <- getCWDFromFocusedTab currNote
+  termShellPid <- launchShell vteTerm maybeCurrDir
+  tmTerm <- newTMTerm vteTerm termShellPid
 
   -- Create the container add the VTE term in it
   scrolledWin <- createScrolledWin mvarTMState
   containerAdd scrolledWin vteTerm
 
-  -- Create the widget for the tab
+  -- Create the GTK widget for the Notebook tab
   (tabLabelBox, tabLabel, tabCloseButton) <- createNotebookTabLabel
+
   -- Create notebook state
   let notebookTab = createTMNotebookTab tabLabel scrolledWin tmTerm
+
+  -- Add the new notebooktab to the notebook.
+  addPage mvarTMState notebookTab tabLabelBox
+
+  -- Setup the initial label for the notebook tab.  This needs to happen
+  -- after we add the new page to the notebook, so that the page can get labelled
+  -- appropriately.
   relabelTab (tmNotebook currNote) tabLabel scrolledWin vteTerm
-  
-  -- Add a new page and update mvar
-  setCurrentPageAction <-
-    modifyMVar mvarTMState $ addPage notebookTab tabLabelBox
-  setCurrentPageAction
 
   -- Connect callbacks
   void $ onButtonClicked tabCloseButton $ termClose notebookTab mvarTMState
@@ -390,9 +450,10 @@ createTerm handleKeyPress mvarTMState = do
 
   -- Put the keyboard focus on the term
   setFocusOn tmStateAppWin vteTerm
+
   -- Make sure the state is still right
   assertInvariantTMState mvarTMState
+
+  -- Run user-defined hooks for modifying the newly-created VTE Terminal.
   createTermHook (hooks tmStateConfig) mvarTMState vteTerm
   pure tmTerm
-
-
