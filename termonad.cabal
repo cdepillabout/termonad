@@ -46,6 +46,7 @@ library
                      , Termonad.Gtk
                      , Termonad.Keys
                      , Termonad.Lenses
+                     , Termonad.Pcre
                      , Termonad.Prelude
                      , Termonad.Term
                      , Termonad.Types
@@ -70,11 +71,13 @@ library
                      , gi-pango
                      , gi-vte >= 2.91.19
                      , haskell-gi-base >= 0.21.2
+                     , inline-c
                      , lens
                      , mono-traversable
                      , pretty-simple
                      , QuickCheck
                      , singletons
+                     , text
                      , xml-conduit
                      , xml-html-qq
   default-language:    Haskell2010
@@ -112,6 +115,7 @@ library
   other-extensions:    TemplateHaskell
                      , UndecidableInstances
   pkgconfig-depends:   gtk+-3.0
+                     , libpcre2-8
                      , vte-2.91
 
 executable termonad
