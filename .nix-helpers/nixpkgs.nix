@@ -10,6 +10,9 @@
   nixpkgs ? null
 , # Additional overlays to apply when importing nixpkgs.
   additionalOverlays ? []
+, # Build all the examples bundled with termonad.  Normally this is only used
+  # in CI for testing that the examples all still compile.
+  buildExamples ? false
 }:
 
 let
@@ -32,19 +35,37 @@ let
         super.haskell.packageOverrides hself hsuper // {
           termonad =
             let
+              filesToIgnore = [
+                ".git"
+                ".nix-helpers"
+                "result"
+                ".stack-work"
+                ".travis.yml"
+              ];
+
               src =
                 builtins.filterSource
                   (path: type: with self.stdenv.lib;
-                    ! elem (baseNameOf path) [ ".git" "result" ".stack-work" ".nix-helpers" ] &&
+                    ! elem (baseNameOf path) filesToIgnore &&
                     ! any (flip hasPrefix (baseNameOf path)) [ "dist" ".ghc" ]
                   )
                   ./..;
+
+              extraCabal2nixOptions =
+                self.lib.optionalString buildExamples "-fbuildexamples";
+
+              termonadDrv =
+                hself.callCabal2nixWithOptions
+                  "termonad"
+                  src
+                  extraCabal2nixOptions
+                  {
+                    inherit (self.gnome3) gtk3;
+                    libpcre2 = self.pcre2;
+                    vte_291 = self.gnome3.vte;
+                  };
             in
-            hself.callCabal2nix "termonad" src {
-              inherit (self.gnome3) gtk3;
-              libpcre2 = self.pcre2;
-              vte_291 = self.gnome3.vte;
-            };
+            termonadDrv;
         };
     };
 

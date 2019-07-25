@@ -98,12 +98,13 @@ let
 in
 
 { extraHaskellPackages ? defaultPackages
-, compiler ? null
 , nixpkgs ? null
 , additionalOverlays ? []
+, compiler ? null
+, buildExamples ? false
 }@args:
 
-with (import ./nixpkgs.nix { inherit compiler nixpkgs additionalOverlays; });
+with (import ./nixpkgs.nix { inherit compiler nixpkgs additionalOverlays buildExamples; });
 
 let
   # GHC environment that has termonad available, as well as the packages
