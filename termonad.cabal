@@ -116,7 +116,7 @@ library
                      , UndecidableInstances
   pkgconfig-depends:   gtk+-3.0
                      , libpcre2-8
-                     , vte-2.91
+                     , vte-2.91 >= 0.46
 
 executable termonad
   main-is:             Main.hs
