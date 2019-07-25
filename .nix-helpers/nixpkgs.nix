@@ -42,6 +42,7 @@ let
             in
             hself.callCabal2nix "termonad" src {
               inherit (self.gnome3) gtk3;
+              libpcre2 = self.pcre2;
               vte_291 = self.gnome3.vte;
             };
         };
