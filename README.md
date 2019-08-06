@@ -226,6 +226,9 @@ Termonad provides the following default key bindings.
 |------------|--------|
 | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>t</kbd> | Open new tab. |
 | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>w</kbd> | Close tab. |
+| <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>f</kbd> | Open Find dialog for searching for a regex. |
+| <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>p</kbd> | Find the regex **above** the current position. |
+| <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>i</kbd> | Find the regex **below** the current position. |
 | <kbd>Ctrl</kbd> <kbd>+</kbd> | Increase font size. |
 | <kbd>Ctrl</kbd> <kbd>-</kbd> | Decrease font size. |
 | <kbd>Alt</kbd> <kbd>(number key)</kbd> | Switch to tab `number`.  For example, <kbd>Alt</kbd> <kbd>2</kbd> switches to tab 2. |

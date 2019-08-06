@@ -1,3 +1,10 @@
+## 2.0.0.0
+
+* Added menu option to search for a regex within the terminal output.
+  This removes support for versions of VTE-2.91 older than 0.46.
+  This means that compiling on older versions of Debian and Ubuntu may no
+  longer work. [#118](https://github.com/cdepillabout/termonad/pull/118)
+
 ## 1.3.0.0
 
 * Change all uses of

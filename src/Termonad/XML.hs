@@ -91,6 +91,21 @@ menuDoc =
           </item>
         </submenu>
         <submenu>
+          <attribute name="label" translatable="yes">Search</attribute>
+          <item>
+            <attribute name="label" translatable="yes">_Find...</attribute>
+            <attribute name="action">app.find</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Find Above</attribute>
+            <attribute name="action">app.findabove</attribute>
+          </item>
+          <item>
+            <attribute name="label" translatable="yes">Find Below</attribute>
+            <attribute name="action">app.findbelow</attribute>
+          </item>
+        </submenu>
+        <submenu>
           <attribute name="label" translatable="yes">Help</attribute>
           <item>
             <attribute name="label" translatable="yes">_About</attribute>
