@@ -14,7 +14,4 @@ haskell.lib.buildStackProject {
     zlib
   ];
   ghc = termonadKnownWorkingHaskellPkgSet.ghc;
-  extraArgs = [
-    "--stack-yaml stack-lts-13.yaml"
-  ];
 }
