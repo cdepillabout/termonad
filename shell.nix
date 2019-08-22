@@ -24,9 +24,10 @@
 # will also index the Termonad libraries, however this will mean the environment
 # will need to be rebuilt every time the termonad source changes.
 
-{ compiler ? null, indexTermonad ? false, nixpkgs ? null, additionalOverlays ? [] }:
+{ indexTermonad ? false, ... }@origArgs:
 
-with (import .nix-helpers/nixpkgs.nix { inherit compiler nixpkgs additionalOverlays; });
+let args = builtins.removeAttrs origArgs [ "indexTermonad" ];
+in with (import .nix-helpers/nixpkgs.nix args);
 
 let
   # A Haskell package set for a version of GHC that is known working.
