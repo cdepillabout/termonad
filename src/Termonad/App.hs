@@ -51,6 +51,7 @@ import GI.Gtk
   , labelNew
   , notebookGetNPages
   , notebookNew
+  , onButtonClicked
   , onEntryActivate
   , onNotebookPageRemoved
   , onNotebookPageReordered
@@ -590,10 +591,12 @@ showPreferencesDialog app = do
   preferencesBuilder <- builderNewFromString preferencesText $ fromIntegral (length preferencesText)
   preferencesDialog <- objFromBuildUnsafe preferencesBuilder "preferences" Gtk.Dialog
   button <- objFromBuildUnsafe preferencesBuilder "close" Gtk.Button
+  let closePrefencesWindow = widgetDestroy preferencesDialog
+  void $ onButtonClicked button closePrefencesWindow
   win <- applicationGetActiveWindow app
   windowSetTransientFor preferencesDialog win
   void $ dialogRun preferencesDialog
-  widgetDestroy preferencesDialog
+  closePrefencesWindow
 
 appStartup :: Application -> IO ()
 appStartup _app = pure ()
