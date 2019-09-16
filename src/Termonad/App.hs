@@ -393,7 +393,7 @@ setupTermonad tmConfig app win builder = do
   applicationSetAccelsForAction app "app.paste" ["<Shift><Ctrl>V"]
 
   preferencesAction <- simpleActionNew "preferences" Nothing
-  void $ onSimpleActionActivate preferencesAction (const $ showPreferencesDialog app)
+  void $ onSimpleActionActivate preferencesAction (const $ showPreferencesDialog mvarTMState)
   actionMapAddAction app preferencesAction
 
   enlargeFontAction <- simpleActionNew "enlargefont" Nothing
@@ -586,8 +586,10 @@ findBelow mvarTMState = do
       -- putStrLn $ "was match found: " <> tshow matchFound
       pure ()
 
-showPreferencesDialog :: Application -> IO ()
-showPreferencesDialog app = do
+showPreferencesDialog :: TMState -> IO ()
+showPreferencesDialog mvarTMState = do
+  tmState <- readMVar mvarTMState
+  let app = tmState ^. lensTMStateApp
   preferencesBuilder <- builderNewFromString preferencesText $ fromIntegral (length preferencesText)
   preferencesDialog <- objFromBuildUnsafe preferencesBuilder "preferences" Gtk.Dialog
   button <- objFromBuildUnsafe preferencesBuilder "close" Gtk.Button
