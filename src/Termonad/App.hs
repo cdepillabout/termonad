@@ -123,7 +123,7 @@ import Termonad.Types
   , tmStateApp
   , tmStateNotebook
   )
-import Termonad.XML (interfaceText, menuText)
+import Termonad.XML (interfaceText, menuText, preferencesText)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
@@ -392,8 +392,7 @@ setupTermonad tmConfig app win builder = do
   applicationSetAccelsForAction app "app.paste" ["<Shift><Ctrl>V"]
 
   preferencesAction <- simpleActionNew "preferences" Nothing
-  void $ onSimpleActionActivate preferencesAction $ \_ -> 
-      putStrLn "show preferences dialog"
+  void $ onSimpleActionActivate preferencesAction (const $ showPreferencesDialog app)
   actionMapAddAction app preferencesAction
 
   enlargeFontAction <- simpleActionNew "enlargefont" Nothing
@@ -585,6 +584,16 @@ findBelow mvarTMState = do
       _matchFound <- terminalSearchFindNext terminal
       -- putStrLn $ "was match found: " <> tshow matchFound
       pure ()
+
+showPreferencesDialog :: Application -> IO ()
+showPreferencesDialog app = do
+  preferencesBuilder <- builderNewFromString preferencesText $ fromIntegral (length preferencesText)
+  preferencesDialog <- objFromBuildUnsafe preferencesBuilder "preferences" Gtk.Dialog
+  button <- objFromBuildUnsafe preferencesBuilder "close" Gtk.Button
+  win <- applicationGetActiveWindow app
+  windowSetTransientFor preferencesDialog win
+  void $ dialogRun preferencesDialog
+  widgetDestroy preferencesDialog
 
 appStartup :: Application -> IO ()
 appStartup _app = pure ()
