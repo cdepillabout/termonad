@@ -588,15 +588,20 @@ findBelow mvarTMState = do
 
 showPreferencesDialog :: TMState -> IO ()
 showPreferencesDialog mvarTMState = do
+  -- Get app out of mvar
   tmState <- readMVar mvarTMState
   let app = tmState ^. lensTMStateApp
+  -- Create the preference dialog
   preferencesBuilder <- builderNewFromString preferencesText $ fromIntegral (length preferencesText)
   preferencesDialog <- objFromBuildUnsafe preferencesBuilder "preferences" Gtk.Dialog
-  button <- objFromBuildUnsafe preferencesBuilder "close" Gtk.Button
-  let closePrefencesWindow = widgetDestroy preferencesDialog
-  void $ onButtonClicked button closePrefencesWindow
+  closeButton <- objFromBuildUnsafe preferencesBuilder "close" Gtk.Button
+  -- Make the dialog modal
   win <- applicationGetActiveWindow app
   windowSetTransientFor preferencesDialog win
+  -- Set callbacks
+  let closePrefencesWindow = widgetDestroy preferencesDialog
+  void $ onButtonClicked closeButton closePrefencesWindow
+  -- Run dialog then close
   void $ dialogRun preferencesDialog
   closePrefencesWindow
 
