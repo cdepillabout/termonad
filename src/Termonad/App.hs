@@ -56,9 +56,12 @@ import GI.Gtk
   , onNotebookPageRemoved
   , onNotebookPageReordered
   , onNotebookSwitchPage
+  , onToggleButtonToggled
   , onWidgetDeleteEvent
   , setWidgetMargin
   , styleContextAddProviderForScreen
+  , toggleButtonGetActive
+  , toggleButtonSetActive
   , widgetDestroy
   , widgetGrabFocus
   , widgetSetCanFocus
@@ -595,12 +598,20 @@ showPreferencesDialog mvarTMState = do
   preferencesBuilder <- builderNewFromString preferencesText $ fromIntegral (length preferencesText)
   preferencesDialog <- objFromBuildUnsafe preferencesBuilder "preferences" Gtk.Dialog
   closeButton <- objFromBuildUnsafe preferencesBuilder "close" Gtk.Button
+  confirmExitCheckButton <- objFromBuildUnsafe preferencesBuilder "confirmExit" Gtk.CheckButton
   -- Make the dialog modal
   win <- applicationGetActiveWindow app
   windowSetTransientFor preferencesDialog win
+  -- Init with current state
+  let confirmExit = tmState ^. lensTMStateConfig . lensOptions . lensConfirmExit
+  toggleButtonSetActive confirmExitCheckButton confirmExit
   -- Set callbacks
   let closePrefencesWindow = widgetDestroy preferencesDialog
   void $ onButtonClicked closeButton closePrefencesWindow
+  void $ onToggleButtonToggled confirmExitCheckButton $ do
+    confirmExit <- toggleButtonGetActive confirmExitCheckButton
+    modifyMVar_ mvarTMState $ \tmState ->
+      pure $ tmState & lensTMStateConfig . lensOptions . lensConfirmExit .~ confirmExit 
   -- Run dialog then close
   void $ dialogRun preferencesDialog
   closePrefencesWindow

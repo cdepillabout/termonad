@@ -356,7 +356,7 @@ preferencesDoc =
               </packing>
             </child>
             <child>
-              <object class="GtkCheckButton">
+              <object class="GtkCheckButton" id="confirmExit">
                 <property name="label" translatable="yes">Confirm exit</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
