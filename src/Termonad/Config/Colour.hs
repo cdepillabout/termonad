@@ -199,7 +199,6 @@ defaultStandardColours = coloursFromBits 192 0
 defaultLightColours :: (Ord b, Floating b) => Vec N8 (AlphaColour b)
 defaultLightColours = coloursFromBits 192 63
 
-
 -- | Convert an 'AlphaColour' to a 'Colour'.
 --
 -- >>> sRGB24show $ pureColour (opaque green)
@@ -534,7 +533,7 @@ data ColourConfig c = ColourConfig
     -- ^ Background color of the cursor.  This is the color of the cursor
     -- itself.
   , foregroundColour :: !(Option c)
-    -- ^ Color of the default default foreground text in the terminal.
+    -- ^ Color of the default foreground text in the terminal.
   , backgroundColour :: !(Option c)
     -- ^ Background color for the terminal
   , palette :: !(Palette c)
