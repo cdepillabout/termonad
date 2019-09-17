@@ -299,6 +299,12 @@ main = do
 There are other example configuration files in the
 [example-config/](./example-config) directory.
 
+If you want to test what all the colors look like, you may find it convenient
+to use the
+[`print-console-colors`](http://hackage.haskell.org/package/print-console-colors)
+package, which provides an executable called `print-console-colors` that prints
+all of the colors for your terminal.
+
 ### Compiling Local Settings
 
 If you launch Termonad by calling `~/.local/bin/termonad`, it will try to

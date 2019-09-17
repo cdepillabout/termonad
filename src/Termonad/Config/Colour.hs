@@ -12,7 +12,14 @@
 -- import this module. Create a new 'ColourExtension' with the 'createColourExtension' function.
 -- Then add the 'ColourExtension' to your 'TMConfig' with the 'addColourExtension' function.
 --
--- See <https://github.com/cdepillabout/termonad/blob/master/example-config/ExampleColourExtension.hs this code> for a simple example.
+-- See
+-- <https://github.com/cdepillabout/termonad/blob/master/example-config/ExampleColourExtension.hs this code>
+-- for a simple example.
+--
+-- When setting colors, you may find it convenient to use the
+-- <http://hackage.haskell.org/package/print-console-colors print-console-colors>
+-- package, which provides an executable called @print-console-colors@ that prints
+-- all of the colors for your terminal.
 
 module Termonad.Config.Colour
   ( -- * Colour Config
