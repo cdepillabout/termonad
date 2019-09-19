@@ -476,6 +476,9 @@ preferencesDoc =
         </child>
       </object>
     </child>
+    <action-widgets>
+      <action-widget response="-3">close</action-widget>
+    </action-widgets>
   </object>
 </interface>
    |]
