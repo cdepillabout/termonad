@@ -5,7 +5,7 @@ module Termonad.App where
 import Termonad.Prelude
 
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
-import Control.Lens ((&), (.~), (^.), (^..))
+import Control.Lens ((&), (.~), (^.), (^..), over)
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
 import Data.Sequence (findIndexR)
 import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
@@ -596,19 +596,24 @@ showPreferencesDialog mvarTMState = do
   preferencesBuilder <- builderNewFromString preferencesText $ fromIntegral (length preferencesText)
   preferencesDialog <- objFromBuildUnsafe preferencesBuilder "preferences" Gtk.Dialog
   confirmExitCheckButton <- objFromBuildUnsafe preferencesBuilder "confirmExit" Gtk.CheckButton
+  showMenuCheckButton <- objFromBuildUnsafe preferencesBuilder "showMenu" Gtk.CheckButton
   -- Make the dialog modal
   win <- applicationGetActiveWindow app
   windowSetTransientFor preferencesDialog win
   -- Init with current state
-  let confirmExit = tmState ^. lensTMStateConfig . lensOptions . lensConfirmExit
-  toggleButtonSetActive confirmExitCheckButton confirmExit
+  let options = tmState ^. lensTMStateConfig . lensOptions
+  toggleButtonSetActive confirmExitCheckButton $ options ^. lensConfirmExit
+  toggleButtonSetActive showMenuCheckButton $ options ^. lensShowMenu
   -- Run dialog then close
   res <- dialogRun preferencesDialog
   -- When closing dialog copy the new settings
   when (toEnum (fromIntegral res) == Gtk.ResponseTypeAccept) $ do
     confirmExit <- toggleButtonGetActive confirmExitCheckButton
-    modifyMVar_ mvarTMState $ \tmState ->
-      pure $ tmState & lensTMStateConfig . lensOptions . lensConfirmExit .~ confirmExit 
+    showMenu <- toggleButtonGetActive showMenuCheckButton
+    modifyMVar_ mvarTMState $ return . over (lensTMStateConfig . lensOptions) 
+      ( (lensConfirmExit .~ confirmExit) 
+      . (lensShowMenu    .~ showMenu)
+      )
   widgetDestroy preferencesDialog
 
 appStartup :: Application -> IO ()

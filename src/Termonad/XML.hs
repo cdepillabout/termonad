@@ -391,7 +391,7 @@ preferencesDoc =
               </packing>
             </child>
             <child>
-              <object class="GtkCheckButton">
+              <object class="GtkCheckButton" id="showMenu">
                 <property name="label" translatable="yes">Show menu</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
