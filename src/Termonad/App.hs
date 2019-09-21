@@ -33,6 +33,7 @@ import GI.Gtk
   , applicationGetActiveWindow
   , applicationSetAccelsForAction
   , applicationSetMenubar
+  , applicationWindowSetShowMenubar
   , boxPackStart
   , builderNewFromString
   , builderSetApplication
@@ -428,10 +429,10 @@ setupTermonad tmConfig app win builder = do
   void $ onSimpleActionActivate aboutAction $ \_ -> showAboutDialog app
   actionMapAddAction app aboutAction
 
-  when (tmConfig ^. lensOptions . lensShowMenu) $ do
-    menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
-    menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
-    applicationSetMenubar app (Just menuModel)
+  menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
+  menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
+  applicationSetMenubar app (Just menuModel)
+  setShowMenuBar app $ tmConfig ^. lensOptions . lensShowMenu
 
   windowSetTitle win "Termonad"
 
@@ -587,6 +588,12 @@ findBelow mvarTMState = do
       -- putStrLn $ "was match found: " <> tshow matchFound
       pure ()
 
+setShowMenuBar :: Application -> Bool -> IO ()
+setShowMenuBar app visible = do
+  maybeWin <- applicationGetActiveWindow app
+  maybeAppWin <- join <$> mapM (castTo ApplicationWindow) maybeWin
+  mapM_ (`applicationWindowSetShowMenubar` visible) maybeAppWin
+
 showPreferencesDialog :: TMState -> IO ()
 showPreferencesDialog mvarTMState = do
   -- Get app out of mvar
@@ -598,8 +605,8 @@ showPreferencesDialog mvarTMState = do
   confirmExitCheckButton <- objFromBuildUnsafe preferencesBuilder "confirmExit" Gtk.CheckButton
   showMenuCheckButton <- objFromBuildUnsafe preferencesBuilder "showMenu" Gtk.CheckButton
   -- Make the dialog modal
-  win <- applicationGetActiveWindow app
-  windowSetTransientFor preferencesDialog win
+  maybeWin <- applicationGetActiveWindow app
+  windowSetTransientFor preferencesDialog maybeWin
   -- Init with current state
   let options = tmState ^. lensTMStateConfig . lensOptions
   toggleButtonSetActive confirmExitCheckButton $ options ^. lensConfirmExit
@@ -614,6 +621,7 @@ showPreferencesDialog mvarTMState = do
       ( (lensConfirmExit .~ confirmExit) 
       . (lensShowMenu    .~ showMenu)
       )
+    setShowMenuBar app showMenu
   widgetDestroy preferencesDialog
 
 appStartup :: Application -> IO ()
