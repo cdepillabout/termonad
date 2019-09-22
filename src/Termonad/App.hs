@@ -608,7 +608,8 @@ showPreferencesDialog mvarTMState = do
   preferencesDialog <- objFromBuildUnsafe preferencesBuilder "preferences" Gtk.Dialog
   confirmExitCheckButton <- objFromBuildUnsafe preferencesBuilder "confirmExit" Gtk.CheckButton
   showMenuCheckButton <- objFromBuildUnsafe preferencesBuilder "showMenu" Gtk.CheckButton
-  wordCharExceptionsEntry <- objFromBuildUnsafe preferencesBuilder "wordCharExceptions" Gtk.Entry
+  wordCharExceptionsEntryBuffer <- getEntryBuffer =<< 
+    objFromBuildUnsafe preferencesBuilder "wordCharExceptions" Gtk.Entry 
   -- Make the dialog modal
   maybeWin <- applicationGetActiveWindow app
   windowSetTransientFor preferencesDialog maybeWin
@@ -616,8 +617,7 @@ showPreferencesDialog mvarTMState = do
   let options = tmState ^. lensTMStateConfig . lensOptions
   toggleButtonSetActive confirmExitCheckButton $ options ^. lensConfirmExit
   toggleButtonSetActive showMenuCheckButton $ options ^. lensShowMenu
-  entryBuffer <- getEntryBuffer wordCharExceptionsEntry
-  entryBufferSetText entryBuffer (options ^. lensWordCharExceptions) $ -1 
+  entryBufferSetText wordCharExceptionsEntryBuffer (options ^. lensWordCharExceptions) $ -1 
   -- Run dialog then close
   res <- dialogRun preferencesDialog
   -- When closing dialog copy the new settings
@@ -625,7 +625,7 @@ showPreferencesDialog mvarTMState = do
     -- Get the settings from the widgets
     confirmExit        <- toggleButtonGetActive confirmExitCheckButton
     showMenu           <- toggleButtonGetActive showMenuCheckButton
-    wordCharExceptions <- entryBufferGetText entryBuffer
+    wordCharExceptions <- entryBufferGetText wordCharExceptionsEntryBuffer
     -- Apply changes to mvarTMState
     modifyMVar_ mvarTMState $ return . over (lensTMStateConfig . lensOptions) 
       ( (lensConfirmExit        .~ confirmExit) 
