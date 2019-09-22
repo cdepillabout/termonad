@@ -381,7 +381,7 @@ preferencesDoc =
               </packing>
             </child>
             <child>
-              <object class="GtkEntry">
+              <object class="GtkEntry" id="wordCharExceptions">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
               </object>

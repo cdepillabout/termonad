@@ -45,8 +45,11 @@ import GI.Gtk
   , dialogNew
   , dialogResponse
   , dialogRun
+  , entryBufferGetText
+  , entryBufferSetText
   , entryGetText
   , entryNew
+  , getEntryBuffer
   , gridAttachNextTo
   , gridNew
   , labelNew
@@ -109,6 +112,7 @@ import Termonad.Lenses
   , lensTMStateFontDesc
   , lensTMStateNotebook
   , lensTerm
+  , lensWordCharExceptions
   )
 import Termonad.Term (createTerm, relabelTabs, termExitFocused, setShowTabs)
 import Termonad.Types
@@ -604,6 +608,7 @@ showPreferencesDialog mvarTMState = do
   preferencesDialog <- objFromBuildUnsafe preferencesBuilder "preferences" Gtk.Dialog
   confirmExitCheckButton <- objFromBuildUnsafe preferencesBuilder "confirmExit" Gtk.CheckButton
   showMenuCheckButton <- objFromBuildUnsafe preferencesBuilder "showMenu" Gtk.CheckButton
+  wordCharExceptionsEntry <- objFromBuildUnsafe preferencesBuilder "wordCharExceptions" Gtk.Entry
   -- Make the dialog modal
   maybeWin <- applicationGetActiveWindow app
   windowSetTransientFor preferencesDialog maybeWin
@@ -611,16 +616,23 @@ showPreferencesDialog mvarTMState = do
   let options = tmState ^. lensTMStateConfig . lensOptions
   toggleButtonSetActive confirmExitCheckButton $ options ^. lensConfirmExit
   toggleButtonSetActive showMenuCheckButton $ options ^. lensShowMenu
+  entryBuffer <- getEntryBuffer wordCharExceptionsEntry
+  entryBufferSetText entryBuffer (options ^. lensWordCharExceptions) $ -1 
   -- Run dialog then close
   res <- dialogRun preferencesDialog
   -- When closing dialog copy the new settings
   when (toEnum (fromIntegral res) == Gtk.ResponseTypeAccept) $ do
-    confirmExit <- toggleButtonGetActive confirmExitCheckButton
-    showMenu <- toggleButtonGetActive showMenuCheckButton
+    -- Get the settings from the widgets
+    confirmExit        <- toggleButtonGetActive confirmExitCheckButton
+    showMenu           <- toggleButtonGetActive showMenuCheckButton
+    wordCharExceptions <- entryBufferGetText entryBuffer
+    -- Apply changes to mvarTMState
     modifyMVar_ mvarTMState $ return . over (lensTMStateConfig . lensOptions) 
-      ( (lensConfirmExit .~ confirmExit) 
-      . (lensShowMenu    .~ showMenu)
+      ( (lensConfirmExit        .~ confirmExit) 
+      . (lensShowMenu           .~ showMenu)
+      . (lensWordCharExceptions .~ wordCharExceptions)
       )
+    -- Update the app with new settings
     setShowMenuBar app showMenu
   widgetDestroy preferencesDialog
 
