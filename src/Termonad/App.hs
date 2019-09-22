@@ -108,6 +108,7 @@ import Termonad.Lenses
   , lensTMNotebookTabTerm
   , lensTMNotebookTabs
   , lensTMStateApp
+  , lensTMStateAppWin
   , lensTMStateConfig
   , lensTMStateFontDesc
   , lensTMStateNotebook
@@ -436,7 +437,8 @@ setupTermonad tmConfig app win builder = do
   menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
   menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
   applicationSetMenubar app (Just menuModel)
-  setShowMenuBar app $ tmConfig ^. lensOptions . lensShowMenu
+  let showMenu = tmConfig ^. lensOptions . lensShowMenu
+  applicationWindowSetShowMenubar win showMenu
 
   windowSetTitle win "Termonad"
 
@@ -633,7 +635,7 @@ showPreferencesDialog mvarTMState = do
       . (lensWordCharExceptions .~ wordCharExceptions)
       )
     -- Update the app with new settings
-    setShowMenuBar app showMenu
+    applicationWindowSetShowMenubar (tmState ^. lensTMStateAppWin) showMenu
   widgetDestroy preferencesDialog
 
 appStartup :: Application -> IO ()
