@@ -62,7 +62,7 @@ installing `stack` can be found on
 First, you must install the required GTK system libraries:
 
 ```sh
-$ pacman -S vte3
+$ pacman -S vte3 gobject-introspection
 ```
 
 In order to install Termonad, clone this repository and run `stack install`.
