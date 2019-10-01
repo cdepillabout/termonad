@@ -79,7 +79,7 @@ $ stack install
 First, you must install the required GTK system libraries:
 
 ```sh
-$ apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev
+$ apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
 ```
 
 In order to install Termonad, clone this repository and run `stack install`.
