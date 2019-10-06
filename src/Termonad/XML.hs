@@ -310,7 +310,7 @@ preferencesDoc =
             <property name="can_focus">False</property>
             <property name="column_homogeneous">True</property>
             <child>
-              <object class="GtkFontButton">
+              <object class="GtkFontButton" id="fontButton">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>

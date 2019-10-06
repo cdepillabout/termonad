@@ -5,7 +5,7 @@ module Termonad.App where
 import Termonad.Prelude
 
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
-import Control.Lens ((&), (.~), (^.), (^..), over)
+import Control.Lens ((&), (.~), (^.), (^..), (%~), over)
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
 import Data.Sequence (findIndexR)
 import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
@@ -49,6 +49,8 @@ import GI.Gtk
   , entryBufferSetText
   , entryGetText
   , entryNew
+  , fontChooserSetFontDesc
+  , fontChooserGetFontDesc
   , getEntryBuffer
   , gridAttachNextTo
   , gridNew
@@ -78,6 +80,7 @@ import qualified GI.Gtk as Gtk
 import GI.Pango
   ( FontDescription
   , pattern SCALE
+  , fontDescriptionGetFamily 
   , fontDescriptionGetSize
   , fontDescriptionGetSizeIsAbsolute
   , fontDescriptionNew
@@ -117,7 +120,7 @@ import Termonad.Lenses
   )
 import Termonad.Term (createTerm, relabelTabs, termExitFocused, setShowTabs)
 import Termonad.Types
-  ( FontConfig(fontFamily, fontSize)
+  ( FontConfig(..)
   , FontSize(FontSizePoints, FontSizeUnits)
   , TMConfig
   , TMNotebookTab
@@ -197,14 +200,7 @@ setFontDescSize fontDesc (FontSizeUnits units) =
 
 adjustFontDescSize :: (FontSize -> FontSize) -> FontDescription -> IO ()
 adjustFontDescSize f fontDesc = do
-  currSize <- fontDescriptionGetSize fontDesc
-  currAbsolute <- fontDescriptionGetSizeIsAbsolute fontDesc
-  let currFontSz =
-        if currAbsolute
-          then FontSizeUnits $ fromIntegral currSize / fromIntegral SCALE
-          else
-            let fontRatio :: Double = fromIntegral currSize / fromIntegral SCALE
-            in FontSizePoints $ round fontRatio
+  currFontSz <- fontSizeFromFontDescription fontDesc
   let newFontSz = f currFontSz
   setFontDescSize fontDesc newFontSz
 
@@ -221,6 +217,22 @@ modifyFontSizeForAllTerms modFontSizeFunc mvarTMState = do
           lensTMNotebookTabTerm .
           lensTerm
   foldMap (\vteTerm -> terminalSetFont vteTerm (Just fontDesc)) terms
+
+fontSizeFromFontDescription :: FontDescription -> IO FontSize
+fontSizeFromFontDescription fontDesc = do
+  currSize <- fontDescriptionGetSize fontDesc
+  currAbsolute <- fontDescriptionGetSizeIsAbsolute fontDesc
+  return $ if currAbsolute
+             then FontSizeUnits $ fromIntegral currSize / fromIntegral SCALE
+             else
+               let fontRatio :: Double = fromIntegral currSize / fromIntegral SCALE
+               in FontSizePoints $ round fontRatio
+
+fontConfigFromFontDescription :: FontDescription -> IO (Maybe FontConfig)
+fontConfigFromFontDescription fontDescription = do
+  fontSize <- fontSizeFromFontDescription fontDescription
+  maybeFontFamily <- fontDescriptionGetFamily fontDescription
+  return $ (`FontConfig` fontSize) <$> maybeFontFamily
 
 compareScrolledWinAndTab :: ScrolledWindow -> TMNotebookTab -> Bool
 compareScrolledWinAndTab scrollWin flTab =
@@ -612,10 +624,13 @@ showPreferencesDialog mvarTMState = do
   showMenuCheckButton <- objFromBuildUnsafe preferencesBuilder "showMenu" Gtk.CheckButton
   wordCharExceptionsEntryBuffer <- getEntryBuffer =<< 
     objFromBuildUnsafe preferencesBuilder "wordCharExceptions" Gtk.Entry 
+  fontButton <- objFromBuildUnsafe preferencesBuilder "fontButton" Gtk.FontButton
   -- Make the dialog modal
   maybeWin <- applicationGetActiveWindow app
   windowSetTransientFor preferencesDialog maybeWin
   -- Init with current state
+  fontDesc <- createFontDescFromConfig (tmState ^. lensTMStateConfig)
+  fontChooserSetFontDesc fontButton fontDesc
   let options = tmState ^. lensTMStateConfig . lensOptions
   toggleButtonSetActive confirmExitCheckButton $ options ^. lensConfirmExit
   toggleButtonSetActive showMenuCheckButton $ options ^. lensShowMenu
@@ -624,7 +639,8 @@ showPreferencesDialog mvarTMState = do
   res <- dialogRun preferencesDialog
   -- When closing dialog copy the new settings
   when (toEnum (fromIntegral res) == Gtk.ResponseTypeAccept) $ do
-    -- Get the settings from the widgets
+    maybeFontDesc      <- fontChooserGetFontDesc fontButton
+    maybeFontConfig    <- liftM join $ mapM fontConfigFromFontDescription maybeFontDesc
     confirmExit        <- toggleButtonGetActive confirmExitCheckButton
     showMenu           <- toggleButtonGetActive showMenuCheckButton
     wordCharExceptions <- entryBufferGetText wordCharExceptionsEntryBuffer
@@ -633,6 +649,7 @@ showPreferencesDialog mvarTMState = do
       ( (lensConfirmExit        .~ confirmExit) 
       . (lensShowMenu           .~ showMenu)
       . (lensWordCharExceptions .~ wordCharExceptions)
+      . (lensFontConfig         %~ (`fromMaybe` maybeFontConfig))
       )
     -- Update the app with new settings
     applicationWindowSetShowMenubar (tmState ^. lensTMStateAppWin) showMenu
