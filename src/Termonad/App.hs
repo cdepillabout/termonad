@@ -629,7 +629,7 @@ showPreferencesDialog mvarTMState = do
   showMenuCheckButton <- objFromBuildUnsafe preferencesBuilder "showMenu" Gtk.CheckButton
   wordCharExceptionsEntryBuffer <- getEntryBuffer =<< 
     objFromBuildUnsafe preferencesBuilder "wordCharExceptions" Gtk.Entry 
-  fontButton <- objFromBuildUnsafe preferencesBuilder "fontButton" Gtk.FontButton
+  fontButton <- objFromBuildUnsafe preferencesBuilder "font" Gtk.FontButton
   scrollbackLenSpinButton <- objFromBuildUnsafe preferencesBuilder "scrollbackLen" Gtk.SpinButton
   spinButtonSetAdjustment scrollbackLenSpinButton =<<
     adjustmentNew 0 0 (fromIntegral (maxBound :: Int)) 1 10 0 
