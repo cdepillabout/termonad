@@ -335,7 +335,7 @@ preferencesDoc =
               </packing>
             </child>
             <child>
-              <object class="GtkSpinButton">
+              <object class="GtkSpinButton" id="scrollbackLen">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
               </object>

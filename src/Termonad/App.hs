@@ -29,6 +29,7 @@ import GI.Gtk
   , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , aboutDialogNew
+  , adjustmentNew
   , applicationAddWindow
   , applicationGetActiveWindow
   , applicationSetAccelsForAction
@@ -63,6 +64,9 @@ import GI.Gtk
   , onNotebookSwitchPage
   , onWidgetDeleteEvent
   , setWidgetMargin
+  , spinButtonGetValueAsInt 
+  , spinButtonSetAdjustment 
+  , spinButtonSetValue 
   , styleContextAddProviderForScreen
   , toggleButtonGetActive
   , toggleButtonSetActive
@@ -108,6 +112,7 @@ import Termonad.Lenses
   , lensFontConfig
   , lensOptions
   , lensShowMenu
+  , lensScrollbackLen
   , lensTMNotebookTabTerm
   , lensTMNotebookTabs
   , lensTMStateApp
@@ -625,6 +630,9 @@ showPreferencesDialog mvarTMState = do
   wordCharExceptionsEntryBuffer <- getEntryBuffer =<< 
     objFromBuildUnsafe preferencesBuilder "wordCharExceptions" Gtk.Entry 
   fontButton <- objFromBuildUnsafe preferencesBuilder "fontButton" Gtk.FontButton
+  scrollbackLenSpinButton <- objFromBuildUnsafe preferencesBuilder "scrollbackLen" Gtk.SpinButton
+  spinButtonSetAdjustment scrollbackLenSpinButton =<<
+    adjustmentNew 0 0 (fromIntegral (maxBound :: Int)) 1 10 0 
   -- Make the dialog modal
   maybeWin <- applicationGetActiveWindow app
   windowSetTransientFor preferencesDialog maybeWin
@@ -632,6 +640,7 @@ showPreferencesDialog mvarTMState = do
   fontDesc <- createFontDescFromConfig (tmState ^. lensTMStateConfig)
   fontChooserSetFontDesc fontButton fontDesc
   let options = tmState ^. lensTMStateConfig . lensOptions
+  spinButtonSetValue scrollbackLenSpinButton $ fromIntegral $ options ^. lensScrollbackLen
   toggleButtonSetActive confirmExitCheckButton $ options ^. lensConfirmExit
   toggleButtonSetActive showMenuCheckButton $ options ^. lensShowMenu
   entryBufferSetText wordCharExceptionsEntryBuffer (options ^. lensWordCharExceptions) $ -1 
@@ -641,6 +650,7 @@ showPreferencesDialog mvarTMState = do
   when (toEnum (fromIntegral res) == Gtk.ResponseTypeAccept) $ do
     maybeFontDesc      <- fontChooserGetFontDesc fontButton
     maybeFontConfig    <- liftM join $ mapM fontConfigFromFontDescription maybeFontDesc
+    scrollbackLen      <- fromIntegral <$> spinButtonGetValueAsInt scrollbackLenSpinButton 
     confirmExit        <- toggleButtonGetActive confirmExitCheckButton
     showMenu           <- toggleButtonGetActive showMenuCheckButton
     wordCharExceptions <- entryBufferGetText wordCharExceptionsEntryBuffer
@@ -650,6 +660,7 @@ showPreferencesDialog mvarTMState = do
       . (lensShowMenu           .~ showMenu)
       . (lensWordCharExceptions .~ wordCharExceptions)
       . (lensFontConfig         %~ (`fromMaybe` maybeFontConfig))
+      . (lensScrollbackLen      .~ scrollbackLen)
       )
     -- Update the app with new settings
     applicationWindowSetShowMenubar (tmState ^. lensTMStateAppWin) showMenu
