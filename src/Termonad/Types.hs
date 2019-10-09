@@ -347,7 +347,7 @@ data ShowScrollbar
                         -- needed.
   | ShowScrollbarIfNeeded -- ^ Only show the scrollbar if there are too many
                           -- lines on the terminal to show all at once.
-  deriving (Eq, Show)
+  deriving (Bounded, Enum, Eq, Show)
 
 -- | Whether or not to show the tab bar for switching tabs.
 data ShowTabBar
