@@ -448,7 +448,7 @@ preferencesDoc =
               </packing>
             </child>
             <child>
-              <object class="GtkComboBoxText">
+              <object class="GtkComboBoxText" id="showTabBar">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
               </object>

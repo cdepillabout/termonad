@@ -355,7 +355,7 @@ data ShowTabBar
                     -- open.  This may be confusing if you plan on using multiple tabs.
   | ShowTabBarAlways -- ^ Always show the tab bar, even if you only have one tab open.
   | ShowTabBarIfNeeded  -- ^ Only show the tab bar if you have multiple tabs open.
-  deriving (Eq, Show)
+  deriving (Bounded, Enum, Eq, Show)
 
 -- | Configuration options for Termonad.
 --

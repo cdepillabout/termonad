@@ -117,6 +117,7 @@ import Termonad.Lenses
   , lensOptions
   , lensShowMenu
   , lensShowScrollbar
+  , lensShowTabBar
   , lensScrollbackLen
   , lensTMNotebookTabTerm
   , lensTMNotebookTabs
@@ -133,6 +134,7 @@ import Termonad.Types
   ( FontConfig(..)
   , FontSize(FontSizePoints, FontSizeUnits)
   , ShowScrollbar(..)
+  , ShowTabBar(..)
   , TMConfig
   , TMNotebookTab
   , TMState
@@ -623,19 +625,19 @@ setShowMenuBar app visible = do
   maybeAppWin <- join <$> mapM (castTo ApplicationWindow) maybeWin
   mapM_ (`applicationWindowSetShowMenubar` visible) maybeAppWin
 
-comboBoxFill :: ComboBoxText -> [(ShowScrollbar, Text)] -> IO ()
+comboBoxFill :: Show t => ComboBoxText -> [(t, Text)] -> IO ()
 comboBoxFill comboBox = mapM_ (\(value, textId) -> 
   comboBoxTextAppend comboBox (Just . pack . show $ value) textId) 
 
-comboBoxSetActive :: ComboBoxText -> ShowScrollbar -> IO ()
+comboBoxSetActive :: Show t => ComboBoxText -> t -> IO ()
 comboBoxSetActive cb = void . comboBoxSetActiveId cb . Just . pack . show 
 
-comboBoxGetActive :: ComboBoxText -> IO (Maybe ShowScrollbar)
+comboBoxGetActive :: (Show a, Enum a, Bounded a) => ComboBoxText -> IO (Maybe a)
 comboBoxGetActive = liftM (join . fmap findEnumFromId) . comboBoxGetActiveId  
   where
-    findEnumFromId :: Text -> Maybe ShowScrollbar
-    findEnumFromId label = find (\x -> pack (show x) == label) 
-      ([minBound..maxBound] :: [ShowScrollbar])
+    findEnumFromId label = find (\x -> pack (show x) == label) allValues
+    allValues :: (Bounded a, Enum a) => [a]
+    allValues = [minBound..]
 
 showPreferencesDialog :: TMState -> IO ()
 showPreferencesDialog mvarTMState = do
@@ -655,6 +657,11 @@ showPreferencesDialog mvarTMState = do
                                          , (ShowScrollbarAlways,   "Always")
                                          , (ShowScrollbarIfNeeded, "If needed")
                                          ]
+  showTabBarComboBoxText <- objFromBuildUnsafe preferencesBuilder "showTabBar" Gtk.ComboBoxText
+  comboBoxFill showTabBarComboBoxText [ (ShowTabBarNever,    "Never")
+                                      , (ShowTabBarAlways,   "Always")
+                                      , (ShowTabBarIfNeeded, "If needed")
+                                      ]
   scrollbackLenSpinButton <- objFromBuildUnsafe preferencesBuilder "scrollbackLen" Gtk.SpinButton
   spinButtonSetAdjustment scrollbackLenSpinButton =<<
     adjustmentNew 0 0 (fromIntegral (maxBound :: Int)) 1 10 0 
@@ -666,6 +673,7 @@ showPreferencesDialog mvarTMState = do
   fontChooserSetFontDesc fontButton fontDesc
   let options = tmState ^. lensTMStateConfig . lensOptions
   comboBoxSetActive showScrollbarComboBoxText $ options ^. lensShowScrollbar
+  comboBoxSetActive showTabBarComboBoxText $ options ^. lensShowTabBar
   spinButtonSetValue scrollbackLenSpinButton $ fromIntegral $ options ^. lensScrollbackLen
   toggleButtonSetActive confirmExitCheckButton $ options ^. lensConfirmExit
   toggleButtonSetActive showMenuCheckButton $ options ^. lensShowMenu
@@ -677,6 +685,7 @@ showPreferencesDialog mvarTMState = do
     maybeFontDesc      <- fontChooserGetFontDesc fontButton
     maybeFontConfig    <- liftM join $ mapM fontConfigFromFontDescription maybeFontDesc
     maybeShowScrollbar <- comboBoxGetActive showScrollbarComboBoxText 
+    maybeShowTabBar    <- comboBoxGetActive showTabBarComboBoxText 
     scrollbackLen      <- fromIntegral <$> spinButtonGetValueAsInt scrollbackLenSpinButton 
     confirmExit        <- toggleButtonGetActive confirmExitCheckButton
     showMenu           <- toggleButtonGetActive showMenuCheckButton
@@ -689,6 +698,7 @@ showPreferencesDialog mvarTMState = do
       . (lensFontConfig         %~ (`fromMaybe` maybeFontConfig))
       . (lensScrollbackLen      .~ scrollbackLen)
       . (lensShowScrollbar      %~ (`fromMaybe` maybeShowScrollbar))
+      . (lensShowTabBar         %~ (`fromMaybe` maybeShowTabBar))
       )
     -- Update the app with new settings
     applicationWindowSetShowMenubar (tmState ^. lensTMStateAppWin) showMenu
