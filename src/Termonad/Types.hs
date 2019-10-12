@@ -347,7 +347,7 @@ data ShowScrollbar
                         -- needed.
   | ShowScrollbarIfNeeded -- ^ Only show the scrollbar if there are too many
                           -- lines on the terminal to show all at once.
-  deriving (Bounded, Enum, Eq, Show)
+  deriving (Enum, Eq, Show)
 
 -- | Whether or not to show the tab bar for switching tabs.
 data ShowTabBar
@@ -355,7 +355,7 @@ data ShowTabBar
                     -- open.  This may be confusing if you plan on using multiple tabs.
   | ShowTabBarAlways -- ^ Always show the tab bar, even if you only have one tab open.
   | ShowTabBarIfNeeded  -- ^ Only show the tab bar if you have multiple tabs open.
-  deriving (Bounded, Enum, Eq, Show)
+  deriving (Enum, Eq, Show)
 
 -- | Configuration options for Termonad.
 --

@@ -458,7 +458,7 @@ preferencesDoc =
               </packing>
             </child>
             <child>
-              <object class="GtkComboBoxText">
+              <object class="GtkComboBoxText" id="cursorBlinkMode">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
               </object>

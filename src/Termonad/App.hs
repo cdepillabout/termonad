@@ -97,7 +97,8 @@ import GI.Pango
   , fontDescriptionSetAbsoluteSize
   )
 import GI.Vte
-  ( catchRegexError
+  ( CursorBlinkMode(..)
+  , catchRegexError
   , regexNewForSearch
   , terminalCopyClipboard
   , terminalPasteClipboard
@@ -113,6 +114,7 @@ import Termonad.Gtk (appNew, objFromBuildUnsafe)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Lenses
   ( lensConfirmExit
+  , lensCursorBlinkMode
   , lensFontConfig
   , lensOptions
   , lensShowMenu
@@ -632,12 +634,10 @@ comboBoxFill comboBox = mapM_ (\(value, textId) ->
 comboBoxSetActive :: Show t => ComboBoxText -> t -> IO ()
 comboBoxSetActive cb = void . comboBoxSetActiveId cb . Just . pack . show 
 
-comboBoxGetActive :: (Show a, Enum a, Bounded a) => ComboBoxText -> IO (Maybe a)
-comboBoxGetActive = liftM (join . fmap findEnumFromId) . comboBoxGetActiveId  
+comboBoxGetActive :: (Show a, Enum a) => ComboBoxText -> [a] -> IO (Maybe a)
+comboBoxGetActive cb values = liftM (join . fmap findEnumFromId) $ comboBoxGetActiveId cb
   where
-    findEnumFromId label = find (\x -> pack (show x) == label) allValues
-    allValues :: (Bounded a, Enum a) => [a]
-    allValues = [minBound..]
+    findEnumFromId label = find (\x -> pack (show x) == label) values
 
 showPreferencesDialog :: TMState -> IO ()
 showPreferencesDialog mvarTMState = do
@@ -662,6 +662,11 @@ showPreferencesDialog mvarTMState = do
                                       , (ShowTabBarAlways,   "Always")
                                       , (ShowTabBarIfNeeded, "If needed")
                                       ]
+  cursorBlinkModeComboBoxText <- objFromBuildUnsafe preferencesBuilder "cursorBlinkMode" Gtk.ComboBoxText
+  comboBoxFill cursorBlinkModeComboBoxText [ (CursorBlinkModeSystem, "System")
+                                           , (CursorBlinkModeOn,     "On")
+                                           , (CursorBlinkModeOff,    "Off")
+                                           ]
   scrollbackLenSpinButton <- objFromBuildUnsafe preferencesBuilder "scrollbackLen" Gtk.SpinButton
   spinButtonSetAdjustment scrollbackLenSpinButton =<<
     adjustmentNew 0 0 (fromIntegral (maxBound :: Int)) 1 10 0 
@@ -674,6 +679,7 @@ showPreferencesDialog mvarTMState = do
   let options = tmState ^. lensTMStateConfig . lensOptions
   comboBoxSetActive showScrollbarComboBoxText $ options ^. lensShowScrollbar
   comboBoxSetActive showTabBarComboBoxText $ options ^. lensShowTabBar
+  comboBoxSetActive cursorBlinkModeComboBoxText $ options ^. lensCursorBlinkMode
   spinButtonSetValue scrollbackLenSpinButton $ fromIntegral $ options ^. lensScrollbackLen
   toggleButtonSetActive confirmExitCheckButton $ options ^. lensConfirmExit
   toggleButtonSetActive showMenuCheckButton $ options ^. lensShowMenu
@@ -682,14 +688,15 @@ showPreferencesDialog mvarTMState = do
   res <- dialogRun preferencesDialog
   -- When closing dialog copy the new settings
   when (toEnum (fromIntegral res) == Gtk.ResponseTypeAccept) $ do
-    maybeFontDesc      <- fontChooserGetFontDesc fontButton
-    maybeFontConfig    <- liftM join $ mapM fontConfigFromFontDescription maybeFontDesc
-    maybeShowScrollbar <- comboBoxGetActive showScrollbarComboBoxText 
-    maybeShowTabBar    <- comboBoxGetActive showTabBarComboBoxText 
-    scrollbackLen      <- fromIntegral <$> spinButtonGetValueAsInt scrollbackLenSpinButton 
-    confirmExit        <- toggleButtonGetActive confirmExitCheckButton
-    showMenu           <- toggleButtonGetActive showMenuCheckButton
-    wordCharExceptions <- entryBufferGetText wordCharExceptionsEntryBuffer
+    maybeFontDesc        <- fontChooserGetFontDesc fontButton
+    maybeFontConfig      <- liftM join $ mapM fontConfigFromFontDescription maybeFontDesc
+    maybeShowScrollbar   <- comboBoxGetActive showScrollbarComboBoxText [ShowScrollbarNever ..]
+    maybeShowTabBar      <- comboBoxGetActive showTabBarComboBoxText [ShowTabBarNever ..]
+    maybeCursorBlinkMode <- comboBoxGetActive cursorBlinkModeComboBoxText [CursorBlinkModeSystem ..]
+    scrollbackLen        <- fromIntegral <$> spinButtonGetValueAsInt scrollbackLenSpinButton 
+    confirmExit          <- toggleButtonGetActive confirmExitCheckButton
+    showMenu             <- toggleButtonGetActive showMenuCheckButton
+    wordCharExceptions   <- entryBufferGetText wordCharExceptionsEntryBuffer
     -- Apply changes to mvarTMState
     modifyMVar_ mvarTMState $ return . over (lensTMStateConfig . lensOptions) 
       ( (lensConfirmExit        .~ confirmExit) 
@@ -699,6 +706,7 @@ showPreferencesDialog mvarTMState = do
       . (lensScrollbackLen      .~ scrollbackLen)
       . (lensShowScrollbar      %~ (`fromMaybe` maybeShowScrollbar))
       . (lensShowTabBar         %~ (`fromMaybe` maybeShowTabBar))
+      . (lensCursorBlinkMode    %~ (`fromMaybe` maybeCursorBlinkMode))
       )
     -- Update the app with new settings
     applicationWindowSetShowMenubar (tmState ^. lensTMStateAppWin) showMenu
