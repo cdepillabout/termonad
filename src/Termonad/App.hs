@@ -25,6 +25,7 @@ import GI.Gtk
   , ApplicationWindow(ApplicationWindow)
   , Box(Box)
   , ComboBoxText
+  , PolicyType(PolicyTypeAutomatic)
   , PositionType(PositionTypeRight)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
   , ScrolledWindow(ScrolledWindow)
@@ -67,6 +68,7 @@ import GI.Gtk
   , onNotebookPageReordered
   , onNotebookSwitchPage
   , onWidgetDeleteEvent
+  , scrolledWindowSetPolicy
   , setWidgetMargin
   , spinButtonGetValueAsInt 
   , spinButtonSetAdjustment 
@@ -125,8 +127,9 @@ import Termonad.Lenses
   , lensShowTabBar
   , lensScrollbackLen
   , lensTMNotebook
-  , lensTMNotebookTabTerm
+  , lensTMNotebookTabTermContainer
   , lensTMNotebookTabs
+  , lensTMNotebookTabTerm
   , lensTMStateApp
   , lensTMStateAppWin
   , lensTMStateConfig
@@ -135,7 +138,13 @@ import Termonad.Lenses
   , lensTerm
   , lensWordCharExceptions
   )
-import Termonad.Term (createTerm, relabelTabs, termExitFocused, setShowTabs)
+import Termonad.Term 
+  ( createTerm
+  , relabelTabs
+  , termExitFocused
+  , setShowTabs
+  , showScrollbarToPolicy 
+  )
 import Termonad.Types
   ( FontConfig(..)
   , FontSize(FontSizePoints, FontSizeUnits)
@@ -646,27 +655,30 @@ comboBoxGetActive cb values = liftM (join . fmap findEnumFromId) $ comboBoxGetAc
 applyNewPreferences :: TMState -> IO ()
 applyNewPreferences mvarTMState = do
   tmState <- readMVar mvarTMState
-  let appWin = tmState ^. lensTMStateAppWin
-      config = tmState ^. lensTMStateConfig
-      options = config ^. lensOptions
-      notebook = tmState ^. lensTMStateNotebook ^. lensTMNotebook
+  let appWin       = tmState ^. lensTMStateAppWin
+      config       = tmState ^. lensTMStateConfig
+      notebook     = tmState ^. lensTMStateNotebook ^. lensTMNotebook
       tabFocusList = tmState ^. lensTMStateNotebook ^. lensTMNotebookTabs
-      showMenu = options ^. lensShowMenu
+      showMenu     = config  ^. lensOptions ^. lensShowMenu
   applicationWindowSetShowMenubar appWin showMenu
-  foldMap (applyNewPreferencesToTab mvarTMState) tabFocusList
   setShowTabs config notebook
+  -- Sets the remaining preferences to each tab
+  foldMap (applyNewPreferencesToTab mvarTMState) tabFocusList
 
 applyNewPreferencesToTab :: TMState -> TMNotebookTab -> IO ()
 applyNewPreferencesToTab mvarTMState tab = do
   tmState <- readMVar mvarTMState
-  let term = tab ^. lensTMNotebookTabTerm ^. lensTerm
-      config = tmState ^. lensTMStateConfig
-      options = config ^. lensOptions
+  let term        = tab ^. lensTMNotebookTabTerm ^. lensTerm
+      scrolledWin = tab ^. lensTMNotebookTabTermContainer 
+      config      = tmState ^. lensTMStateConfig
+      options     = config ^. lensOptions
   fontDesc <- createFontDescFromConfig config
   terminalSetFont term (Just fontDesc)
   terminalSetCursorBlinkMode term (options ^. lensCursorBlinkMode)
   terminalSetWordCharExceptions term (options ^. lensWordCharExceptions)
   terminalSetScrollbackLines term (fromIntegral (options ^. lensScrollbackLen))
+  let vScrollbarPolicy = showScrollbarToPolicy (options ^. lensShowScrollbar)
+  scrolledWindowSetPolicy scrolledWin PolicyTypeAutomatic vScrollbarPolicy
 
 showPreferencesDialog :: TMState -> IO ()
 showPreferencesDialog mvarTMState = do
