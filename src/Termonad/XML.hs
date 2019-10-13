@@ -473,6 +473,24 @@ preferencesDoc =
                 <property name="top_attach">7</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Warning: these settings will be used for current session only. To make them permanent, set them in ~/.config/termonad/termonad.hs</property>
+                <property name="justify">fill</property>
+                <property name="wrap">True</property>
+                <property name="max_width_chars">30</property>
+                <attributes>
+                  <attribute name="foreground" value="#ffff00000000"/>
+                </attributes>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">8</property>
+                <property name="width">2</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="expand">False</property>
