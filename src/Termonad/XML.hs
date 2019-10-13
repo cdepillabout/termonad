@@ -285,8 +285,8 @@ preferencesDoc =
               <placeholder/>
             </child>
             <child>
-              <object class="GtkButton" id="close">
-                <property name="label">gtk-close</property>
+              <object class="GtkButton" id="ok">
+                <property name="label">gtk-ok</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
@@ -478,7 +478,7 @@ preferencesDoc =
       </object>
     </child>
     <action-widgets>
-      <action-widget response="-3">close</action-widget>
+      <action-widget response="-3">ok</action-widget>
     </action-widgets>
   </object>
 </interface>
