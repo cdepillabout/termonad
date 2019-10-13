@@ -267,6 +267,7 @@ preferencesDoc =
   <requires lib="gtk+" version="3.20"/>
   <object class="GtkDialog" id="preferences">
     <property name="can_focus">False</property>
+    <property name="title" translatable="yes">Preferences</property>
     <property name="type_hint">dialog</property>
     <child>
       <placeholder/>
