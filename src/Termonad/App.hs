@@ -106,7 +106,10 @@ import GI.Vte
   , terminalSearchFindPrevious
   , terminalSearchSetRegex
   , terminalSearchSetWrapAround
+  , terminalSetCursorBlinkMode 
   , terminalSetFont
+  , terminalSetScrollbackLines 
+  , terminalSetWordCharExceptions   
   )
 
 import Paths_termonad (getDataFileName)
@@ -121,6 +124,7 @@ import Termonad.Lenses
   , lensShowScrollbar
   , lensShowTabBar
   , lensScrollbackLen
+  , lensTMNotebook
   , lensTMNotebookTabTerm
   , lensTMNotebookTabs
   , lensTMStateApp
@@ -639,6 +643,31 @@ comboBoxGetActive cb values = liftM (join . fmap findEnumFromId) $ comboBoxGetAc
   where
     findEnumFromId label = find (\x -> pack (show x) == label) values
 
+applyNewPreferences :: TMState -> IO ()
+applyNewPreferences mvarTMState = do
+  tmState <- readMVar mvarTMState
+  let appWin = tmState ^. lensTMStateAppWin
+      config = tmState ^. lensTMStateConfig
+      options = config ^. lensOptions
+      notebook = tmState ^. lensTMStateNotebook ^. lensTMNotebook
+      tabFocusList = tmState ^. lensTMStateNotebook ^. lensTMNotebookTabs
+      showMenu = options ^. lensShowMenu
+  applicationWindowSetShowMenubar appWin showMenu
+  foldMap (applyNewPreferencesToTab mvarTMState) tabFocusList
+  setShowTabs config notebook
+
+applyNewPreferencesToTab :: TMState -> TMNotebookTab -> IO ()
+applyNewPreferencesToTab mvarTMState tab = do
+  tmState <- readMVar mvarTMState
+  let term = tab ^. lensTMNotebookTabTerm ^. lensTerm
+      config = tmState ^. lensTMStateConfig
+      options = config ^. lensOptions
+  fontDesc <- createFontDescFromConfig config
+  terminalSetFont term (Just fontDesc)
+  terminalSetCursorBlinkMode term (options ^. lensCursorBlinkMode)
+  terminalSetWordCharExceptions term (options ^. lensWordCharExceptions)
+  terminalSetScrollbackLines term (fromIntegral (options ^. lensScrollbackLen))
+
 showPreferencesDialog :: TMState -> IO ()
 showPreferencesDialog mvarTMState = do
   -- Get app out of mvar
@@ -709,7 +738,7 @@ showPreferencesDialog mvarTMState = do
       . (lensCursorBlinkMode    %~ (`fromMaybe` maybeCursorBlinkMode))
       )
     -- Update the app with new settings
-    applicationWindowSetShowMenubar (tmState ^. lensTMStateAppWin) showMenu
+    applyNewPreferences mvarTMState
   widgetDestroy preferencesDialog
 
 appStartup :: Application -> IO ()
