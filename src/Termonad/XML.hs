@@ -275,8 +275,12 @@ preferencesDoc =
     <child internal-child="vbox">
       <object class="GtkBox">
         <property name="can_focus">False</property>
+        <property name="margin_left">6</property>
+        <property name="margin_right">6</property>
+        <property name="margin_top">6</property>
+        <property name="margin_bottom">6</property>
         <property name="orientation">vertical</property>
-        <property name="spacing">2</property>
+        <property name="spacing">6</property>
         <child internal-child="action_area">
           <object class="GtkButtonBox">
             <property name="can_focus">False</property>
@@ -309,7 +313,8 @@ preferencesDoc =
           <object class="GtkGrid">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="column_homogeneous">True</property>
+            <property name="row_spacing">6</property>
+            <property name="column_spacing">6</property>
             <child>
               <object class="GtkFontButton" id="font">
                 <property name="visible">True</property>
