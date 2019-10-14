@@ -668,11 +668,10 @@ applyNewPreferences mvarTMState = do
 applyNewPreferencesToTab :: TMState -> TMNotebookTab -> IO ()
 applyNewPreferencesToTab mvarTMState tab = do
   tmState <- readMVar mvarTMState
-  let term        = tab ^. lensTMNotebookTabTerm ^. lensTerm
+  let fontDesc    = tmState ^. lensTMStateFontDesc
+      term        = tab ^. lensTMNotebookTabTerm ^. lensTerm
       scrolledWin = tab ^. lensTMNotebookTabTermContainer 
-      config      = tmState ^. lensTMStateConfig
-      options     = config ^. lensOptions
-  fontDesc <- createFontDescFromConfig config
+      options     = tmState ^. lensTMStateConfig ^. lensOptions
   terminalSetFont term (Just fontDesc)
   terminalSetCursorBlinkMode term (options ^. lensCursorBlinkMode)
   terminalSetWordCharExceptions term (options ^. lensWordCharExceptions)
@@ -715,8 +714,7 @@ showPreferencesDialog mvarTMState = do
   maybeWin <- applicationGetActiveWindow app
   windowSetTransientFor preferencesDialog maybeWin
   -- Init with current state
-  fontDesc <- createFontDescFromConfig (tmState ^. lensTMStateConfig)
-  fontChooserSetFontDesc fontButton fontDesc
+  fontChooserSetFontDesc fontButton (tmState ^. lensTMStateFontDesc)
   let options = tmState ^. lensTMStateConfig . lensOptions
   comboBoxSetActive showScrollbarComboBoxText $ options ^. lensShowScrollbar
   comboBoxSetActive showTabBarComboBoxText $ options ^. lensShowTabBar
@@ -739,16 +737,18 @@ showPreferencesDialog mvarTMState = do
     showMenu             <- toggleButtonGetActive showMenuCheckButton
     wordCharExceptions   <- entryBufferGetText wordCharExceptionsEntryBuffer
     -- Apply changes to mvarTMState
-    modifyMVar_ mvarTMState $ return . over (lensTMStateConfig . lensOptions) 
-      ( (lensConfirmExit        .~ confirmExit) 
-      . (lensShowMenu           .~ showMenu)
-      . (lensWordCharExceptions .~ wordCharExceptions)
-      . (lensFontConfig         %~ (`fromMaybe` maybeFontConfig))
-      . (lensScrollbackLen      .~ scrollbackLen)
-      . (lensShowScrollbar      %~ (`fromMaybe` maybeShowScrollbar))
-      . (lensShowTabBar         %~ (`fromMaybe` maybeShowTabBar))
-      . (lensCursorBlinkMode    %~ (`fromMaybe` maybeCursorBlinkMode))
-      )
+    modifyMVar_ mvarTMState $ return
+      . over lensTMStateFontDesc (`fromMaybe` maybeFontDesc) 
+      . over (lensTMStateConfig . lensOptions) 
+        ( (lensConfirmExit        .~ confirmExit) 
+        . (lensShowMenu           .~ showMenu)
+        . (lensWordCharExceptions .~ wordCharExceptions)
+        . (lensFontConfig         %~ (`fromMaybe` maybeFontConfig))
+        . (lensScrollbackLen      .~ scrollbackLen)
+        . (lensShowScrollbar      %~ (`fromMaybe` maybeShowScrollbar))
+        . (lensShowTabBar         %~ (`fromMaybe` maybeShowTabBar))
+        . (lensCursorBlinkMode    %~ (`fromMaybe` maybeCursorBlinkMode))
+        ) 
     -- Update the app with new settings
     applyNewPreferences mvarTMState
   widgetDestroy preferencesDialog
