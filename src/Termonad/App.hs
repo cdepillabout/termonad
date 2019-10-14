@@ -640,13 +640,23 @@ setShowMenuBar app visible = do
   maybeAppWin <- join <$> mapM (castTo ApplicationWindow) maybeWin
   mapM_ (`applicationWindowSetShowMenubar` visible) maybeAppWin
 
+-- | Fill a combo box with ids and labels
+-- 
+-- The ids are stored in the combobox as Text, so their type should be an
+-- instance of the Show type class
 comboBoxFill :: Show t => ComboBoxText -> [(t, Text)] -> IO ()
 comboBoxFill comboBox = mapM_ (\(value, textId) -> 
   comboBoxTextAppend comboBox (Just . pack . show $ value) textId) 
 
+-- | Set the current active item in a combobox given an input id
 comboBoxSetActive :: Show t => ComboBoxText -> t -> IO ()
 comboBoxSetActive cb = void . comboBoxSetActiveId cb . Just . pack . show 
 
+-- | Get the current active item in a combobox
+-- 
+-- The list of values to be searched in the combobox must be given as a
+-- parameter. These values are converted to Text then compared to the current
+-- id.
 comboBoxGetActive :: (Show a, Enum a) => ComboBoxText -> [a] -> IO (Maybe a)
 comboBoxGetActive cb values = liftM (join . fmap findEnumFromId) $ comboBoxGetActiveId cb
   where
@@ -679,6 +689,10 @@ applyNewPreferencesToTab mvarTMState tab = do
   let vScrollbarPolicy = showScrollbarToPolicy (options ^. lensShowScrollbar)
   scrolledWindowSetPolicy scrolledWin PolicyTypeAutomatic vScrollbarPolicy
 
+-- | Show the preferences dialog. 
+--
+-- When the user clics on the Ok button, it copies the new settings to TMState.
+-- Then apply them to the current terminals.
 showPreferencesDialog :: TMState -> IO ()
 showPreferencesDialog mvarTMState = do
   -- Get app out of mvar
@@ -725,7 +739,7 @@ showPreferencesDialog mvarTMState = do
   entryBufferSetText wordCharExceptionsEntryBuffer (options ^. lensWordCharExceptions) $ -1 
   -- Run dialog then close
   res <- dialogRun preferencesDialog
-  -- When closing dialog copy the new settings
+  -- When closing the dialog get the new settings
   when (toEnum (fromIntegral res) == Gtk.ResponseTypeAccept) $ do
     maybeFontDesc        <- fontChooserGetFontDesc fontButton
     maybeFontConfig      <- liftM join $ mapM fontConfigFromFontDescription maybeFontDesc
@@ -736,7 +750,7 @@ showPreferencesDialog mvarTMState = do
     confirmExit          <- toggleButtonGetActive confirmExitCheckButton
     showMenu             <- toggleButtonGetActive showMenuCheckButton
     wordCharExceptions   <- entryBufferGetText wordCharExceptionsEntryBuffer
-    -- Apply changes to mvarTMState
+    -- Apply the changes to mvarTMState
     modifyMVar_ mvarTMState $ return
       . over lensTMStateFontDesc (`fromMaybe` maybeFontDesc) 
       . over (lensTMStateConfig . lensOptions) 
