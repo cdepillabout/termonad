@@ -13,12 +13,27 @@
 
 with (import ./nixpkgs.nix {});
 
+# stack needs to be version 1.9.3, because versions greater than two can't be
+# re-execed in a nix shell:
+#
+#https://github.com/commercialhaskell/stack/issues/5000
+
 let
+  nixpkgs-19-03-tarball = builtins.fetchTarball {
+    # Channel nixos-19.03 as of 2019/08/12.
+    url = "https://github.com/NixOS/nixpkgs/archive/56d94c8c69f8cac518027d191e2f8de678b56088.tar.gz";
+    sha256 = "1c812ssgmnmh97sarmp8jcykk0g57m8rsbfjg9ql9996ig6crsmi";
+  };
+
+  nixpkgs-19-03 = import nixpkgs-19-03-tarball {};
+
+  stack = nixpkgs-19-03.stack;
+
   fhsStack =
     buildFHSUserEnv {
       name = "stack";
       runScript = "stack";
-      targetPkgs = pkgs: with pkgs; [
+      targetPkgs = pkgs: (with pkgs; [
           binutils
           cairo
           cairo.dev
@@ -35,9 +50,11 @@ let
           pango
           pcre2
           pkgconfig
-          stack
+          # stack
           termonadKnownWorkingHaskellPkgSet.ghc
           zlib
+      ]) ++ [
+        stack
       ] ++
         stdenv.lib.optional
           (stdenv.hostPlatform.libc == "glibc")
