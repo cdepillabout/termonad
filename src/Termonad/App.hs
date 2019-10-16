@@ -24,11 +24,16 @@ import GI.Gtk
   ( Application
   , ApplicationWindow(ApplicationWindow)
   , Box(Box)
-  , ComboBoxText
+  , CheckButton(CheckButton)
+  , ComboBoxText(ComboBoxText)
+  , Dialog(Dialog)
+  , Entry(Entry)
+  , FontButton(FontButton)
   , PolicyType(PolicyTypeAutomatic)
   , PositionType(PositionTypeRight)
-  , ResponseType(ResponseTypeNo, ResponseTypeYes)
+  , ResponseType(ResponseTypeAccept, ResponseTypeNo, ResponseTypeYes)
   , ScrolledWindow(ScrolledWindow)
+  , SpinButton(SpinButton)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , aboutDialogNew
   , adjustmentNew
@@ -642,34 +647,40 @@ setShowMenuBar app visible = do
 
 -- | Fill a combo box with ids and labels
 --
--- The ids are stored in the combobox as Text, so their type should be an
--- instance of the Show type class
-comboBoxFill :: Show t => ComboBoxText -> [(t, Text)] -> IO ()
-comboBoxFill comboBox = mapM_ (\(value, textId) ->
-  comboBoxTextAppend comboBox (Just . pack . show $ value) textId)
+-- The ids are stored in the combobox as 'Text', so their type should be an
+-- instance of the 'Show' type class.
+comboBoxFill :: forall a. Show a => ComboBoxText -> [(a, Text)] -> IO ()
+comboBoxFill comboBox = mapM_ go
+  where
+    go :: (a, Text) -> IO ()
+    go (value, textId) =
+      comboBoxTextAppend comboBox (Just $ tshow value) textId
 
--- | Set the current active item in a combobox given an input id
-comboBoxSetActive :: Show t => ComboBoxText -> t -> IO ()
-comboBoxSetActive cb = void . comboBoxSetActiveId cb . Just . pack . show
+-- | Set the current active item in a combobox given an input id.
+comboBoxSetActive :: Show a => ComboBoxText -> a -> IO ()
+comboBoxSetActive cb = void . comboBoxSetActiveId cb . Just . tshow
 
 -- | Get the current active item in a combobox
 --
 -- The list of values to be searched in the combobox must be given as a
 -- parameter. These values are converted to Text then compared to the current
 -- id.
-comboBoxGetActive :: (Show a, Enum a) => ComboBoxText -> [a] -> IO (Maybe a)
-comboBoxGetActive cb values = liftM (join . fmap findEnumFromId) $ comboBoxGetActiveId cb
+comboBoxGetActive
+  :: forall a. (Show a, Enum a) => ComboBoxText -> [a] -> IO (Maybe a)
+comboBoxGetActive cb values =
+  liftM (join . fmap findEnumFromId) $ comboBoxGetActiveId cb
   where
-    findEnumFromId label = find (\x -> pack (show x) == label) values
+    findEnumFromId :: Text -> Maybe a
+    findEnumFromId label = find (\x -> tshow x == label) values
 
 applyNewPreferences :: TMState -> IO ()
 applyNewPreferences mvarTMState = do
   tmState <- readMVar mvarTMState
-  let appWin       = tmState ^. lensTMStateAppWin
-      config       = tmState ^. lensTMStateConfig
-      notebook     = tmState ^. lensTMStateNotebook ^. lensTMNotebook
+  let appWin = tmState ^. lensTMStateAppWin
+      config = tmState ^. lensTMStateConfig
+      notebook = tmState ^. lensTMStateNotebook ^. lensTMNotebook
       tabFocusList = tmState ^. lensTMStateNotebook ^. lensTMNotebookTabs
-      showMenu     = config  ^. lensOptions ^. lensShowMenu
+      showMenu = config  ^. lensOptions ^. lensShowMenu
   applicationWindowSetShowMenubar appWin showMenu
   setShowTabs config notebook
   -- Sets the remaining preferences to each tab
@@ -691,80 +702,113 @@ applyNewPreferencesToTab mvarTMState tab = do
 
 -- | Show the preferences dialog.
 --
--- When the user clics on the Ok button, it copies the new settings to TMState.
+-- When the user clicks on the Ok button, it copies the new settings to TMState.
 -- Then apply them to the current terminals.
 showPreferencesDialog :: TMState -> IO ()
 showPreferencesDialog mvarTMState = do
   -- Get app out of mvar
   tmState <- readMVar mvarTMState
   let app = tmState ^. lensTMStateApp
+
   -- Create the preference dialog and get some widgets
-  preferencesBuilder <- builderNewFromString preferencesText $ fromIntegral (length preferencesText)
-  preferencesDialog <- objFromBuildUnsafe preferencesBuilder "preferences" Gtk.Dialog
-  confirmExitCheckButton <- objFromBuildUnsafe preferencesBuilder "confirmExit" Gtk.CheckButton
-  showMenuCheckButton <- objFromBuildUnsafe preferencesBuilder "showMenu" Gtk.CheckButton
-  wordCharExceptionsEntryBuffer <- getEntryBuffer =<<
-    objFromBuildUnsafe preferencesBuilder "wordCharExceptions" Gtk.Entry
-  fontButton <- objFromBuildUnsafe preferencesBuilder "font" Gtk.FontButton
-  showScrollbarComboBoxText <- objFromBuildUnsafe preferencesBuilder "showScrollbar" Gtk.ComboBoxText
-  comboBoxFill showScrollbarComboBoxText [ (ShowScrollbarNever,    "Never")
-                                         , (ShowScrollbarAlways,   "Always")
-                                         , (ShowScrollbarIfNeeded, "If needed")
-                                         ]
-  showTabBarComboBoxText <- objFromBuildUnsafe preferencesBuilder "showTabBar" Gtk.ComboBoxText
-  comboBoxFill showTabBarComboBoxText [ (ShowTabBarNever,    "Never")
-                                      , (ShowTabBarAlways,   "Always")
-                                      , (ShowTabBarIfNeeded, "If needed")
-                                      ]
-  cursorBlinkModeComboBoxText <- objFromBuildUnsafe preferencesBuilder "cursorBlinkMode" Gtk.ComboBoxText
-  comboBoxFill cursorBlinkModeComboBoxText [ (CursorBlinkModeSystem, "System")
-                                           , (CursorBlinkModeOn,     "On")
-                                           , (CursorBlinkModeOff,    "Off")
-                                           ]
-  scrollbackLenSpinButton <- objFromBuildUnsafe preferencesBuilder "scrollbackLen" Gtk.SpinButton
-  spinButtonSetAdjustment scrollbackLenSpinButton =<<
-    adjustmentNew 0 0 (fromIntegral (maxBound :: Int)) 1 10 0
+  preferencesBuilder <-
+    builderNewFromString preferencesText $ fromIntegral (length preferencesText)
+  preferencesDialog <-
+    objFromBuildUnsafe preferencesBuilder "preferences" Dialog
+  confirmExitCheckButton <-
+    objFromBuildUnsafe preferencesBuilder "confirmExit" CheckButton
+  showMenuCheckButton <-
+    objFromBuildUnsafe preferencesBuilder "showMenu" CheckButton
+  wordCharExceptionsEntryBuffer <-
+    objFromBuildUnsafe preferencesBuilder "wordCharExceptions" Entry >>=
+      getEntryBuffer
+  fontButton <- objFromBuildUnsafe preferencesBuilder "font" FontButton
+  showScrollbarComboBoxText <-
+    objFromBuildUnsafe preferencesBuilder "showScrollbar" ComboBoxText
+  comboBoxFill
+    showScrollbarComboBoxText
+    [ (ShowScrollbarNever, "Never")
+    , (ShowScrollbarAlways, "Always")
+    , (ShowScrollbarIfNeeded, "If needed")
+    ]
+  showTabBarComboBoxText <-
+    objFromBuildUnsafe preferencesBuilder "showTabBar" ComboBoxText
+  comboBoxFill
+    showTabBarComboBoxText
+    [ (ShowTabBarNever, "Never")
+    , (ShowTabBarAlways, "Always")
+    , (ShowTabBarIfNeeded, "If needed")
+    ]
+  cursorBlinkModeComboBoxText <-
+    objFromBuildUnsafe preferencesBuilder "cursorBlinkMode" ComboBoxText
+  comboBoxFill
+    cursorBlinkModeComboBoxText
+    [ (CursorBlinkModeSystem, "System")
+    , (CursorBlinkModeOn, "On")
+    , (CursorBlinkModeOff, "Off")
+    ]
+  scrollbackLenSpinButton <-
+    objFromBuildUnsafe preferencesBuilder "scrollbackLen" SpinButton
+  adjustmentNew 0 0 (fromIntegral (maxBound :: Int)) 1 10 0 >>=
+    spinButtonSetAdjustment scrollbackLenSpinButton
+
   -- Make the dialog modal
   maybeWin <- applicationGetActiveWindow app
   windowSetTransientFor preferencesDialog maybeWin
+
   -- Init with current state
   fontChooserSetFontDesc fontButton (tmState ^. lensTMStateFontDesc)
   let options = tmState ^. lensTMStateConfig . lensOptions
   comboBoxSetActive showScrollbarComboBoxText $ options ^. lensShowScrollbar
   comboBoxSetActive showTabBarComboBoxText $ options ^. lensShowTabBar
   comboBoxSetActive cursorBlinkModeComboBoxText $ options ^. lensCursorBlinkMode
-  spinButtonSetValue scrollbackLenSpinButton $ fromIntegral $ options ^. lensScrollbackLen
+  spinButtonSetValue
+    scrollbackLenSpinButton
+    (fromIntegral $ options ^. lensScrollbackLen)
   toggleButtonSetActive confirmExitCheckButton $ options ^. lensConfirmExit
   toggleButtonSetActive showMenuCheckButton $ options ^. lensShowMenu
-  entryBufferSetText wordCharExceptionsEntryBuffer (options ^. lensWordCharExceptions) $ -1
+  entryBufferSetText
+    wordCharExceptionsEntryBuffer
+    (options ^. lensWordCharExceptions)
+    (-1)
+
   -- Run dialog then close
   res <- dialogRun preferencesDialog
+
   -- When closing the dialog get the new settings
-  when (toEnum (fromIntegral res) == Gtk.ResponseTypeAccept) $ do
-    maybeFontDesc        <- fontChooserGetFontDesc fontButton
-    maybeFontConfig      <- liftM join $ mapM fontConfigFromFontDescription maybeFontDesc
-    maybeShowScrollbar   <- comboBoxGetActive showScrollbarComboBoxText [ShowScrollbarNever ..]
-    maybeShowTabBar      <- comboBoxGetActive showTabBarComboBoxText [ShowTabBarNever ..]
-    maybeCursorBlinkMode <- comboBoxGetActive cursorBlinkModeComboBoxText [CursorBlinkModeSystem ..]
-    scrollbackLen        <- fromIntegral <$> spinButtonGetValueAsInt scrollbackLenSpinButton
-    confirmExit          <- toggleButtonGetActive confirmExitCheckButton
-    showMenu             <- toggleButtonGetActive showMenuCheckButton
-    wordCharExceptions   <- entryBufferGetText wordCharExceptionsEntryBuffer
+  when (toEnum (fromIntegral res) == ResponseTypeAccept) $ do
+    maybeFontDesc <- fontChooserGetFontDesc fontButton
+    maybeFontConfig <-
+      liftM join $ mapM fontConfigFromFontDescription maybeFontDesc
+    maybeShowScrollbar <-
+      comboBoxGetActive showScrollbarComboBoxText [ShowScrollbarNever ..]
+    maybeShowTabBar <-
+      comboBoxGetActive showTabBarComboBoxText [ShowTabBarNever ..]
+    maybeCursorBlinkMode <-
+      comboBoxGetActive cursorBlinkModeComboBoxText [CursorBlinkModeSystem ..]
+    scrollbackLen <-
+      fromIntegral <$> spinButtonGetValueAsInt scrollbackLenSpinButton
+    confirmExit <- toggleButtonGetActive confirmExitCheckButton
+    showMenu <- toggleButtonGetActive showMenuCheckButton
+    wordCharExceptions <- entryBufferGetText wordCharExceptionsEntryBuffer
+
     -- Apply the changes to mvarTMState
-    modifyMVar_ mvarTMState $ return
+    modifyMVar_ mvarTMState $ pure
       . over lensTMStateFontDesc (`fromMaybe` maybeFontDesc)
       . over (lensTMStateConfig . lensOptions)
-        ( (lensConfirmExit        .~ confirmExit)
-        . (lensShowMenu           .~ showMenu)
+        ( (lensConfirmExit .~ confirmExit)
+        . (lensShowMenu .~ showMenu)
         . (lensWordCharExceptions .~ wordCharExceptions)
-        . (lensFontConfig         %~ (`fromMaybe` maybeFontConfig))
-        . (lensScrollbackLen      .~ scrollbackLen)
-        . (lensShowScrollbar      %~ (`fromMaybe` maybeShowScrollbar))
-        . (lensShowTabBar         %~ (`fromMaybe` maybeShowTabBar))
-        . (lensCursorBlinkMode    %~ (`fromMaybe` maybeCursorBlinkMode))
+        . (lensFontConfig %~ (`fromMaybe` maybeFontConfig))
+        . (lensScrollbackLen .~ scrollbackLen)
+        . (lensShowScrollbar %~ (`fromMaybe` maybeShowScrollbar))
+        . (lensShowTabBar %~ (`fromMaybe` maybeShowTabBar))
+        . (lensCursorBlinkMode %~ (`fromMaybe` maybeCursorBlinkMode))
         )
+
     -- Update the app with new settings
     applyNewPreferences mvarTMState
+
   widgetDestroy preferencesDialog
 
 appStartup :: Application -> IO ()
