@@ -5,7 +5,7 @@ module Termonad.App where
 import Termonad.Prelude
 
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
-import Control.Lens ((&), (.~), (^.), (^..), (%~), over)
+import Control.Lens ((&), (.~), (^.), (^..), over, set)
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
 import Data.Sequence (findIndexR)
 import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
@@ -641,9 +641,10 @@ findBelow mvarTMState = do
 
 setShowMenuBar :: Application -> Bool -> IO ()
 setShowMenuBar app visible = do
-  maybeWin <- applicationGetActiveWindow app
-  maybeAppWin <- join <$> mapM (castTo ApplicationWindow) maybeWin
-  mapM_ (`applicationWindowSetShowMenubar` visible) maybeAppWin
+  void $ runMaybeT $ do
+    win <- MaybeT $ applicationGetActiveWindow app
+    appWin <- MaybeT $ castTo ApplicationWindow win
+    lift $ applicationWindowSetShowMenubar appWin visible
 
 -- | Fill a combo box with ids and labels
 --
@@ -658,7 +659,7 @@ comboBoxFill comboBox = mapM_ go
 
 -- | Set the current active item in a combobox given an input id.
 comboBoxSetActive :: Show a => ComboBoxText -> a -> IO ()
-comboBoxSetActive cb = void . comboBoxSetActiveId cb . Just . tshow
+comboBoxSetActive cb item = void $ comboBoxSetActiveId cb (Just $ tshow item)
 
 -- | Get the current active item in a combobox
 --
@@ -667,9 +668,11 @@ comboBoxSetActive cb = void . comboBoxSetActiveId cb . Just . tshow
 -- id.
 comboBoxGetActive
   :: forall a. (Show a, Enum a) => ComboBoxText -> [a] -> IO (Maybe a)
-comboBoxGetActive cb values =
-  liftM (join . fmap findEnumFromId) $ comboBoxGetActiveId cb
+comboBoxGetActive cb values = findEnumFromMaybeId <$> comboBoxGetActiveId cb
   where
+    findEnumFromMaybeId :: Maybe Text -> Maybe a
+    findEnumFromMaybeId maybeId = maybeId >>= findEnumFromId
+
     findEnumFromId :: Text -> Maybe a
     findEnumFromId label = find (\x -> tshow x == label) values
 
@@ -689,10 +692,10 @@ applyNewPreferences mvarTMState = do
 applyNewPreferencesToTab :: TMState -> TMNotebookTab -> IO ()
 applyNewPreferencesToTab mvarTMState tab = do
   tmState <- readMVar mvarTMState
-  let fontDesc    = tmState ^. lensTMStateFontDesc
-      term        = tab ^. lensTMNotebookTabTerm ^. lensTerm
+  let fontDesc = tmState ^. lensTMStateFontDesc
+      term = tab ^. lensTMNotebookTabTerm ^. lensTerm
       scrolledWin = tab ^. lensTMNotebookTabTermContainer
-      options     = tmState ^. lensTMStateConfig ^. lensOptions
+      options = tmState ^. lensTMStateConfig ^. lensOptions
   terminalSetFont term (Just fontDesc)
   terminalSetCursorBlinkMode term (options ^. lensCursorBlinkMode)
   terminalSetWordCharExceptions term (options ^. lensWordCharExceptions)
@@ -796,14 +799,14 @@ showPreferencesDialog mvarTMState = do
     modifyMVar_ mvarTMState $ pure
       . over lensTMStateFontDesc (`fromMaybe` maybeFontDesc)
       . over (lensTMStateConfig . lensOptions)
-        ( (lensConfirmExit .~ confirmExit)
-        . (lensShowMenu .~ showMenu)
-        . (lensWordCharExceptions .~ wordCharExceptions)
-        . (lensFontConfig %~ (`fromMaybe` maybeFontConfig))
-        . (lensScrollbackLen .~ scrollbackLen)
-        . (lensShowScrollbar %~ (`fromMaybe` maybeShowScrollbar))
-        . (lensShowTabBar %~ (`fromMaybe` maybeShowTabBar))
-        . (lensCursorBlinkMode %~ (`fromMaybe` maybeCursorBlinkMode))
+        ( set lensConfirmExit confirmExit
+        . set lensShowMenu showMenu
+        . set lensWordCharExceptions wordCharExceptions
+        . over lensFontConfig (`fromMaybe` maybeFontConfig)
+        . set lensScrollbackLen scrollbackLen
+        . over lensShowScrollbar (`fromMaybe` maybeShowScrollbar)
+        . over lensShowTabBar (`fromMaybe` maybeShowTabBar)
+        . over lensCursorBlinkMode (`fromMaybe` maybeCursorBlinkMode)
         )
 
     -- Update the app with new settings
