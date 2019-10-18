@@ -5,6 +5,7 @@ module Termonad.Prelude
   ) where
 
 import Control.Lens as X ((&))
+import Control.Monad.Trans.Maybe as X (MaybeT(MaybeT), runMaybeT)
 import ClassyPrelude as X
 import Data.Proxy as X
 import qualified Data.Text.IO as TextIO
