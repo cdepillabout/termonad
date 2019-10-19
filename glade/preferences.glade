@@ -61,6 +61,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="tooltip_text" translatable="yes">Font to use in the terminal.</property>
                 <property name="hexpand">True</property>
                 <property name="vexpand">False</property>
                 <property name="font">Sans 12</property>
@@ -88,6 +89,7 @@
               <object class="GtkSpinButton" id="scrollbackLen">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="tooltip_text" translatable="yes">Number of lines to keep in the output of the terminal.</property>
               </object>
               <packing>
                 <property name="left_attach">1</property>
@@ -112,6 +114,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
+                <property name="tooltip_text" translatable="yes">Whether or not to pop-up a dialog asking if you are sure you want to exit when you close a tab or exit out of Termonad.</property>
                 <property name="halign">center</property>
                 <property name="draw_indicator">True</property>
               </object>
@@ -137,6 +140,7 @@
               <object class="GtkEntry" id="wordCharExceptions">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="tooltip_text" translatable="yes">When double-clicking on text in the terminal with the mouse, Termonad will use these characters to determine what to highlight.  Characters in this list will be counted as part of a word.  This makes it easy to highlight things like URLs or file paths.</property>
               </object>
               <packing>
                 <property name="left_attach">1</property>
@@ -149,6 +153,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
+                <property name="tooltip_text" translatable="yes">Whether or not to show the menubar.  (This is the bar at the top that has the "File", "Edit", "View", etc buttons.)</property>
                 <property name="halign">center</property>
                 <property name="draw_indicator">True</property>
               </object>
@@ -198,6 +203,7 @@
               <object class="GtkComboBoxText" id="showScrollbar">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Whether or not to show a scrollbar on the terminal.  "If Needed" only shows the scrollbar if the text on the terminal goes off the screen.</property>
               </object>
               <packing>
                 <property name="left_attach">1</property>
@@ -208,6 +214,7 @@
               <object class="GtkComboBoxText" id="showTabBar">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Whether or not to show the tab bar.  "If Needed" only shows the tab bar when you have multiple tabs.</property>
               </object>
               <packing>
                 <property name="left_attach">1</property>
@@ -218,6 +225,7 @@
               <object class="GtkComboBoxText" id="cursorBlinkMode">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Set whether the cursor in the terminal should blink.  "System" sets this to the system-level GTK setting.</property>
               </object>
               <packing>
                 <property name="left_attach">1</property>
