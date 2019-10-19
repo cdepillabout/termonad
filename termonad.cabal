@@ -14,6 +14,8 @@ cabal-version:       >=1.12
 extra-source-files:  README.md
                    , CHANGELOG.md
                    , default.nix
+                   , glade/preferences.glade
+                   , glade/README.md
                    , img/termonad.png
                    , .nix-helpers/nixops.nix
                    , .nix-helpers/nixpkgs.nix
@@ -62,6 +64,7 @@ library
                      , directory >= 1.3.1.0
                      , distributive
                      , dyre
+                     , file-embed
                      , filepath
                      , focuslist
                      , gi-gdk
