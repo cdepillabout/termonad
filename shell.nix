@@ -35,11 +35,15 @@ let
   # Nix-shell environment for hacking on termonad.
   termonadEnv = haskPkgSet.termonad.env;
 
-  # Haskell build tools that are nice to have.  It is okay to get these from
-  # any Haskell package set, since they do not depend on the GHC version we are
-  # using.  We get these from the normal haskellPackages pkg set because then
-  # they don't have to be compiled from scratch.
-  nativeBuildTools = with haskellPackages; [ cabal-install ghcid ];
+  # Build tools that are nice to have.  It is okay to get Haskell build tools
+  # from any Haskell package set, since they do not depend on the GHC version
+  # we are using.  We get these from the normal haskellPackages pkg set because
+  # then they don't have to be compiled from scratch.
+  nativeBuildTools = [
+    cabal-install
+    gnome3.glade
+    haskellPackages.ghcid
+  ];
 in
 
 if indexTermonad
