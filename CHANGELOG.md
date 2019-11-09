@@ -1,6 +1,8 @@
 
 ## next
 
+* Remove the one-pixel white border around the `GtkNotebook` (the GTK widget thing
+  that contains the tabs). [#138]
 * Add a right-click menu for the terminal.  It currently allows copy and
   paste.  [#136](https://github.com/cdepillabout/termonad/pull/136)  Thanks
   @jecaro!
