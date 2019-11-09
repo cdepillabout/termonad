@@ -8,15 +8,20 @@ import Control.Lens ((^.), (&), (.~), set, to)
 import Data.Colour.SRGB (Colour, RGB(RGB), toSRGB)
 import Data.FocusList (appendFL, deleteFL, getFocusItemFL)
 import GI.Gdk
-  ( EventKey
+  ( EventButton
+  , EventKey
   , RGBA
+  , getEventButtonButton
   , newZeroRGBA
   , setRGBABlue
   , setRGBAGreen
   , setRGBARed
   )
+import GI.Gdk.Constants (pattern BUTTON_SECONDARY)
 import GI.Gio
-  ( noCancellable
+  ( menuAppend
+  , menuNew
+  , noCancellable
   )
 import GI.GLib
   ( SpawnFlags(SpawnFlagsDefault)
@@ -47,6 +52,9 @@ import GI.Gtk
   , labelSetEllipsize
   , labelSetLabel
   , labelSetMaxWidthChars
+  , menuAttachToWidget
+  , menuNewFromModel
+  , menuPopupAtPointer
   , noAdjustment
   , notebookAppendPage
   , notebookDetachTab
@@ -56,6 +64,7 @@ import GI.Gtk
   , notebookSetShowTabs
   , notebookSetTabReorderable
   , onButtonClicked
+  , onWidgetButtonPressEvent
   , onWidgetKeyPressEvent
   , scrolledWindowNew
   , scrolledWindowSetPolicy
@@ -446,6 +455,7 @@ createTerm handleKeyPress mvarTMState = do
     relabelTab notebook tabLabel scrolledWin vteTerm
   void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
   void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
+  void $ onWidgetButtonPressEvent vteTerm $ handleMousePress vteTerm
   void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState
 
   -- Put the keyboard focus on the term
@@ -457,3 +467,18 @@ createTerm handleKeyPress mvarTMState = do
   -- Run user-defined hooks for modifying the newly-created VTE Terminal.
   createTermHook (hooks tmStateConfig) mvarTMState vteTerm
   pure tmTerm
+
+-- | Popup the context menu on right click
+handleMousePress :: Terminal -> EventButton -> IO Bool
+handleMousePress vteTerm event = do
+  button <- getEventButtonButton event
+  let rightClick = button == fromIntegral BUTTON_SECONDARY
+  when rightClick $ do
+    menuModel <- menuNew
+    menuAppend menuModel (Just "Copy") (Just "app.copy")
+    menuAppend menuModel (Just "Paste") (Just "app.paste")
+    menu <- menuNewFromModel menuModel
+    menuAttachToWidget menu vteTerm Nothing
+    menuPopupAtPointer menu Nothing
+  pure rightClick
+
