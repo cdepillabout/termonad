@@ -68,6 +68,7 @@ import GI.Gtk
   , labelNew
   , notebookGetNPages
   , notebookNew
+  , notebookSetShowBorder
   , onEntryActivate
   , onNotebookPageRemoved
   , onNotebookPageReordered
@@ -365,6 +366,9 @@ setupTermonad tmConfig app win builder = do
   fontDesc <- createFontDescFromConfig tmConfig
   note <- notebookNew
   widgetSetCanFocus note False
+  -- If this is not set to False, then there will be a one pixel white border
+  -- shown around the notebook.
+  notebookSetShowBorder note False
   boxPackStart box note True True 0
 
   mvarTMState <- newEmptyTMState tmConfig app win note fontDesc
