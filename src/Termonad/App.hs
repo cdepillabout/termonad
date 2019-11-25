@@ -29,6 +29,7 @@ import GI.Gtk
   , Dialog(Dialog)
   , Entry(Entry)
   , FontButton(FontButton)
+  , Label(Label)
   , PolicyType(PolicyTypeAutomatic)
   , PositionType(PositionTypeRight)
   , ResponseType(ResponseTypeAccept, ResponseTypeNo, ResponseTypeYes)
@@ -85,6 +86,7 @@ import GI.Gtk
   , widgetDestroy
   , widgetGrabFocus
   , widgetSetCanFocus
+  , widgetSetVisible
   , widgetShow
   , widgetShowAll
   , windowPresent
@@ -119,6 +121,8 @@ import GI.Vte
   , terminalSetScrollbackLines
   , terminalSetWordCharExceptions
   )
+import System.Environment (getExecutablePath)
+import System.FilePath (takeFileName)
 
 import Paths_termonad (getDataFileName)
 import Termonad.Gtk (appNew, objFromBuildUnsafe)
@@ -759,6 +763,13 @@ showPreferencesDialog mvarTMState = do
     objFromBuildUnsafe preferencesBuilder "scrollbackLen" SpinButton
   adjustmentNew 0 0 (fromIntegral (maxBound :: Int)) 1 10 0 >>=
     spinButtonSetAdjustment scrollbackLenSpinButton
+  warningLabel <- objFromBuildUnsafe preferencesBuilder "warning" Label
+
+  -- We show the warning label only if the user has launched termonad with a
+  -- termonad.hs file
+  executablePath <- getExecutablePath
+  let hasTermonadHs = takeFileName executablePath == "termonad-linux-x86_64"
+  widgetSetVisible warningLabel hasTermonadHs
 
   -- Make the dialog modal
   maybeWin <- applicationGetActiveWindow app
