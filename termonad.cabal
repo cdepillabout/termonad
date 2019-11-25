@@ -82,6 +82,7 @@ library
                      , singletons
                      , text
                      , transformers
+                     , yaml
                      , xml-conduit
                      , xml-html-qq
   default-language:    Haskell2010
@@ -91,6 +92,7 @@ library
                      , DeriveAnyClass
                      , DeriveFoldable
                      , DeriveFunctor
+                     , DeriveGeneric
                      , DerivingStrategies
                      , EmptyCase
                      , ExistentialQuantification

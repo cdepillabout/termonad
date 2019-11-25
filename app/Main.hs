@@ -2,7 +2,7 @@
 module Main where
 
 import Termonad (defaultMain)
-import Termonad.Config (defaultTMConfig)
+import Termonad.Config (tmConfigFromPreferencesFile)
 
 main :: IO ()
-main = defaultMain defaultTMConfig
+main = defaultMain =<< tmConfigFromPreferencesFile

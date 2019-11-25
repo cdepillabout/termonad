@@ -6,6 +6,15 @@ import Termonad.Prelude
 
 import Data.FocusList (FocusList, emptyFL, singletonFL, getFocusItemFL, lengthFL)
 import Data.Unique (Unique, hashUnique, newUnique)
+import Data.Yaml
+  ( FromJSON(parseJSON)
+  , ToJSON(toJSON)
+  , Value(String)
+  , decodeFileEither
+  , encodeFile
+  , prettyPrintParseException
+  , withText
+  )
 import GI.Gtk
   ( Application
   , ApplicationWindow
@@ -19,7 +28,8 @@ import GI.Gtk
   , notebookGetNPages
   )
 import GI.Pango (FontDescription)
-import GI.Vte (Terminal, CursorBlinkMode(CursorBlinkModeOn))
+import GI.Vte (Terminal, CursorBlinkMode(..))
+import System.Directory (XdgDirectory(XdgConfig), createDirectoryIfMissing, doesFileExist, getXdgDirectory)
 import Text.Pretty.Simple (pPrint)
 import Text.Show (Show(showsPrec), ShowS, showParen, showString)
 
@@ -258,7 +268,7 @@ data FontSize
     -- can be thought of as one pixel.  The function
     -- 'GI.Pango.fontDescriptionSetAbsoluteSize' is used to set the font size.
     -- See the documentation for that function for more info.
-  deriving (Eq, Show)
+  deriving (Eq, FromJSON, Generic, Show, ToJSON)
 
 -- | The default 'FontSize' used if not specified.
 --
@@ -300,7 +310,7 @@ data FontConfig = FontConfig
     -- ^ The font family to use.  Example: @"DejaVu Sans Mono"@ or @"Source Code Pro"@
   , fontSize :: !FontSize
     -- ^ The font size.
-  } deriving (Eq, Show)
+  } deriving (Eq, FromJSON, Generic, Show, ToJSON)
 
 -- | The default 'FontConfig' to use if not specified.
 --
@@ -347,7 +357,7 @@ data ShowScrollbar
                         -- needed.
   | ShowScrollbarIfNeeded -- ^ Only show the scrollbar if there are too many
                           -- lines on the terminal to show all at once.
-  deriving (Enum, Eq, Show)
+  deriving (Enum, Eq, Generic, FromJSON, Show, ToJSON)
 
 -- | Whether or not to show the tab bar for switching tabs.
 data ShowTabBar
@@ -355,7 +365,7 @@ data ShowTabBar
                     -- open.  This may be confusing if you plan on using multiple tabs.
   | ShowTabBarAlways -- ^ Always show the tab bar, even if you only have one tab open.
   | ShowTabBarIfNeeded  -- ^ Only show the tab bar if you have multiple tabs open.
-  deriving (Enum, Eq, Show)
+  deriving (Enum, Eq, Generic, FromJSON, Show, ToJSON)
 
 -- | Configuration options for Termonad.
 --
@@ -386,7 +396,22 @@ data ConfigOptions = ConfigOptions
     -- ^ When to show the tab bar.
   , cursorBlinkMode :: !CursorBlinkMode
     -- ^ How to handle cursor blink.
-  } deriving (Eq, Show)
+  } deriving (Eq, Generic, FromJSON, Show, ToJSON)
+
+instance FromJSON CursorBlinkMode where
+  parseJSON = withText "CursorBlinkMode" $ \c -> do
+    case (c :: Text) of
+      "CursorBlinkModeSystem" -> pure CursorBlinkModeSystem
+      "CursorBlinkModeOn" -> pure CursorBlinkModeOn
+      "CursorBlinkModeOff" -> pure CursorBlinkModeOff
+      _ -> fail "Wrong value for CursorBlinkMode"
+
+instance ToJSON CursorBlinkMode where
+  toJSON CursorBlinkModeSystem = String "CursorBlinkModeSystem"
+  toJSON CursorBlinkModeOn = String "CursorBlinkModeOn"
+  toJSON CursorBlinkModeOff = String "CursorBlinkModeOff"
+  -- Not supposed to happened fall back to system
+  toJSON (AnotherCursorBlinkMode _) = String "CursorBlinkModeSystem"
 
 -- | The default 'ConfigOptions'.
 --
@@ -593,3 +618,29 @@ pPrintTMState :: TMState -> IO ()
 pPrintTMState mvarTMState = do
   tmState <- readMVar mvarTMState
   pPrint tmState
+
+-- | Read the configuration for the preferences file
+-- @~\/.config\/termonad\/termonad.yml@. This file stores only the 'options' of
+-- 'TMConfig' so 'hooks' is initialized with 'defaultConfigHooks''. If the file
+-- does not exist, the function writes one with the default configuration
+-- options.
+tmConfigFromPreferencesFile :: IO TMConfig
+tmConfigFromPreferencesFile = do
+  -- Get the termonad config directory
+  confDir <- getXdgDirectory XdgConfig "termonad"
+  createDirectoryIfMissing True confDir
+  let confFile = confDir </> "termonad.yml"
+  -- If there is no preferences file we create it with the default values
+  exists <- doesFileExist confFile
+  unless exists $ encodeFile confFile defaultConfigOptions
+  -- Read the configuration file
+  eitherOptions <- decodeFileEither confFile
+  options <-
+    case eitherOptions of
+      Left err -> do
+        hPutStrLn stderr $ "Error parsing file " <> pack confFile
+        hPutStrLn stderr $ pack $ prettyPrintParseException err
+        return defaultConfigOptions
+      Right options -> return options
+  return $ TMConfig { options = options, hooks = defaultConfigHooks }
+
