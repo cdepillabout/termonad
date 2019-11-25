@@ -5,7 +5,7 @@ module Termonad.App where
 import Termonad.Prelude
 
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
-import Control.Lens ((&), (.~), (^.), (^..), over, set)
+import Control.Lens ((&), (.~), (^.), (^..), over, set, view)
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
 import Data.Sequence (findIndexR)
 import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
@@ -163,6 +163,7 @@ import Termonad.Types
   , getFocusedTermFromState
   , modFontSize
   , newEmptyTMState
+  , saveToPreferencesFile
   , tmNotebookTabTermContainer
   , tmNotebookTabs
   , tmStateApp
@@ -812,6 +813,9 @@ showPreferencesDialog mvarTMState = do
         . over lensShowTabBar (`fromMaybe` maybeShowTabBar)
         . over lensCursorBlinkMode (`fromMaybe` maybeCursorBlinkMode)
         )
+
+    -- Save the changes to the preferences files
+    withMVar mvarTMState $ saveToPreferencesFile . view lensTMStateConfig
 
     -- Update the app with new settings
     applyNewPreferences mvarTMState
