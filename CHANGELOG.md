@@ -1,5 +1,5 @@
 
-## 2.2.0.0
+## 3.0.0.0
 
 * Remove the one-pixel white border around the `GtkNotebook` (the GTK widget thing
   that contains the tabs). [#138](https://github.com/cdepillabout/termonad/pull/138)
