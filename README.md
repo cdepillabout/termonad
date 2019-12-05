@@ -235,6 +235,32 @@ Termonad provides the following default key bindings.
 
 ### Configuring Termonad
 
+Termonad has two different ways to be configured.
+
+The first way is to use the built-in Preferences editor.  You can find this in
+the `Preferences` menu under `Edit` in the menubar.
+
+When opening Termonad for the first time, it will create a preferences file at
+`~/.config/termonad/termonad.yaml`.  When you change a setting in the
+Preferences editor, Termonad will update the setting in the preferences file.
+
+When running Termonad, it will load settings from the preferences file.
+Do not edit the preferences file by hand, because it will be overwritten when
+updating settings in the Preferences editor.
+
+This method is perfect for users who only want to make small changes to the
+Termonad settings, like the default font size.
+
+The second way to configure Termonad is to use a Haskell-based settings file,
+called `~/.config/termonad/termonad.hs` by default.  This method allows you to
+make large, sweeping changes to Termonad.  This is method is recommended for
+power users power users.
+
+**WARNING: If you have a `~/.config/termonad/termonad.hs` file, then all
+settings from `~/.config/termonad/termonad.yaml` will be ignored.  If you want
+to set *ANY* settings in `~/.config/termonad/termonad.hs`, then you must
+set *ALL* settings in `~/.config/termonad/termonad.hs`.**
+
 The following is an example Termonad configuration file. You should save this to
 `~/.config/termonad/termonad.hs`. You can find more information on the available
 configuration options within the
