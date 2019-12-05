@@ -49,6 +49,7 @@ library
                      , Termonad.Keys
                      , Termonad.Lenses
                      , Termonad.Pcre
+                     , Termonad.PreferencesFile
                      , Termonad.Prelude
                      , Termonad.Term
                      , Termonad.Types

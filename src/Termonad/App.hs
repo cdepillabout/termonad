@@ -148,6 +148,7 @@ import Termonad.Lenses
   , lensTerm
   , lensWordCharExceptions
   )
+import Termonad.PreferencesFile (saveToPreferencesFile)
 import Termonad.Term
   ( createTerm
   , relabelTabs
@@ -167,7 +168,6 @@ import Termonad.Types
   , getFocusedTermFromState
   , modFontSize
   , newEmptyTMState
-  , saveToPreferencesFile
   , tmNotebookTabTermContainer
   , tmNotebookTabs
   , tmStateApp
