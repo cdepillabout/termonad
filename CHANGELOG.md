@@ -1,10 +1,16 @@
 
-## next
+## 3.0.0.0
 
 * Remove the one-pixel white border around the `GtkNotebook` (the GTK widget thing
-  that contains the tabs). [#138]
+  that contains the tabs). [#138](https://github.com/cdepillabout/termonad/pull/138)
 * Add a right-click menu for the terminal.  It currently allows copy and
   paste.  [#136](https://github.com/cdepillabout/termonad/pull/136)  Thanks
+  @jecaro!
+* Add a preferences file that settings will be saved to and read from at
+  `~/.config/termonad/termonad.yaml`.  You can change settings with the
+  Preferences dialog.  **The settings will only be used from this file if you
+  do not have a `~/.config/termonad/termonad.hs` file**.
+  [#140](https://github.com/cdepillabout/termonad/pull/140) Thanks again
   @jecaro!
 
 ## 2.1.0.0

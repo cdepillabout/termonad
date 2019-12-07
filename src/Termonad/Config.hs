@@ -54,8 +54,10 @@ module Termonad.Config
   , ShowScrollbar(..)
   , ShowTabBar(..)
   , CursorBlinkMode(..)
+  , tmConfigFromPreferencesFile
   ) where
 
 import GI.Vte (CursorBlinkMode(..))
 
+import Termonad.PreferencesFile (tmConfigFromPreferencesFile)
 import Termonad.Types

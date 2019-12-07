@@ -1,5 +1,5 @@
 name:                termonad
-version:             2.1.0.0
+version:             3.0.0.0
 synopsis:            Terminal emulator configurable in Haskell
 description:         Please see <https://github.com/cdepillabout/termonad#readme README.md>.
 homepage:            https://github.com/cdepillabout/termonad
@@ -49,6 +49,7 @@ library
                      , Termonad.Keys
                      , Termonad.Lenses
                      , Termonad.Pcre
+                     , Termonad.PreferencesFile
                      , Termonad.Prelude
                      , Termonad.Term
                      , Termonad.Types
@@ -82,6 +83,7 @@ library
                      , singletons
                      , text
                      , transformers
+                     , yaml
                      , xml-conduit
                      , xml-html-qq
   default-language:    Haskell2010
@@ -91,6 +93,7 @@ library
                      , DeriveAnyClass
                      , DeriveFoldable
                      , DeriveFunctor
+                     , DeriveGeneric
                      , DerivingStrategies
                      , EmptyCase
                      , ExistentialQuantification
