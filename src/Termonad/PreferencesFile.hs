@@ -18,7 +18,7 @@ import Termonad.Types
   , defaultConfigOptions
   )
 
--- | Get the path to the preferences file @~\/.config\/termonad\/termonad.yml@.
+-- | Get the path to the preferences file @~\/.config\/termonad\/termonad.yaml@.
 getPreferencesFile :: IO FilePath
 getPreferencesFile = do
   -- Get the termonad config directory
@@ -27,7 +27,7 @@ getPreferencesFile = do
   pure $ confDir </> "termonad.yaml"
 
 -- | Read the configuration for the preferences file
--- @~\/.config\/termonad\/termonad.yml@. This file stores only the 'options' of
+-- @~\/.config\/termonad\/termonad.yaml@. This file stores only the 'options' of
 -- 'TMConfig' so 'hooks' are initialized with 'defaultConfigHooks'.  If the
 -- file doesn't exist, create it with the default values.
 tmConfigFromPreferencesFile :: IO TMConfig
@@ -63,7 +63,7 @@ writePreferencesFile confFile options = do
   writeFile confFile yamlWithComment
 
 -- | Save the configuration to the preferences file
--- @~\/.config\/termonad\/termonad.yml@
+-- @~\/.config\/termonad\/termonad.yaml@
 saveToPreferencesFile :: TMConfig -> IO ()
 saveToPreferencesFile TMConfig { options = options } = do
   confFile <- getPreferencesFile

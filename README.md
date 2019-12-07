@@ -253,8 +253,8 @@ Termonad settings, like the default font size.
 
 The second way to configure Termonad is to use a Haskell-based settings file,
 called `~/.config/termonad/termonad.hs` by default.  This method allows you to
-make large, sweeping changes to Termonad.  This is method is recommended for
-power users power users.
+make large, sweeping changes to Termonad.  This method is recommended for power
+users.
 
 **WARNING: If you have a `~/.config/termonad/termonad.hs` file, then all
 settings from `~/.config/termonad/termonad.yaml` will be ignored.  If you want
