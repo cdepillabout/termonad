@@ -4,15 +4,30 @@
 module Main where
 
 import Termonad
-  ( CursorBlinkMode(CursorBlinkModeOff), Option(Set)
-  , ShowScrollbar(ShowScrollbarNever), TMConfig, confirmExit, cursorBlinkMode
-  , defaultConfigOptions, defaultTMConfig, options, showMenu, showScrollbar
+  ( CursorBlinkMode(CursorBlinkModeOff)
+  , Option(Set)
+  , ShowScrollbar(ShowScrollbarNever)
+  , TMConfig
+  , confirmExit
+  , cursorBlinkMode
+  , defaultConfigOptions
+  , defaultTMConfig
+  , options
+  , showMenu
+  , showScrollbar
   , start
   )
 import Termonad.Config.Colour
-  ( AlphaColour, ColourConfig, Palette(ExtendedPalette), addColourExtension
-  , createColour, createColourExtension, defaultColourConfig
-  , foregroundColour, palette
+  ( AlphaColour
+  , ColourConfig
+  , Palette(ExtendedPalette)
+  , addColourExtension
+  , createColour
+  , createColourExtension
+  , defaultColourConfig
+  , backgroundColour
+  , foregroundColour
+  , palette
   )
 import Termonad.Config.Vec (Vec((:*), EmptyVec), N8)
 
@@ -38,13 +53,14 @@ solarizedDark =
   defaultColourConfig
     -- Set the default foreground colour of text of the terminal.
     { foregroundColour = Set (createColour 131 148 150) -- base0
+    , backgroundColour = Set (createColour   0  43  54) -- base03
     -- Set the extended palette that has 2 Vecs of 8 Solarized palette colours
     , palette = ExtendedPalette solarizedDark1 solarizedDark2
     }
   where
     solarizedDark1 :: Vec N8 (AlphaColour Double)
     solarizedDark1 =
-         createColour   0  43  54 -- base03, background
+         createColour   7  54  66 -- base02, background highlights
       :* createColour 220  50  47 -- red
       :* createColour 133 153   0 -- green
       :* createColour 181 137   0 -- yellow
@@ -56,7 +72,7 @@ solarizedDark =
 
     solarizedDark2 :: Vec N8 (AlphaColour Double)
     solarizedDark2 =
-         createColour   7  54  66 -- base02, background highlights
+         createColour   0  43  54 -- base03, background
       :* createColour 203  75  22 -- orange
       :* createColour  88 110 117 -- base01, comments / secondary text
       :* createColour 131 148 150 -- base0, body text / default code / primary content
@@ -72,6 +88,7 @@ solarizedLight =
   defaultColourConfig
     -- Set the default foreground colour of text of the terminal.
     { foregroundColour = Set (createColour 101 123 131) -- base00
+    , backgroundColour = Set (createColour 253 246 227) -- base3
     -- Set the extended palette that has 2 Vecs of 8 Solarized palette colours
     , palette = ExtendedPalette solarizedLight1 solarizedLight2
     }
