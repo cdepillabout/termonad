@@ -53,7 +53,7 @@ solarizedDark =
   defaultColourConfig
     -- Set the default foreground colour of text of the terminal.
     { foregroundColour = Set (createColour 131 148 150) -- base0
-    , foregroundColour = Set (createColour   0  43  54) -- base03
+    , backgroundColour = Set (createColour   0  43  54) -- base03
     -- Set the extended palette that has 2 Vecs of 8 Solarized palette colours
     , palette = ExtendedPalette solarizedDark1 solarizedDark2
     }
@@ -88,7 +88,7 @@ solarizedLight =
   defaultColourConfig
     -- Set the default foreground colour of text of the terminal.
     { foregroundColour = Set (createColour 101 123 131) -- base00
-    , foregroundColour = Set (createColour 253 246 227) -- base3
+    , backgroundColour = Set (createColour 253 246 227) -- base3
     -- Set the extended palette that has 2 Vecs of 8 Solarized palette colours
     , palette = ExtendedPalette solarizedLight1 solarizedLight2
     }
