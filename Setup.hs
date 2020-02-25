@@ -14,7 +14,7 @@ import Data.Monoid ((<>))
 import Data.Version (Version)
 import Distribution.PackageDescription (HookedBuildInfo, cppOptions, emptyBuildInfo)
 import Distribution.Simple (UserHooks, defaultMainWithHooks, preBuild, preRepl, simpleUserHooks)
-import Distribution.Simple.Program (configureProgram, defaultProgramConfiguration, getDbProgramOutput, pkgConfigProgram)
+import Distribution.Simple.Program (configureProgram, defaultProgramDb, getDbProgramOutput, pkgConfigProgram)
 import Distribution.Text (simpleParse)
 import Distribution.Verbosity (normal)
 
@@ -122,7 +122,7 @@ createGtkVersionCPPOpts gtkVersion =
 
 getPkgConfigVersionFor :: String -> IO (Maybe Version)
 getPkgConfigVersionFor program = do
-  pkgDb <- configureProgram normal pkgConfigProgram defaultProgramConfiguration
+  pkgDb <- configureProgram normal pkgConfigProgram defaultProgramDb
   pkgConfigOutput <-
     getDbProgramOutput normal pkgConfigProgram pkgDb ["--modversion", program]
   -- Drop the newline on the end of the pkgConfigOutput.
