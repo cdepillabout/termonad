@@ -1,5 +1,5 @@
 name:                termonad
-version:             3.0.0.0
+version:             3.1.0.0
 synopsis:            Terminal emulator configurable in Haskell
 description:         Please see <https://github.com/cdepillabout/termonad#readme README.md>.
 homepage:            https://github.com/cdepillabout/termonad
@@ -54,7 +54,7 @@ library
                      , Termonad.Types
                      , Termonad.XML
   other-modules:       Paths_termonad
-  build-depends:       base >= 4.11 && < 5
+  build-depends:       base >= 4.13 && < 5
                      , adjunctions
                      , classy-prelude
                      , colour
