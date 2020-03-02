@@ -4,6 +4,7 @@ module Termonad.Types where
 
 import Termonad.Prelude
 
+import Control.Monad.Fail (fail)
 import Data.FocusList (FocusList, emptyFL, singletonFL, getFocusItemFL, lengthFL)
 import Data.Unique (Unique, hashUnique, newUnique)
 import Data.Yaml
