@@ -4,7 +4,7 @@
 
 module Main where
 
-import Data.Singletons (sing)
+import Data.Singletons (Sing, sing)
 import Termonad
   ( CursorBlinkMode(CursorBlinkModeOff), Option(Set)
   , ShowScrollbar(ShowScrollbarNever), TMConfig, confirmExit, cursorBlinkMode
@@ -17,7 +17,7 @@ import Termonad.Config.Colour
   , foregroundColour, palette
   )
 import Termonad.Config.Vec
-  ( N4, N8, Sing, Vec((:*), EmptyVec), fin_, setAtVec, unsafeFromListVec_
+  ( N4, N8, Vec((:*), EmptyVec), fin_, setAtVec, unsafeFromListVec_
   )
 
 -- This is our main 'TMConfig'.  It holds all of the non-colour settings

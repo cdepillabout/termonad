@@ -1,9 +1,12 @@
-## (next)
+## 3.1.0.0
 
 * Fix up deprecated functions used in Setup.hs.  This should allow Termonad to
   be compiled with Cabal-3.0.0.0 (which is used by default in GHC-8.8).
   [#144](https://github.com/cdepillabout/termonad/pull/144) Thanks
   [mdorman](https://github.com/mdorman)!
+
+* Fully update to LTS-15 and GHC-8.8.  Termonad now requires GHC-8.8 in order
+  to be compiled. [#145](https://github.com/cdepillabout/termonad/pull/145).
 
 ## 3.0.0.0
 

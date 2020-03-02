@@ -5,18 +5,18 @@
 -- are compiled with.
 
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# OPTIONS_GHC -Wall #-}
 module Main (main) where
 
 import Data.Maybe (catMaybes)
-import Data.Monoid ((<>))
-import Data.Version (Version)
 import Distribution.PackageDescription (HookedBuildInfo, cppOptions, emptyBuildInfo)
 import Distribution.Simple (UserHooks, defaultMainWithHooks, preBuild, preRepl, simpleUserHooks)
 import Distribution.Simple.Program (configureProgram, defaultProgramDb, getDbProgramOutput, pkgConfigProgram)
 import Distribution.Text (simpleParse)
 import Distribution.Verbosity (normal)
+import Distribution.Version (Version, mkVersion)
 
 #ifndef MIN_VERSION_cabal_doctest
 #define MIN_VERSION_cabal_doctest(x,y,z) 0
@@ -103,7 +103,7 @@ createVteVersionCPPOpts
   -> [String]
 createVteVersionCPPOpts vers =
   catMaybes $
-    [ if vers >= [0,44] then Just "-DVTE_VERSION_GEQ_0_44" else Nothing
+    [ if vers >= mkVersion [0,44] then Just "-DVTE_VERSION_GEQ_0_44" else Nothing
     ]
 
 -- | Based on the version of the GTK3 library as reported by @pkg-config@, return
@@ -117,7 +117,7 @@ createGtkVersionCPPOpts
   -> [String] -- ^ A list of CPP macros to show the GTK version.
 createGtkVersionCPPOpts gtkVersion =
   catMaybes $
-    [ if gtkVersion >= [3,22] then Just "-DGTK_VERSION_GEQ_3_22" else Nothing
+    [ if gtkVersion >= mkVersion [3,22] then Just "-DGTK_VERSION_GEQ_3_22" else Nothing
     ]
 
 getPkgConfigVersionFor :: String -> IO (Maybe Version)

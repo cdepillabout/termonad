@@ -4,7 +4,7 @@ module Termonad.Term where
 
 import Termonad.Prelude
 
-import Control.Lens ((^.), (&), (.~), set, to)
+import Control.Lens ((^.), (.~), set, to)
 import Data.Colour.SRGB (Colour, RGB(RGB), toSRGB)
 import Data.FocusList (appendFL, deleteFL, getFocusItemFL)
 import GI.Gdk
@@ -92,7 +92,6 @@ import GI.Vte
   , terminalSpawnSync
   , terminalSetWordCharExceptions
   )
-import System.FilePath ((</>))
 import System.Directory (getSymbolicLinkTarget)
 import System.Environment (lookupEnv)
 

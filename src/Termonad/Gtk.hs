@@ -4,6 +4,7 @@ module Termonad.Gtk where
 
 import Termonad.Prelude
 
+import Control.Monad.Fail (MonadFail, fail)
 import Data.GI.Base (ManagedPtr, withManagedPtr)
 import GHC.Stack (HasCallStack)
 import GI.Gdk
@@ -37,7 +38,7 @@ objFromBuildUnsafe builder name constructor = do
 -- This can fail for different reasons, one of which being that application
 -- name does not have a period in it.
 appNew ::
-     (HasCallStack, MonadIO m)
+     (HasCallStack, MonadIO m, MonadFail m)
   => Maybe Text
   -- ^ The application name.  Must have a period in it if specified.  If passed
   -- as 'Nothing', then no application name will be used.

@@ -216,9 +216,11 @@ fin_ ::
   -> Fin total
 fin_ n = toFinIFin $ ifin_ n
 
-data instance Sing (z :: Fin n) where
-  SFZ :: Sing 'FZ
-  SFS :: Sing x -> Sing ('FS x)
+data SFin :: forall n. Fin n -> Type where
+  SFZ :: SFin 'FZ
+  SFS :: SFin n -> SFin ('FS n)
+
+type instance Sing @(Fin n) = SFin
 
 instance SingI 'FZ where
   sing = SFZ
@@ -238,10 +240,10 @@ instance SingKind (Fin n) where
     case toSing fin' of
       SomeSing n -> SomeSing (SFS n)
 
-instance Show (Sing 'FZ) where
+instance Show (SFin 'FZ) where
   show SFZ = "SFZ"
 
-instance Show (Sing n) => Show (Sing ('FS n)) where
+instance Show (SFin n) => Show (SFin ('FS n)) where
   showsPrec d (SFS n) =
     showParen (d > 10) $
     showString "SFS " . showsPrec 11 n
@@ -291,11 +293,14 @@ ifin_ ::
   -> IFin total n
 ifin_ = ifin sing
 
-data instance Sing (z :: IFin n m) where
-  SIFZ :: Sing 'IFZ
-  SIFS :: Sing x -> Sing ('IFS x)
+data SIFin :: forall n m. IFin n m -> Type where
+  SIFZ :: SIFin 'IFZ
+  SIFS :: SIFin x -> SIFin ('IFS x)
+
+type instance Sing @(IFin n m) = SIFin
 
 instance SingI 'IFZ where
+  sing :: Sing 'IFZ
   sing = SIFZ
 
 instance SingI n => SingI ('IFS n) where
@@ -313,10 +318,10 @@ instance SingKind (IFin n m) where
     case toSing fin' of
       SomeSing n -> SomeSing (SIFS n)
 
-instance Show (Sing 'IFZ) where
+instance Show (SIFin 'IFZ) where
   show SIFZ = "SIFZ"
 
-instance Show (Sing n) => Show (Sing ('IFS n)) where
+instance Show (SIFin n) => Show (SIFin ('IFS n)) where
   showsPrec d (SIFS n) =
     showParen (d > 10) $
     showString "SIFS " . showsPrec 11 n
