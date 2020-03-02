@@ -5,7 +5,7 @@ module Termonad.App where
 import Termonad.Prelude
 
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
-import Control.Lens ((&), (.~), (^.), (^..), over, set, view)
+import Control.Lens ((.~), (^.), (^..), over, set, view)
 import Control.Monad.Fail (fail)
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
 import Data.Sequence (findIndexR)

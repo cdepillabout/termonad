@@ -19,7 +19,6 @@ extra-source-files:  README.md
                    , img/termonad.png
                    , .nix-helpers/nixops.nix
                    , .nix-helpers/nixpkgs.nix
-                   , .nix-helpers/stack-fhs-env.nix
                    , .nix-helpers/stack-shell.nix
                    , .nix-helpers/termonad-with-packages.nix
                    , shell.nix

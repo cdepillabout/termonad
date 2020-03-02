@@ -107,6 +107,9 @@ $ cd termonad/
 $ stack --nix install
 ```
 
+(_edit_: Building with `stack` using Nix-integration does not currently work.
+See [#99](https://github.com/cdepillabout/termonad/issues/99).)
+
 The second is using the normal `nix-build` machinery.  The following commands
 clone this repository and build the `termonad` binary at `./result/bin/`:
 
