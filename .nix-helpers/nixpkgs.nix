@@ -20,9 +20,9 @@ let
     if isNull nixpkgs
       then
         builtins.fetchTarball {
-          # Recent version of nixpkgs master as of 2020-03-01.
-          url = "https://github.com/NixOS/nixpkgs/archive/4f36e9f9a33da034327188ddebc3aecb3633e4d7.tar.gz";
-          sha256 = "sha256:0aa3aldp6m962hx0qzkizkwvamwv2c4yijk6g515dx7h7f5xrary";
+          # Recent version of nixpkgs master as of 2020-03-03.
+          url = "https://github.com/NixOS/nixpkgs/archive/bd2c1d72c5a77bfc78693c5b6d121a9e8bb59e6f.tar.gz";
+          sha256 = "sha256:0r6lbsz5a0yn6x96y890xvycc1h6la84k2hd3ig5c8irknxdbx22";
         }
       else nixpkgs;
 
