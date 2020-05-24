@@ -1,10 +1,11 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- | This is an example Termonad configuration that shows how to use the
 -- Solarized colour scheme https://ethanschoonover.com/solarized/
 
 module Main where
 
 import Termonad
-  ( CursorBlinkMode(CursorBlinkModeOff)
+  ( CursorBlinkMode(CursorBlinkModeOn)
   , Option(Set)
   , ShowScrollbar(ShowScrollbarNever)
   , TMConfig
@@ -16,6 +17,12 @@ import Termonad
   , showMenu
   , showScrollbar
   , start
+  , FontConfig
+  , FontSize(FontSizePoints)
+  , defaultFontConfig
+  , fontConfig
+  , fontFamily
+  , fontSize
   )
 import Termonad.Config.Colour
   ( AlphaColour
@@ -43,7 +50,8 @@ myTMConfig =
           { showScrollbar = ShowScrollbarNever
           , confirmExit = False
           , showMenu = False
-          , cursorBlinkMode = CursorBlinkModeOff
+          , cursorBlinkMode = CursorBlinkModeOn
+          , fontConfig = fontConf
           }
     }
 
@@ -60,7 +68,7 @@ solarizedDark =
   where
     solarizedDark1 :: Vec N8 (AlphaColour Double)
     solarizedDark1 =
-         createColour   7  54  66 -- base02, background highlights
+         createColour   7  54  66 -- base02
       :* createColour 220  50  47 -- red
       :* createColour 133 153   0 -- green
       :* createColour 181 137   0 -- yellow
@@ -72,13 +80,13 @@ solarizedDark =
 
     solarizedDark2 :: Vec N8 (AlphaColour Double)
     solarizedDark2 =
-         createColour   0  43  54 -- base03, background
+         createColour   0  43  54 -- base03
       :* createColour 203  75  22 -- orange
-      :* createColour  88 110 117 -- base01, comments / secondary text
-      :* createColour 131 148 150 -- base0, body text / default code / primary content
-      :* createColour 147 161 161 -- base1, optional emphasised content
-      :* createColour 108 113 196 -- violet
+      :* createColour  88 110 117 -- base01
       :* createColour 101 123 131 -- base00
+      :* createColour 131 148 150 -- base0
+      :* createColour 108 113 196 -- violet
+      :* createColour 147 161 161 -- base1
       :* createColour 253 246 227 -- base3
       :* EmptyVec
 
@@ -95,31 +103,39 @@ solarizedLight =
   where
     solarizedLight1 :: Vec N8 (AlphaColour Double)
     solarizedLight1 =
-         createColour 238 232 213 -- base2, background highlights
+         createColour   7  54  66 -- base02
       :* createColour 220  50  47 -- red
       :* createColour 133 153   0 -- green
       :* createColour 181 137   0 -- yellow
       :* createColour  38 139 210 -- blue
       :* createColour 211  54 130 -- magenta
       :* createColour  42 161 152 -- cyan
-      :* createColour   7  54  66 -- base02
+      :* createColour 238 232 213 -- base2
       :* EmptyVec
 
     solarizedLight2 :: Vec N8 (AlphaColour Double)
     solarizedLight2 =
-         createColour 253 246 227 -- base3, background
+         createColour   0  43  54 -- base03
       :* createColour 203  75  22 -- orange
-      :* createColour 147 161 161 -- base1, comments / secondary text
-      :* createColour 101 123 131 -- base00, body text / default code / primary content
-      :* createColour  88 110 117 -- base01, optional emphasised content
-      :* createColour 108 113 196 -- violet
+      :* createColour  88 110 117 -- base01
+      :* createColour 101 123 131 -- base00
       :* createColour 131 148 150 -- base0
-      :* createColour   0  43  54 -- base03
+      :* createColour 108 113 196 -- violet
+      :* createColour 147 161 161 -- base1
+      :* createColour 253 246 227 -- base3
       :* EmptyVec
+
+-- This defines the font for the terminal.
+fontConf :: FontConfig
+fontConf =
+  defaultFontConfig
+    { fontFamily = "Monospace"
+    , fontSize = FontSizePoints 12
+    }
 
 main :: IO ()
 main = do
-  -- First, create the colour extension based on either Solarixed modules.
+  -- First, create the colour extension based on either Solarized modules.
   myColourExt <- createColourExtension solarizedDark
 
   -- Update 'myTMConfig' with our colour extension.
