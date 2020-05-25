@@ -16,6 +16,11 @@ thought of as the "XMonad" of terminal emulators.
 
 ![image of Termonad](./img/termonad.png)
 
+Termonad was
+[featured on an episode](https://www.youtube.com/watch?v=TLNr_gBv5HY) of
+[DistroTube](https://www.youtube.com/channel/UCVls1GmFKf6WlTraIb_IaJg).
+This video gives a short overview of Termonad.
+
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
