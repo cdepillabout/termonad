@@ -1,3 +1,17 @@
+## 3.1.0.1
+
+* Correct the solarized colours
+  [#148](https://github.com/cdepillabout/termonad/pull/148).
+  Thanks [@craigem](https://github.com/craigem)!
+
+* Add an example showing Gruvbox colours
+  [#149](https://github.com/cdepillabout/termonad/pull/149).
+  Thanks again [@craigem](https://github.com/craigem)!
+
+* Set an upperbound on `base` so we make sure that only GHC-8.8 is used.  Some
+  of the dependencies of Termonad don't support GHC-8.10 yet.
+
+
 ## 3.1.0.0
 
 * Fix up deprecated functions used in Setup.hs.  This should allow Termonad to
