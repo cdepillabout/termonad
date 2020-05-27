@@ -54,7 +54,8 @@ library
                      , Termonad.Types
                      , Termonad.XML
   other-modules:       Paths_termonad
-  build-depends:       base >= 4.13 && < 5
+  -- Termonad only supports GHC-8.8
+  build-depends:       base >= 4.13 && < 4.14
                      , adjunctions
                      , classy-prelude
                      , colour
