@@ -25,25 +25,25 @@ This video gives a short overview of Termonad.
 **Table of Contents**
 
 - [Termonad](#termonad)
-    - [Installation](#installation)
-        - [Arch Linux](#arch-linux)
-        - [Ubuntu / Debian](#ubuntu--debian)
-        - [Nix](#nix)
-        - [Mac OS X](#mac-os-x)
-            - [Installing with just `stack`](#installing-with-just-stack)
-            - [Installing with just `nix`](#installing-with-just-nix)
-            - [Installing with `stack` using `nix`](#installing-with-stack-using-nix)
-        - [Windows](#windows)
-    - [How to use Termonad](#how-to-use-termonad)
-        - [Default Key Bindings](#default-key-bindings)
-        - [Configuring Termonad](#configuring-termonad)
-        - [Compiling Local Settings](#compiling-local-settings)
-            - [Running with `stack`](#running-with-stack)
-            - [Running with `nix`](#running-with-nix)
-    - [Goals](#goals)
-    - [Where to get help](#where-to-get-help)
-    - [Contributions](#contributions)
-    - [Maintainers](#maintainers)
+  - [Installation](#installation)
+    - [Arch Linux](#arch-linux)
+    - [Ubuntu / Debian](#ubuntu--debian)
+    - [Nix](#nix)
+    - [Mac OS X](#mac-os-x)
+      - [Installing with just `stack`](#installing-with-just-stack)
+      - [Installing with just `nix`](#installing-with-just-nix)
+      - [Installing with `stack` using `nix`](#installing-with-stack-using-nix)
+    - [Windows](#windows)
+  - [How to use Termonad](#how-to-use-termonad)
+    - [Default Key Bindings](#default-key-bindings)
+    - [Configuring Termonad](#configuring-termonad)
+    - [Compiling Local Settings](#compiling-local-settings)
+      - [Running with `stack`](#running-with-stack)
+      - [Running with `nix`](#running-with-nix)
+  - [Goals](#goals)
+  - [Where to get help](#where-to-get-help)
+  - [Contributions](#contributions)
+  - [Maintainers](#maintainers)
 
 <!-- markdown-toc end -->
 
@@ -190,7 +190,51 @@ This will install the `termonad` binary to `~/.local/bin/`.
 
 ### Windows
 
-(*currently no instructions available.  please send a PR adding instructions if you get termonad to build.*)
+To run Termonad on Windows, you'll need:
+
+* any X server app, for example **Vcxsrv**
+* any WSL, for example **Ubuntu**
+
+I'm using both Vcxsrv and Ubuntu WSL.
+
+Configure both Vcxsrv and WSL. For Vcxsrv go with default settings
+everywhere, it will be fine. Configure your WSL as you want (choose
+your name etc.). After you set up the user, you'll have to update your
+OS, run:
+
+```console
+$ sudo apt-get update
+$ sudo apt-get upgrade -y
+$ sudo apt-get dist-upgrade -y
+$ sudo apt-get autoremove -y
+```
+
+Configure the `DISPLAY` environment variable for the X server, and load the changes in bash:
+
+```console
+$ echo "export DISPLAY=localhost:0.0" >> ~/.bashrc
+$ source ~/.bashrc
+```
+
+Your X server should now be configured.
+
+Execute following command to install the necessary GTK system libraries:
+
+```console
+$ apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
+```
+
+The required GTK system libraries should now be installed.
+
+Clone the Termonad repo:
+
+```sh
+$ git clone https://github.com/cdepillabout/termonad
+$ cd termonad/
+$ stack build
+$ stack run
+```
+After `stack run`, you should see a new window with your Termonad running.
 
 ## How to use Termonad
 
