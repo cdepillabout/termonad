@@ -197,44 +197,44 @@ To run Termonad on Windows, you'll need:
 
 I'm using both Vcxsrv and Ubuntu WSL.
 
-Configure both Vcxsrv and WSL. For Vcxsrv go with default settings everywhere, it will be fine. Configure your WSL as you want (choose your name etc.). After you set up the user, you'll have to update your OS, run:
+Configure both Vcxsrv and WSL. For Vcxsrv go with default settings
+everywhere, it will be fine. Configure your WSL as you want (choose
+your name etc.). After you set up the user, you'll have to update your
+OS, run:
 
-```sh
-$ sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get dist-upgrade -y && sudo apt-get autoremove -y
+```console
+$ sudo apt-get update
+$ sudo apt-get upgrade -y
+$ sudo apt-get dist-upgrade -y
+$ sudo apt-get autoremove -y
 ```
 
-Configure your X server:
+Configure the `DISPLAY` environment variable for the X server, and load the changes in bash:
 
-```sh
+```console
 $ echo "export DISPLAY=localhost:0.0" >> ~/.bashrc
-```
-Restart Bash (or whatever you're using) or restart it, like:
-
-```sh
-$ . ~/.bashrc
+$ source ~/.bashrc
 ```
 
-You have your X server configured.
+Your X server should now be configured.
 
-Execute following command to install GTK system libraries:
+Execute following command to install the necessary GTK system libraries:
 
-```sh
-$ cd
+```console
 $ apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
 ```
 
-Now you have required GTK system libraries installed.
+The required GTK system libraries should now be installed.
 
-Clone the repo:
+Clone the Termonad repo:
 
 ```sh
 $ git clone https://github.com/cdepillabout/termonad
 $ cd termonad/
-$ mv stack-lts-15.yaml stack.yaml
 $ stack build
 $ stack run
 ```
-After `stack run` you should see a new window with your Termonad running.
+After `stack run`, you should see a new window with your Termonad running.
 
 ## How to use Termonad
 
