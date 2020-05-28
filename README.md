@@ -200,7 +200,7 @@ I'm using both Vcxsrv and Ubuntu WSL.
 Configure both Vcxsrv and WSL. For Vcxsrv go with default settings everywhere, it will be fine. Configure your WSL as you want (choose your name etc.). After you set up the user, you'll have to update your OS, run:
 
 ```sh
-$ sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get upgrade -y && sudo apt-get dist-upgrade -y && sudo apt-get autoremove -y
+$ sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get dist-upgrade -y && sudo apt-get autoremove -y
 ```
 
 Configure your X server:
