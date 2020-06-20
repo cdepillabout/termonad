@@ -61,6 +61,8 @@ module Termonad.Config.Colour
     , cube
     -- * Doctest setup
     -- $setup
+    , mkList8
+    , mkList24
   ) where
 
 import Termonad.Prelude hiding ((\\), index)
@@ -80,6 +82,7 @@ import Data.Colour
   )
 import Data.Colour.SRGB (RGB(RGB), toSRGB, toSRGB24, sRGB24)
 import qualified Data.Foldable
+import GHC.TypeNats
 import GI.Gdk
   ( RGBA
   , newZeroRGBA
@@ -101,7 +104,6 @@ import GI.Vte
 import Text.Printf (printf)
 import Text.Show (showString)
 
-import Termonad.Config.Vec
 import Termonad.Lenses (lensCreateTermHook, lensHooks)
 import Termonad.Types
   ( Option(Unset)
@@ -117,6 +119,25 @@ import Termonad.Types
 -------------------
 -- Colour Config --
 -------------------
+
+type Matrix n a = ListN n (ListN n (ListN n a))
+
+newtype ListN (n :: Nat) a = ListN [a]
+  deriving (Show, Eq, Functor, Foldable)
+
+mkListN :: forall a n. KnownNat n => [a] -> ListN n a
+mkListN xs =
+  if length xs == (fromIntegral $ natVal (Proxy :: Proxy n))
+  then ListN xs
+  else error "List must contain 8 elements"
+
+mkList8 :: [a] -> ListN 8 a
+mkList8 = mkListN
+
+mkList24 :: [a] -> ListN 24 a
+mkList24 = mkListN
+
+mkMatrixN :: forall a n. KnownNat n => [[[a]]]
 
 -- | This is the color palette to use for the terminal. Each data constructor
 -- lets you set progressively more colors.  These colors are used by the
@@ -148,14 +169,14 @@ data Palette c
   = NoPalette
   -- ^ Don't set any colors and just use the default from VTE.  This is a black
   -- background with light grey text.
-  | BasicPalette !(Vec N8 c)
+  | BasicPalette !(ListN 8 c)
   -- ^ Set the colors from the standard colors.
-  | ExtendedPalette !(Vec N8 c) !(Vec N8 c)
+  | ExtendedPalette !(ListN 8 c) !(ListN 8 c)
   -- ^ Set the colors from the extended (light) colors (as well as standard colors).
-  | ColourCubePalette !(Vec N8 c) !(Vec N8 c) !(Matrix '[N6, N6, N6] c)
+  | ColourCubePalette !(ListN 8 c) !(ListN 8 c) ![[[c]]] -- vec8 vec8 matrix [n6, n6, n6]
   -- ^ Set the colors from the color cube (as well as the standard colors and
   -- extended colors).
-  | FullPalette !(Vec N8 c) !(Vec N8 c) !(Matrix '[N6, N6, N6] c) !(Vec N24 c)
+  | FullPalette !(ListN 8 c) !(ListN 8 c) ![[[c]]] !(ListN 24 c) -- vec8 vec8 matrix [n6, n6, n6] vec24
   -- ^ Set the colors from the grey scale (as well as the standard colors,
   -- extended colors, and color cube).
   deriving (Eq, Show, Functor, Foldable)
@@ -175,35 +196,38 @@ paletteToList = Data.Foldable.toList
 -- True
 --
 -- In general, as an end-user, you shouldn't need to use this.
-coloursFromBits :: forall b. (Ord b, Floating b) => Word8 -> Word8 -> Vec N8 (AlphaColour b)
-coloursFromBits scale offset = genVec_ createElem
+coloursFromBits :: forall b. (Ord b, Floating b) => Word8 -> Word8 -> ListN 8 (AlphaColour b)
+coloursFromBits scale offset = genList createElem
   where
-    createElem :: Fin N8 -> AlphaColour b
-    createElem finN =
-      let red = cmp 0 finN
-          green = cmp 1 finN
-          blue = cmp 2 finN
+    createElem :: Int -> AlphaColour b
+    createElem i =
+      let red = cmp 0 i
+          green = cmp 1 i
+          blue = cmp 2 i
           color = opaque $ sRGB24 red green blue
       in color
 
-    cmp :: Int -> Fin N8 -> Word8
-    cmp i = (offset +) . (scale *) . fromIntegral . bit i . toIntFin
+    cmp :: Int -> Int -> Word8
+    cmp i = (offset +) . (scale *) . fromIntegral . bit i
 
     bit :: Int -> Int -> Int
     bit m i = i `div` (2 ^ m) `mod` 2
+
+    genList :: (Int -> a) -> ListN 8 a
+    genList f = mkListN [ f x | x <- [0..7]]
 
 -- | A 'Vec' of standard colors.  Default value for 'BasicPalette'.
 --
 -- >>> showColourVec defaultStandardColours
 -- ["#000000ff","#c00000ff","#00c000ff","#c0c000ff","#0000c0ff","#c000c0ff","#00c0c0ff","#c0c0c0ff"]
-defaultStandardColours :: (Ord b, Floating b) => Vec N8 (AlphaColour b)
+defaultStandardColours :: (Ord b, Floating b) => ListN 8 (AlphaColour b)
 defaultStandardColours = coloursFromBits 192 0
 
 -- | A 'Vec' of extended (light) colors.  Default value for 'ExtendedPalette'.
 --
 -- >>> showColourVec defaultLightColours
 -- ["#3f3f3fff","#ff3f3fff","#3fff3fff","#ffff3fff","#3f3fffff","#ff3fffff","#3fffffff","#ffffffff"]
-defaultLightColours :: (Ord b, Floating b) => Vec N8 (AlphaColour b)
+defaultLightColours :: (Ord b, Floating b) => ListN 8 (AlphaColour b)
 defaultLightColours = coloursFromBits 192 63
 
 -- | Convert an 'AlphaColour' to a 'Colour'.
@@ -317,8 +341,20 @@ createColour
 createColour r g b = sRGB32 r g b 255
 
 -- | A helper function for showing all the colors in 'Vec' of colors.
-showColourVec :: forall n. Vec n (AlphaColour Double) -> [String]
-showColourVec = fmap sRGB32show . Data.Foldable.toList
+showColourVec :: [AlphaColour Double] -> [String]
+showColourVec = fmap sRGB32show
+
+genMatrix :: (Int -> Int -> Int -> a) -> [a]
+genMatrix f = [ f x y z | x <- [0..5], y <- [0..5], z <- [0..5] ]
+
+build :: ((a -> [a] -> [a]) -> [a] -> [a]) -> [a]
+build g = g (:) []
+
+chunksOf :: Int -> [e] -> [[e]]
+chunksOf i ls = map (take i) (build (splitter ls)) where
+  splitter :: [e] -> ([e] -> a -> a) -> a -> a
+  splitter [] _ n = n
+  splitter l c n  = l `c` splitter (drop i l) c n
 
 -- | Specify a colour cube with one colour vector for its displacement and three
 -- colour vectors for its edges. Produces a uniform 6x6x6 grid bounded by
@@ -326,16 +362,17 @@ showColourVec = fmap sRGB32show . Data.Foldable.toList
 cube ::
      forall b. Fractional b
   => AlphaColour b
-  -> Vec N3 (AlphaColour b)
-  -> Matrix '[ N6, N6, N6] (AlphaColour b)
-cube d (i :* j :* k :* EmptyVec) =
-  genMatrix_ $
-    \(x :< y :< z :< EmptyHList) ->
-      affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] $ opaque black
+  -> AlphaColour b
+  -> AlphaColour b
+  -> AlphaColour b
+  -> [[[AlphaColour b]]]
+cube d i j k =
+  let xs = genMatrix $ \x y z ->
+        affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] $ opaque black
+  in chunksOf 6 $ chunksOf 6 xs
   where
-    coef :: Fin N6 -> b
-    coef fin' = fromIntegral (toIntFin fin') / 5
-
+    coef :: Int -> b
+    coef x = fromIntegral x / 5
 -- | A matrix of a 6 x 6 x 6 color cube. Default value for 'ColourCubePalette'.
 --
 -- >>> putStrLn $ pack $ showColourCube defaultColourCube
@@ -382,22 +419,19 @@ cube d (i :* j :* k :* EmptyVec) =
 --   , #ffff00ff, #ffff5fff, #ffff87ff, #ffffafff, #ffffd7ff, #ffffffff
 --   ]
 -- ]
-defaultColourCube :: (Ord b, Floating b) => Matrix '[N6, N6, N6] (AlphaColour b)
+defaultColourCube :: (Ord b, Floating b) => [[[AlphaColour b]]]
 defaultColourCube =
-  genMatrix_ $ \(x :< y :< z :< EmptyHList) -> opaque $ sRGB24 (cmp x) (cmp y) (cmp z)
+  let xs = genMatrix $ \x y z -> opaque $ sRGB24 (cmp x) (cmp y) (cmp z)
+  in chunksOf 6 $ chunksOf 6 xs
   where
-    cmp :: Fin N6 -> Word8
-    cmp i =
-      let i' = fromIntegral (toIntFin i)
-      in signum i' * 55 + 40 * i'
+    cmp :: Int -> Word8
+    cmp i = let i' = fromIntegral i in signum i' * 55 + 40 * i'
 
 -- | Helper function for showing all the colors in a color cube. This is used
 -- for debugging.
-showColourCube :: Matrix '[N6, N6, N6] (AlphaColour Double) -> String
+showColourCube :: [[[AlphaColour Double]]] -> String
 showColourCube matrix =
-  -- TODO: This function will only work with a 6x6x6 matrix, but it could be
-  -- generalized to work with any Rank-3 matrix.
-  let itemList = Data.Foldable.toList matrix
+  let itemList = (mconcat . mconcat) matrix
   in showSColourCube itemList ""
   where
     showSColourCube :: [AlphaColour Double] -> String -> String
@@ -450,14 +484,15 @@ showColourCube matrix =
     showCol :: AlphaColour Double -> String -> String
     showCol col str = sRGB32show col <> str
 
--- | A 'Vec' of a grey scale.  Default value for 'FullPalette'.
+-- | A List of a grey scale.  Default value for 'FullPalette'.
 --
--- >>> showColourVec defaultGreyscale
+-- >>> fmap sRGB32show defaultGreyscale
 -- ["#080808ff","#121212ff","#1c1c1cff","#262626ff","#303030ff","#3a3a3aff","#444444ff","#4e4e4eff","#585858ff","#626262ff","#6c6c6cff","#767676ff","#808080ff","#8a8a8aff","#949494ff","#9e9e9eff","#a8a8a8ff","#b2b2b2ff","#bcbcbcff","#c6c6c6ff","#d0d0d0ff","#dadadaff","#e4e4e4ff","#eeeeeeff"]
-defaultGreyscale :: (Ord b, Floating b) => Vec N24 (AlphaColour b)
-defaultGreyscale = genVec_ $ \n ->
-  let l = 8 + 10 * fromIntegral (toIntFin n)
-  in opaque $ sRGB24 l l l
+defaultGreyscale :: (Ord b, Floating b) => [AlphaColour b]
+defaultGreyscale = do
+  n <- [0..23]
+  let l = 8 + 10 * n
+  pure $ opaque $ sRGB24 l l l
 
 -- | The configuration for the colors used by Termonad.
 --
@@ -665,3 +700,4 @@ addColourHook
 addColourHook newHook oldHook tmState term = do
   oldHook tmState term
   newHook tmState term
+

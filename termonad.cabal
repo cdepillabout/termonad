@@ -43,7 +43,6 @@ library
                      , Termonad.App
                      , Termonad.Config
                      , Termonad.Config.Colour
-                     , Termonad.Config.Vec
                      , Termonad.Gtk
                      , Termonad.Keys
                      , Termonad.Lenses
