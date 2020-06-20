@@ -11,9 +11,9 @@ import Termonad
   , start
   )
 import Termonad.Config.Colour
-  ( AlphaColour, ColourConfig, Palette(ExtendedPalette), addColourExtension
+  ( AlphaColour, ColourConfig, List8, Palette(ExtendedPalette), addColourExtension
   , createColour, createColourExtension, cursorBgColour, defaultColourConfig
-  , foregroundColour, palette, mkList8
+  , foregroundColour, palette, unsafeMkList8
   )
 
 -- This is our main 'TMConfig'.  It holds all of the non-colour settings
@@ -47,8 +47,10 @@ myColourConfig =
     }
   where
     -- This is a an example of creating a linked-list of colours,
+    -- This function uses an unsafe method for generating the list.
     -- You must be absolutely sure you have 8 elements in this list.
-    myStandardColours = mkList8
+    myStandardColours :: List8 (AlphaColour Double)
+    myStandardColours = unsafeMkList8
       [ createColour  40  30  20 -- dark brown (used as background colour)
       , createColour 180  30  20 -- red
       , createColour  40 160  20 -- green
@@ -59,10 +61,7 @@ myColourConfig =
       , createColour 180 160 120 -- light brown
       ]
 
-    -- This is an example of creating a length-indexed linked-list of colours,
-    -- using the 'unsafeFromListVec_' function.  'unsafeFromListVec_' is okay to
-    -- use as long as you're absolutely sure you have 8 elements.
-    myLightColours = mkList8
+    myLightColours = unsafeMkList8
         [ createColour  70  60  50 -- brown
         , createColour 220  30  20 -- light red
         , createColour  40 210  20 -- light green
@@ -72,13 +71,6 @@ myColourConfig =
         , createColour  50 200 160 -- light teal
         , createColour 220 200 150 -- light brown
         ]
-
-    -- This is an example of updating just a single value in a 'Colour' 'Vec'.
-    -- Here we are updating the 5th 'Colour' (which is at index 4).
-    --_updateSingleColor :: Vec N8 (AlphaColour Double)
-    --_updateSingleColor =
-    --  let fin4 = fin_ (sing :: Sing N4)
-    --  in setAtVec fin4 (createColour 40 30 150) myStandardColours
 
 main :: IO ()
 main = do

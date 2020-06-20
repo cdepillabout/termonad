@@ -25,6 +25,12 @@ module Termonad.Config.Colour
   ( -- * Colour Config
       ColourConfig(..)
     , defaultColourConfig
+    , List8
+    , List24
+    , mkList8
+    , unsafeMkList8
+    , mkList24
+    , unsafeMkList24
     -- ** Colour Config Lenses
     , lensCursorFgColour
     , lensCursorBgColour
@@ -61,8 +67,6 @@ module Termonad.Config.Colour
     , cube
     -- * Doctest setup
     -- $setup
-    , mkList8
-    , mkList24
   ) where
 
 import Termonad.Prelude hiding ((\\), index)
@@ -82,7 +86,6 @@ import Data.Colour
   )
 import Data.Colour.SRGB (RGB(RGB), toSRGB, toSRGB24, sRGB24)
 import qualified Data.Foldable
-import GHC.TypeNats
 import GI.Gdk
   ( RGBA
   , newZeroRGBA
@@ -120,24 +123,25 @@ import Termonad.Types
 -- Colour Config --
 -------------------
 
-type Matrix n a = ListN n (ListN n (ListN n a))
+newtype List8 a = List8 [a]
+  deriving (Show, Eq, Foldable, Functor)
 
-newtype ListN (n :: Nat) a = ListN [a]
-  deriving (Show, Eq, Functor, Foldable)
+mkList8 :: [a] -> Maybe (List8 a)
+mkList8 xs = if length xs == 8 then Just (List8 xs) else Nothing
 
-mkListN :: forall a n. KnownNat n => [a] -> ListN n a
-mkListN xs =
-  if length xs == (fromIntegral $ natVal (Proxy :: Proxy n))
-  then ListN xs
-  else error "List must contain 8 elements"
+unsafeMkList8 :: [a] -> List8 a
+unsafeMkList8 xs = if length xs == 8 then List8 xs else error "List must contain 8 elements"
 
-mkList8 :: [a] -> ListN 8 a
-mkList8 = mkListN
+newtype List24 a = List24 [a]
+  deriving (Show, Eq, Foldable, Functor)
 
-mkList24 :: [a] -> ListN 24 a
-mkList24 = mkListN
+mkList24 :: [a] -> Maybe (List24 a)
+mkList24 xs = if length xs == 24 then Just (List24 xs) else Nothing
 
-mkMatrixN :: forall a n. KnownNat n => [[[a]]]
+unsafeMkList24 :: [a] -> List24 a
+unsafeMkList24 xs = if length xs == 24 then List24 xs else error "List must contain 24 elements"
+
+--mkMatrixN :: forall a n. KnownNat n => [[[a]]]
 
 -- | This is the color palette to use for the terminal. Each data constructor
 -- lets you set progressively more colors.  These colors are used by the
@@ -169,14 +173,14 @@ data Palette c
   = NoPalette
   -- ^ Don't set any colors and just use the default from VTE.  This is a black
   -- background with light grey text.
-  | BasicPalette !(ListN 8 c)
+  | BasicPalette !(List8 c)
   -- ^ Set the colors from the standard colors.
-  | ExtendedPalette !(ListN 8 c) !(ListN 8 c)
+  | ExtendedPalette !(List8 c) !(List8 c)
   -- ^ Set the colors from the extended (light) colors (as well as standard colors).
-  | ColourCubePalette !(ListN 8 c) !(ListN 8 c) ![[[c]]] -- vec8 vec8 matrix [n6, n6, n6]
+  | ColourCubePalette !(List8 c) !(List8 c) ![[[c]]] -- vec8 vec8 matrix [n6, n6, n6]
   -- ^ Set the colors from the color cube (as well as the standard colors and
   -- extended colors).
-  | FullPalette !(ListN 8 c) !(ListN 8 c) ![[[c]]] !(ListN 24 c) -- vec8 vec8 matrix [n6, n6, n6] vec24
+  | FullPalette !(List8 c) !(List8 c) ![[[c]]] !(List24 c) -- vec8 vec8 matrix [n6, n6, n6] vec24
   -- ^ Set the colors from the grey scale (as well as the standard colors,
   -- extended colors, and color cube).
   deriving (Eq, Show, Functor, Foldable)
@@ -196,7 +200,7 @@ paletteToList = Data.Foldable.toList
 -- True
 --
 -- In general, as an end-user, you shouldn't need to use this.
-coloursFromBits :: forall b. (Ord b, Floating b) => Word8 -> Word8 -> ListN 8 (AlphaColour b)
+coloursFromBits :: forall b. (Ord b, Floating b) => Word8 -> Word8 -> List8 (AlphaColour b)
 coloursFromBits scale offset = genList createElem
   where
     createElem :: Int -> AlphaColour b
@@ -213,21 +217,21 @@ coloursFromBits scale offset = genList createElem
     bit :: Int -> Int -> Int
     bit m i = i `div` (2 ^ m) `mod` 2
 
-    genList :: (Int -> a) -> ListN 8 a
-    genList f = mkListN [ f x | x <- [0..7]]
+    genList :: (Int -> a) -> List8 a
+    genList f = unsafeMkList8 [ f x | x <- [0..7]]
 
 -- | A 'Vec' of standard colors.  Default value for 'BasicPalette'.
 --
 -- >>> showColourVec defaultStandardColours
 -- ["#000000ff","#c00000ff","#00c000ff","#c0c000ff","#0000c0ff","#c000c0ff","#00c0c0ff","#c0c0c0ff"]
-defaultStandardColours :: (Ord b, Floating b) => ListN 8 (AlphaColour b)
+defaultStandardColours :: (Ord b, Floating b) => List8 (AlphaColour b)
 defaultStandardColours = coloursFromBits 192 0
 
 -- | A 'Vec' of extended (light) colors.  Default value for 'ExtendedPalette'.
 --
 -- >>> showColourVec defaultLightColours
 -- ["#3f3f3fff","#ff3f3fff","#3fff3fff","#ffff3fff","#3f3fffff","#ff3fffff","#3fffffff","#ffffffff"]
-defaultLightColours :: (Ord b, Floating b) => ListN 8 (AlphaColour b)
+defaultLightColours :: (Ord b, Floating b) => List8 (AlphaColour b)
 defaultLightColours = coloursFromBits 192 63
 
 -- | Convert an 'AlphaColour' to a 'Colour'.
