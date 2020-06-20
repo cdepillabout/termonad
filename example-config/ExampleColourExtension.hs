@@ -13,8 +13,10 @@ import Termonad
 import Termonad.Config.Colour
   ( AlphaColour, ColourConfig, List8, Palette(ExtendedPalette), addColourExtension
   , createColour, createColourExtension, cursorBgColour, defaultColourConfig
-  , foregroundColour, palette, unsafeMkList8
+  , foregroundColour, palette, mkList8, unsafeMkList8
   )
+
+import Data.Maybe (fromJust)
 
 -- This is our main 'TMConfig'.  It holds all of the non-colour settings
 -- for Termonad.
@@ -43,12 +45,12 @@ myColourConfig =
     , foregroundColour = Set (createColour 220 180 210) -- light pink
     -- Set the extended palette that has 8 colours standard colors and then 8
     -- light colors.
-    , palette = ExtendedPalette myStandardColours myLightColours
+    , palette = ExtendedPalette myStandardColours (fromJust myLightColours)
     }
   where
     -- This is a an example of creating a linked-list of colours,
     -- This function uses an unsafe method for generating the list.
-    -- You must be absolutely sure you have 8 elements in this list.
+    -- An exception will be thrown if your list does not have 8 elements.
     myStandardColours :: List8 (AlphaColour Double)
     myStandardColours = unsafeMkList8
       [ createColour  40  30  20 -- dark brown (used as background colour)
@@ -61,7 +63,10 @@ myColourConfig =
       , createColour 180 160 120 -- light brown
       ]
 
-    myLightColours = unsafeMkList8
+    -- This is an example of creating a linked-list of colours with a type
+    -- safe method. mkList8 produces a Maybe value which must be handled explicitely.
+    myLightColours :: Maybe (List8 (AlphaColour Double))
+    myLightColours = mkList8
         [ createColour  70  60  50 -- brown
         , createColour 220  30  20 -- light red
         , createColour  40 210  20 -- light green

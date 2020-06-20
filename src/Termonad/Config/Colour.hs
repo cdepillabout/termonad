@@ -26,11 +26,17 @@ module Termonad.Config.Colour
       ColourConfig(..)
     , defaultColourConfig
     , List8
+    , List6
     , List24
+    , Matrix
     , mkList8
     , unsafeMkList8
+    , mkList6
+    , unsafeMkList6
     , mkList24
     , unsafeMkList24
+    , mkMatrix
+    , unsafeMkMatrix
     -- ** Colour Config Lenses
     , lensCursorFgColour
     , lensCursorBgColour
@@ -123,25 +129,72 @@ import Termonad.Types
 -- Colour Config --
 -------------------
 
-newtype List8 a = List8 [a]
+-- | This newtype is for length 8 lists. Construct it with `mkList8` or `unsafeMkList8`
+newtype List8 a = List8 { getList8 :: [a] }
   deriving (Show, Eq, Foldable, Functor)
 
+-- | Typesafe smart constructor for length 8 lists.
 mkList8 :: [a] -> Maybe (List8 a)
 mkList8 xs = if length xs == 8 then Just (List8 xs) else Nothing
 
+-- | Unsafe smart constructor for length 8 lists.
 unsafeMkList8 :: [a] -> List8 a
-unsafeMkList8 xs = if length xs == 8 then List8 xs else error "List must contain 8 elements"
+unsafeMkList8 xs =
+  case mkList8 xs of
+    Just xs' -> xs'
+    Nothing  -> error "List must contain 8 elements"
 
-newtype List24 a = List24 [a]
+-- | This newtype is for length 6 lists. Construct it with `mkList6` or `unsafeMkList6`
+newtype List6 a = List6 { getList6 :: [a] }
   deriving (Show, Eq, Foldable, Functor)
 
+-- | Typesafe smart constructor for length 6 lists.
+mkList6 :: [a] -> Maybe (List6 a)
+mkList6 xs = if length xs == 6 then Just (List6 xs) else Nothing
+
+-- | Unsafe smart constructor for length 6 lists.
+unsafeMkList6 :: [a] -> List6 a
+unsafeMkList6 xs =
+  case mkList6 xs of
+    Just xs' -> xs'
+    Nothing  -> error "List must contain 6 elements"
+
+-- | This newtype is for length 24 lists. Construct it with `mkList24` or `unsafeMkList24`
+newtype List24 a = List24 { getList24 :: [a] }
+  deriving (Show, Eq, Foldable, Functor)
+
+-- | Typesafe smart constructor for length 24 lists.
 mkList24 :: [a] -> Maybe (List24 a)
 mkList24 xs = if length xs == 24 then Just (List24 xs) else Nothing
 
+-- | Unsafe smart constructor for length 24 lists.
 unsafeMkList24 :: [a] -> List24 a
-unsafeMkList24 xs = if length xs == 24 then List24 xs else error "List must contain 24 elements"
+unsafeMkList24 xs =
+  case mkList24 xs of
+    Just xs' -> xs'
+    Nothing  -> error "List must contain 24 elements"
 
---mkMatrixN :: forall a n. KnownNat n => [[[a]]]
+-- | This newtype is for 6x6x6 matrices.. Construct it with `mkMatrix` or `unsafeMkMatrix`
+newtype Matrix a = Matrix (List6 (List6 (List6 a)))
+  deriving (Show, Eq, Functor, Foldable)
+
+getMatrix :: Matrix a -> [[[a]]]
+getMatrix (Matrix (List6 m)) = fmap getList6 $ (fmap . fmap) getList6 m
+
+-- | Unsafe smart constructor for 6x6x6 Matrices.
+mkMatrix :: [[[a]]] -> Maybe (Matrix a)
+mkMatrix xs =
+  if length xs == 6 && all (\x -> length x == 6) xs
+                    && all (all (\x -> length x == 6)) xs
+  then Just $ Matrix $ List6 (fmap List6 ((fmap . fmap) List6 xs))
+  else Nothing
+
+-- | Unsafe smart constructor for 6x6x6 Matrices.
+unsafeMkMatrix :: [[[a]]] -> Matrix a
+unsafeMkMatrix xs =
+  case mkMatrix xs of
+    Just xs' -> xs'
+    Nothing  -> error "Matrix must be 6x6x6"
 
 -- | This is the color palette to use for the terminal. Each data constructor
 -- lets you set progressively more colors.  These colors are used by the
@@ -157,7 +210,7 @@ unsafeMkList24 xs = if length xs == 24 then List24 xs else error "List must cont
 -- grey scale.
 --
 -- The following image gives an idea of what each individual color looks like:
---
+  --
 -- <<https://raw.githubusercontent.com/cdepillabout/termonad/master/img/terminal-colors.png>>
 --
 -- This picture does not exactly match up with Termonad's default colors, but it gives an
@@ -177,10 +230,10 @@ data Palette c
   -- ^ Set the colors from the standard colors.
   | ExtendedPalette !(List8 c) !(List8 c)
   -- ^ Set the colors from the extended (light) colors (as well as standard colors).
-  | ColourCubePalette !(List8 c) !(List8 c) ![[[c]]] -- vec8 vec8 matrix [n6, n6, n6]
+  | ColourCubePalette !(List8 c) !(List8 c) !(Matrix c)
   -- ^ Set the colors from the color cube (as well as the standard colors and
   -- extended colors).
-  | FullPalette !(List8 c) !(List8 c) ![[[c]]] !(List24 c) -- vec8 vec8 matrix [n6, n6, n6] vec24
+  | FullPalette !(List8 c) !(List8 c) !(Matrix c) !(List24 c)
   -- ^ Set the colors from the grey scale (as well as the standard colors,
   -- extended colors, and color cube).
   deriving (Eq, Show, Functor, Foldable)
@@ -345,8 +398,8 @@ createColour
 createColour r g b = sRGB32 r g b 255
 
 -- | A helper function for showing all the colors in 'Vec' of colors.
-showColourVec :: [AlphaColour Double] -> [String]
-showColourVec = fmap sRGB32show
+showColourVec :: List8 (AlphaColour Double) -> [String]
+showColourVec (List8 xs) = fmap sRGB32show xs
 
 genMatrix :: (Int -> Int -> Int -> a) -> [a]
 genMatrix f = [ f x y z | x <- [0..5], y <- [0..5], z <- [0..5] ]
@@ -369,11 +422,11 @@ cube ::
   -> AlphaColour b
   -> AlphaColour b
   -> AlphaColour b
-  -> [[[AlphaColour b]]]
+  -> Matrix (AlphaColour b)
 cube d i j k =
   let xs = genMatrix $ \x y z ->
         affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] $ opaque black
-  in chunksOf 6 $ chunksOf 6 xs
+  in unsafeMkMatrix $ chunksOf 6 $ chunksOf 6 xs
   where
     coef :: Int -> b
     coef x = fromIntegral x / 5
@@ -423,19 +476,19 @@ cube d i j k =
 --   , #ffff00ff, #ffff5fff, #ffff87ff, #ffffafff, #ffffd7ff, #ffffffff
 --   ]
 -- ]
-defaultColourCube :: (Ord b, Floating b) => [[[AlphaColour b]]]
+defaultColourCube :: (Ord b, Floating b) => Matrix (AlphaColour b)
 defaultColourCube =
   let xs = genMatrix $ \x y z -> opaque $ sRGB24 (cmp x) (cmp y) (cmp z)
-  in chunksOf 6 $ chunksOf 6 xs
+  in unsafeMkMatrix $ chunksOf 6 $ chunksOf 6 xs
   where
     cmp :: Int -> Word8
     cmp i = let i' = fromIntegral i in signum i' * 55 + 40 * i'
 
 -- | Helper function for showing all the colors in a color cube. This is used
 -- for debugging.
-showColourCube :: [[[AlphaColour Double]]] -> String
+showColourCube :: Matrix (AlphaColour Double) -> String
 showColourCube matrix =
-  let itemList = (mconcat . mconcat) matrix
+  let itemList = (mconcat . mconcat) $ getMatrix matrix
   in showSColourCube itemList ""
   where
     showSColourCube :: [AlphaColour Double] -> String -> String
@@ -491,9 +544,9 @@ showColourCube matrix =
 -- | A List of a grey scale.  Default value for 'FullPalette'.
 --
 -- >>> fmap sRGB32show defaultGreyscale
--- ["#080808ff","#121212ff","#1c1c1cff","#262626ff","#303030ff","#3a3a3aff","#444444ff","#4e4e4eff","#585858ff","#626262ff","#6c6c6cff","#767676ff","#808080ff","#8a8a8aff","#949494ff","#9e9e9eff","#a8a8a8ff","#b2b2b2ff","#bcbcbcff","#c6c6c6ff","#d0d0d0ff","#dadadaff","#e4e4e4ff","#eeeeeeff"]
-defaultGreyscale :: (Ord b, Floating b) => [AlphaColour b]
-defaultGreyscale = do
+-- List24 {getList24 = ["#080808ff","#121212ff","#1c1c1cff","#262626ff","#303030ff","#3a3a3aff","#444444ff","#4e4e4eff","#585858ff","#626262ff","#6c6c6cff","#767676ff","#808080ff","#8a8a8aff","#949494ff","#9e9e9eff","#a8a8a8ff","#b2b2b2ff","#bcbcbcff","#c6c6c6ff","#d0d0d0ff","#dadadaff","#e4e4e4ff","#eeeeeeff"]}
+defaultGreyscale :: (Ord b, Floating b) => List24 (AlphaColour b)
+defaultGreyscale = unsafeMkList24 $ do
   n <- [0..23]
   let l = 8 + 10 * n
   pure $ opaque $ sRGB24 l l l
