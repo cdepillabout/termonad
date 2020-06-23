@@ -13,10 +13,8 @@ import Termonad
 import Termonad.Config.Colour
   ( AlphaColour, ColourConfig, List8, Palette(ExtendedPalette), addColourExtension
   , createColour, createColourExtension, cursorBgColour, defaultColourConfig
-  , foregroundColour, palette, mkList8, unsafeMkList8
+  , defaultLightColours, foregroundColour, palette, mkList8, unsafeMkList8
   )
-
-import Data.Maybe (fromJust)
 
 -- This is our main 'TMConfig'.  It holds all of the non-colour settings
 -- for Termonad.
@@ -45,7 +43,8 @@ myColourConfig =
     , foregroundColour = Set (createColour 220 180 210) -- light pink
     -- Set the extended palette that has 8 colours standard colors and then 8
     -- light colors.
-    , palette = ExtendedPalette myStandardColours (fromJust myLightColours)
+    , palette = ExtendedPalette myStandardColours
+                                (maybe defaultLightColours id myLightColours)
     }
   where
     -- This is a an example of creating a linked-list of colours,
