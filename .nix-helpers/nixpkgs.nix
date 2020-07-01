@@ -20,13 +20,13 @@ let
     if isNull nixpkgs
       then
         builtins.fetchTarball {
-          # Recent version of nixpkgs master as of 2020-03-03.
-          url = "https://github.com/NixOS/nixpkgs/archive/bd2c1d72c5a77bfc78693c5b6d121a9e8bb59e6f.tar.gz";
-          sha256 = "sha256:0r6lbsz5a0yn6x96y890xvycc1h6la84k2hd3ig5c8irknxdbx22";
+          # Recent version of nixpkgs master as of 2020-07-01 which uses LTS-16.2.
+          url = "https://github.com/NixOS/nixpkgs/archive/7db146538e49ad4bee4b5c4fea073c38586df7e2.tar.gz";
+          sha256 = "06vhwys3rpj6grxn76n1sj14wf4hn9z8bmd2k1yhcy29cqri0xhk";
         }
       else nixpkgs;
 
-  compilerVersion = if isNull compiler then "ghc882" else compiler;
+  compilerVersion = if isNull compiler then "ghc883" else compiler;
 
   # An overlay that adds termonad to all haskell package sets.
   haskellPackagesOverlay = self: super: {
@@ -61,7 +61,6 @@ let
                   extraCabal2nixOptions
                   {
                     inherit (self) gtk3;
-                    libpcre2 = self.pcre2;
                     vte_291 = self.vte;
                   };
             in
