@@ -71,7 +71,7 @@ jobs:
 
     - name: Install Required System Packages
       # run: sudo apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
-      run: sudo apt-get install libvte-2.91-dev
+      run: sudo apt-get install gobject-introspection libvte-2.91-dev
 
     - name: Build
       run: |
