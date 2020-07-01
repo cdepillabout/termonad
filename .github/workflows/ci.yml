@@ -8,7 +8,7 @@ on:
 
 jobs:
   cabal:
-    name: ${{ matrix.os }} / ghc ${{ matrix.ghc }}
+    name: cabal / ghc-${{ matrix.ghc }} / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -48,7 +48,7 @@ jobs:
       run: |
         cabal test all --enable-tests
   stack:
-    name: stack / ghc ${{ matrix.ghc }}
+    name: stack / ubuntu-latest
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -79,3 +79,14 @@ jobs:
     - name: Test
       run: |
         stack test --flag termonad:buildexamples
+
+  nix:
+    name: nix / ubuntu-latest
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: cachix/install-nix-action@v10
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+    - run: nix-build
+    - run: nix-build shell.nix
