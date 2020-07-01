@@ -31,11 +31,11 @@ jobs:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
 
-    - uses: actions/cache@v1
-      name: Cache cabal-store
-      with:
-        path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
-        key: ${{ runner.os }}-${{ matrix.ghc }}-cabal
+    # - uses: actions/cache@v1
+    #   name: Cache cabal-store
+    #   with:
+    #     path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
+    #     key: ${{ runner.os }}-${{ matrix.ghc }}-cabal
 
     - name: Install Required System Packages
       run: sudo apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
@@ -70,8 +70,7 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.ghc }}-stack
 
     - name: Install Required System Packages
-      # run: sudo apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
-      run: sudo apt-get install gobject-introspection libvte-2.91-dev
+      run: sudo apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
 
     - name: Build
       run: |
