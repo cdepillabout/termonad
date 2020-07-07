@@ -218,7 +218,7 @@ $ echo "export DISPLAY=localhost:0.0" >> ~/.bashrc
 $ source ~/.bashrc
 ```
 
-* For WSL2:
+For WSL2:
 
 ```console
 $ echo export DISPLAY=$(awk '/nameserver / {print $2; exit}' /etc/resolv.conf 2>/dev/null):0 >> ~/.bashrc
