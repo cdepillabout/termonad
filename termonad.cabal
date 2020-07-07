@@ -79,7 +79,6 @@ library
                      , mono-traversable
                      , pretty-simple
                      , QuickCheck
-                     , singletons
                      , text
                      , transformers
                      , yaml
@@ -147,8 +146,6 @@ test-suite termonad-test
   type:                exitcode-stdio-1.0
   main-is:             Test.hs
   hs-source-dirs:      test
-  -- other-modules:       Test.FocusList
-  --                    , Test.FocusList.Invariants
   build-depends:       base
                      , genvalidity-containers
                      , genvalidity-hspec
@@ -202,7 +199,6 @@ executable termonad-example-colour-extension
   build-depends:       base
                      , termonad
                      , colour
-                     , singletons
   default-language:    Haskell2010
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
 
@@ -216,7 +212,6 @@ executable termonad-example-colour-extension-gruvbox
   build-depends:       base
                      , termonad
                      , colour
-                     , singletons
   default-language:    Haskell2010
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
 
@@ -230,7 +225,6 @@ executable termonad-example-colour-extension-solarized
   build-depends:       base
                      , termonad
                      , colour
-                     , singletons
   default-language:    Haskell2010
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
 
