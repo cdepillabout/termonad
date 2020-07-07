@@ -226,7 +226,7 @@ $ echo export LIBGL_ALWAYS_INDIRECT=1 >> ~/.bashrc
 $ source ~/.bashrc
 ```
 
-> If you're using WSL2, you have to create a separate **inbound rule** for TCP port 6000, to allow WSL access to the X server.
+If you're using WSL2, you have to create a separate **inbound rule** for TCP port 6000, to allow WSL access to the X server.
 If you're using mentioned earlier **Vcxsrv** you can enable public access for your X server by disabling Access Control on the Extra Settings.
 You can also use `-ac` flag in the Additional parameters for VcXsrv section.
 
