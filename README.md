@@ -211,7 +211,7 @@ $ sudo apt-get autoremove -y
 
 Configure the `DISPLAY` environment variable for the X server, and load the changes in bash:
 
-* For WSL1:
+For WSL1:
 
 ```console
 $ echo "export DISPLAY=localhost:0.0" >> ~/.bashrc
