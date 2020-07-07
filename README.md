@@ -211,10 +211,24 @@ $ sudo apt-get autoremove -y
 
 Configure the `DISPLAY` environment variable for the X server, and load the changes in bash:
 
+* For WSL1:
+
 ```console
 $ echo "export DISPLAY=localhost:0.0" >> ~/.bashrc
 $ source ~/.bashrc
 ```
+
+* For WSL2:
+
+```console
+$ echo export DISPLAY=$(awk '/nameserver / {print $2; exit}' /etc/resolv.conf 2>/dev/null):0 >> ~/.bashrc
+$ echo export LIBGL_ALWAYS_INDIRECT=1 >> ~/.bashrc
+$ source ~/.bashrc
+```
+
+> If you're using WSL2, you have to create a separate **inbound rule** for TCP port 6000, to allow WSL access to the X server.
+If you're using mentioned earlier **Vcxsrv** you can enable public access for your X server by disabling Access Control on the Extra Settings.
+You can also use `-ac` flag in the Additional parameters for VcXsrv section.
 
 Your X server should now be configured.
 
