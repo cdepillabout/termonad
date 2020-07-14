@@ -4,7 +4,6 @@
 
 module Main where
 
-import Data.Singletons (Sing, sing)
 import Termonad
   ( CursorBlinkMode(CursorBlinkModeOff), Option(Set)
   , ShowScrollbar(ShowScrollbarNever), TMConfig, confirmExit, cursorBlinkMode
@@ -12,12 +11,9 @@ import Termonad
   , start
   )
 import Termonad.Config.Colour
-  ( AlphaColour, ColourConfig, Palette(ExtendedPalette), addColourExtension
+  ( AlphaColour, ColourConfig, List8, Palette(ExtendedPalette), addColourExtension
   , createColour, createColourExtension, cursorBgColour, defaultColourConfig
-  , foregroundColour, palette
-  )
-import Termonad.Config.Vec
-  ( N4, N8, Vec((:*), EmptyVec), fin_, setAtVec, unsafeFromListVec_
+  , defaultLightColours, foregroundColour, palette, mkList8, unsafeMkList8
   )
 
 -- This is our main 'TMConfig'.  It holds all of the non-colour settings
@@ -47,29 +43,29 @@ myColourConfig =
     , foregroundColour = Set (createColour 220 180 210) -- light pink
     -- Set the extended palette that has 8 colours standard colors and then 8
     -- light colors.
-    , palette = ExtendedPalette myStandardColours myLightColours
+    , palette = ExtendedPalette myStandardColours
+                                (maybe defaultLightColours id myLightColours)
     }
   where
-    -- This is a an example of creating a length-indexed linked-list of colours,
-    -- using 'Vec' constructors.
-    myStandardColours :: Vec N8 (AlphaColour Double)
-    myStandardColours =
-         createColour  40  30  20 -- dark brown (used as background colour)
-      :* createColour 180  30  20 -- red
-      :* createColour  40 160  20 -- green
-      :* createColour 180 160  20 -- dark yellow
-      :* createColour  40  30 120 -- dark purple
-      :* createColour 180  30 120 -- bright pink
-      :* createColour  40 160 120 -- teal
-      :* createColour 180 160 120 -- light brown
-      :* EmptyVec
+    -- This is a an example of creating a linked-list of colours,
+    -- This function uses an unsafe method for generating the list.
+    -- An exception will be thrown if your list does not have 8 elements.
+    myStandardColours :: List8 (AlphaColour Double)
+    myStandardColours = unsafeMkList8
+      [ createColour  40  30  20 -- dark brown (used as background colour)
+      , createColour 180  30  20 -- red
+      , createColour  40 160  20 -- green
+      , createColour 180 160  20 -- dark yellow
+      , createColour  40  30 120 -- dark purple
+      , createColour 180  30 120 -- bright pink
+      , createColour  40 160 120 -- teal
+      , createColour 180 160 120 -- light brown
+      ]
 
-    -- This is an example of creating a length-indexed linked-list of colours,
-    -- using the 'unsafeFromListVec_' function.  'unsafeFromListVec_' is okay to
-    -- use as long as you're absolutely sure you have 8 elements.
-    myLightColours :: Vec N8 (AlphaColour Double)
-    myLightColours =
-      unsafeFromListVec_
+    -- This is an example of creating a linked-list of colours with a type
+    -- safe method. mkList8 produces a Maybe value which must be handled explicitely.
+    myLightColours :: Maybe (List8 (AlphaColour Double))
+    myLightColours = mkList8
         [ createColour  70  60  50 -- brown
         , createColour 220  30  20 -- light red
         , createColour  40 210  20 -- light green
@@ -79,13 +75,6 @@ myColourConfig =
         , createColour  50 200 160 -- light teal
         , createColour 220 200 150 -- light brown
         ]
-
-    -- This is an example of updating just a single value in a 'Colour' 'Vec'.
-    -- Here we are updating the 5th 'Colour' (which is at index 4).
-    _updateSingleColor :: Vec N8 (AlphaColour Double)
-    _updateSingleColor =
-      let fin4 = fin_ (sing :: Sing N4)
-      in setAtVec fin4 (createColour 40 30 150) myStandardColours
 
 main :: IO ()
 main = do

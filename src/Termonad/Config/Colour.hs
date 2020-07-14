@@ -25,6 +25,26 @@ module Termonad.Config.Colour
   ( -- * Colour Config
       ColourConfig(..)
     , defaultColourConfig
+    , List8
+    , List6
+    , List24
+    , Matrix
+    , mkList8
+    , unsafeMkList8
+    , setAtList8
+    , overAtList8
+    , mkList6
+    , unsafeMkList6
+    , setAtList6
+    , overAtList6
+    , mkList24
+    , unsafeMkList24
+    , setAtList24
+    , overAtList24
+    , mkMatrix
+    , unsafeMkMatrix
+    , setAtMatrix
+    , overAtMatrix
     -- ** Colour Config Lenses
     , lensCursorFgColour
     , lensCursorBgColour
@@ -59,6 +79,8 @@ module Termonad.Config.Colour
     , paletteToList
     , coloursFromBits
     , cube
+    , setAt
+    , overAt
     -- * Doctest setup
     -- $setup
   ) where
@@ -101,7 +123,6 @@ import GI.Vte
 import Text.Printf (printf)
 import Text.Show (showString)
 
-import Termonad.Config.Vec
 import Termonad.Lenses (lensCreateTermHook, lensHooks)
 import Termonad.Types
   ( Option(Unset)
@@ -118,6 +139,180 @@ import Termonad.Types
 -- Colour Config --
 -------------------
 
+-- | This newtype is for length 8 lists. Construct it with 'mkList8' or 'unsafeMkList8'
+newtype List8 a = List8 { getList8 :: [a] }
+  deriving (Show, Eq, Foldable, Functor)
+
+-- | Typesafe smart constructor for length 8 lists.
+mkList8 :: [a] -> Maybe (List8 a)
+mkList8 xs = if length xs == 8 then Just (List8 xs) else Nothing
+
+-- | Unsafe smart constructor for length 8 lists.
+unsafeMkList8 :: [a] -> List8 a
+unsafeMkList8 xs =
+  case mkList8 xs of
+    Just xs' -> xs'
+    Nothing  ->
+      error $
+        "unsafeMkList8: input list contains " <> show (length xs) <>
+        " elements.  Must contain exactly 8 elements."
+
+-- | Set a given value in a list.
+--
+-- >>> setAt 2 "hello" ["a","b","c","d"]
+-- ["a","b","hello","d"]
+--
+-- You can set the first and last values in the list as well:
+--
+-- >>> setAt 0 "hello" ["a","b","c","d"]
+-- ["hello","b","c","d"]
+-- >>> setAt 3 "hello" ["a","b","c","d"]
+-- ["a","b","c","hello"]
+--
+-- If you try to set a value outside of the list, you'll get back the same
+-- list:
+--
+-- >>> setAt (-10) "hello" ["a","b","c","d"]
+-- ["a","b","c","d"]
+-- >>> setAt 100 "hello" ["a","b","c","d"]
+-- ["a","b","c","d"]
+setAt :: forall a. Int -> a -> [a] -> [a]
+setAt n newVal = overAt n (\_ -> newVal)
+
+-- | Update a given value in a list.
+--
+-- >>> overAt 2 (\x -> x ++ x) ["a","b","c","d"]
+-- ["a","b","cc","d"]
+--
+-- You can update the first and last values in the list as well:
+--
+-- >>> overAt 0 (\x -> "bye") ["a","b","c","d"]
+-- ["bye","b","c","d"]
+-- >>> overAt 3 (\x -> "") ["a","b","c","d"]
+-- ["a","b","c",""]
+--
+-- If you try to set a value outside of the list, you'll get back the same
+-- list:
+--
+-- >>> overAt (-10) (\_ -> "foobar") ["a","b","c","d"]
+-- ["a","b","c","d"]
+-- >>> overAt 100 (\_ -> "baz") ["a","b","c","d"]
+-- ["a","b","c","d"]
+overAt :: forall a. Int -> (a -> a) -> [a] -> [a]
+overAt n f = foldr go [] . zip [0..]
+  where
+    go :: (Int, a) -> [a] -> [a]
+    go (i, a) next
+      | i == n = f a : next
+      | otherwise = a : next
+
+-- | Set a given value in a 'List8'.
+--
+-- Internally uses 'setAt'.  See documentation on 'setAt' for some examples.
+setAtList8 :: Int -> a -> List8 a -> List8 a
+setAtList8 n a (List8 l) = List8 (setAt n a l)
+
+-- | Set a given value in a 'List8'.
+--
+-- Internally uses 'overAt'.  See documentation on 'overAt' for some examples.
+overAtList8 :: Int -> (a -> a) -> List8 a -> List8 a
+overAtList8 n f (List8 l) = List8 (overAt n f l)
+
+-- | This newtype is for length 6 lists. Construct it with 'mkList6' or 'unsafeMkList6'
+newtype List6 a = List6 { getList6 :: [a] }
+  deriving (Show, Eq, Foldable, Functor)
+
+-- | Typesafe smart constructor for length 6 lists.
+mkList6 :: [a] -> Maybe (List6 a)
+mkList6 xs = if length xs == 6 then Just (List6 xs) else Nothing
+
+-- | Unsafe smart constructor for length 6 lists.
+unsafeMkList6 :: [a] -> List6 a
+unsafeMkList6 xs =
+  case mkList6 xs of
+    Just xs' -> xs'
+    Nothing  ->
+      error $
+        "unsafeMkList6: input list contains " <> show (length xs) <>
+        " elements.  Must contain exactly 6 elements."
+
+-- | Set a given value in a 'List6'.
+--
+-- Internally uses 'setAt'.  See documentation on 'setAt' for some examples.
+setAtList6 :: Int -> a -> List6 a -> List6 a
+setAtList6 n a (List6 l) = List6 (setAt n a l)
+
+-- | Set a given value in a 'List6'.
+--
+-- Internally uses 'overAt'.  See documentation on 'overAt' for some examples.
+overAtList6 :: Int -> (a -> a) -> List6 a -> List6 a
+overAtList6 n f (List6 l) = List6 (overAt n f l)
+
+-- | This newtype is for length 24 lists. Construct it with 'mkList24' or 'unsafeMkList24'
+newtype List24 a = List24 { getList24 :: [a] }
+  deriving (Show, Eq, Foldable, Functor)
+
+-- | Typesafe smart constructor for length 24 lists.
+mkList24 :: [a] -> Maybe (List24 a)
+mkList24 xs = if length xs == 24 then Just (List24 xs) else Nothing
+
+-- | Unsafe smart constructor for length 24 lists.
+unsafeMkList24 :: [a] -> List24 a
+unsafeMkList24 xs =
+  case mkList24 xs of
+    Just xs' -> xs'
+    Nothing  -> error "List must contain 24 elements"
+
+-- | Set a given value in a 'List24'.
+--
+-- Internally uses 'setAt'.  See documentation on 'setAt' for some examples.
+setAtList24 :: Int -> a -> List24 a -> List24 a
+setAtList24 n a (List24 l) = List24 (setAt n a l)
+
+-- | Set a given value in a 'List24'.
+--
+-- Internally uses 'overAt'.  See documentation on 'overAt' for some examples.
+overAtList24 :: Int -> (a -> a) -> List24 a -> List24 a
+overAtList24 n f (List24 l) = List24 (overAt n f l)
+
+-- | This newtype is for 6x6x6 matrices.. Construct it with 'mkMatrix' or 'unsafeMkMatrix'
+newtype Matrix a = Matrix (List6 (List6 (List6 a)))
+  deriving (Show, Eq, Functor, Foldable)
+
+getMatrix :: Matrix a -> [[[a]]]
+getMatrix (Matrix (List6 m)) = fmap getList6 $ (fmap . fmap) getList6 m
+
+-- | Unsafe smart constructor for 6x6x6 Matrices.
+mkMatrix :: [[[a]]] -> Maybe (Matrix a)
+mkMatrix xs =
+  if length xs == 6 && all (\x -> length x == 6) xs
+                    && all (all (\x -> length x == 6)) xs
+  then Just $ Matrix $ List6 (fmap List6 ((fmap . fmap) List6 xs))
+  else Nothing
+
+-- | Unsafe smart constructor for 6x6x6 Matrices.
+unsafeMkMatrix :: [[[a]]] -> Matrix a
+unsafeMkMatrix xs =
+  case mkMatrix xs of
+    Just xs' -> xs'
+    Nothing  -> error "Matrix must be 6x6x6"
+    Nothing  ->
+      error $
+        "unsafeMkMatrix: input list must be exactly 6x6x6"
+
+-- | Set a given value in a 'Matrix'.
+--
+-- Internally uses 'setAt'.  See documentation on 'setAt' for some examples.
+setAtMatrix :: Int -> Int -> Int -> a -> Matrix a -> Matrix a
+setAtMatrix x y z a m = overAtMatrix x y z (\_ -> a) m
+
+-- | Set a given value in a 'Matrix'.
+--
+-- Internally uses 'overAt'.  See documentation on 'overAt' for some examples.
+overAtMatrix :: Int -> Int -> Int -> (a -> a) -> Matrix a -> Matrix a
+overAtMatrix x y z f (Matrix l6) =
+  Matrix (overAtList6 x (overAtList6 y (overAtList6 z f)) l6)
+
 -- | This is the color palette to use for the terminal. Each data constructor
 -- lets you set progressively more colors.  These colors are used by the
 -- terminal to render
@@ -132,7 +327,7 @@ import Termonad.Types
 -- grey scale.
 --
 -- The following image gives an idea of what each individual color looks like:
---
+  --
 -- <<https://raw.githubusercontent.com/cdepillabout/termonad/master/img/terminal-colors.png>>
 --
 -- This picture does not exactly match up with Termonad's default colors, but it gives an
@@ -148,14 +343,14 @@ data Palette c
   = NoPalette
   -- ^ Don't set any colors and just use the default from VTE.  This is a black
   -- background with light grey text.
-  | BasicPalette !(Vec N8 c)
+  | BasicPalette !(List8 c)
   -- ^ Set the colors from the standard colors.
-  | ExtendedPalette !(Vec N8 c) !(Vec N8 c)
+  | ExtendedPalette !(List8 c) !(List8 c)
   -- ^ Set the colors from the extended (light) colors (as well as standard colors).
-  | ColourCubePalette !(Vec N8 c) !(Vec N8 c) !(Matrix '[N6, N6, N6] c)
+  | ColourCubePalette !(List8 c) !(List8 c) !(Matrix c)
   -- ^ Set the colors from the color cube (as well as the standard colors and
   -- extended colors).
-  | FullPalette !(Vec N8 c) !(Vec N8 c) !(Matrix '[N6, N6, N6] c) !(Vec N24 c)
+  | FullPalette !(List8 c) !(List8 c) !(Matrix c) !(List24 c)
   -- ^ Set the colors from the grey scale (as well as the standard colors,
   -- extended colors, and color cube).
   deriving (Eq, Show, Functor, Foldable)
@@ -175,35 +370,38 @@ paletteToList = Data.Foldable.toList
 -- True
 --
 -- In general, as an end-user, you shouldn't need to use this.
-coloursFromBits :: forall b. (Ord b, Floating b) => Word8 -> Word8 -> Vec N8 (AlphaColour b)
-coloursFromBits scale offset = genVec_ createElem
+coloursFromBits :: forall b. (Ord b, Floating b) => Word8 -> Word8 -> List8 (AlphaColour b)
+coloursFromBits scale offset = genList createElem
   where
-    createElem :: Fin N8 -> AlphaColour b
-    createElem finN =
-      let red = cmp 0 finN
-          green = cmp 1 finN
-          blue = cmp 2 finN
+    createElem :: Int -> AlphaColour b
+    createElem i =
+      let red = cmp 0 i
+          green = cmp 1 i
+          blue = cmp 2 i
           color = opaque $ sRGB24 red green blue
       in color
 
-    cmp :: Int -> Fin N8 -> Word8
-    cmp i = (offset +) . (scale *) . fromIntegral . bit i . toIntFin
+    cmp :: Int -> Int -> Word8
+    cmp i = (offset +) . (scale *) . fromIntegral . bit i
 
     bit :: Int -> Int -> Int
     bit m i = i `div` (2 ^ m) `mod` 2
+
+    genList :: (Int -> a) -> List8 a
+    genList f = unsafeMkList8 [ f x | x <- [0..7]]
 
 -- | A 'Vec' of standard colors.  Default value for 'BasicPalette'.
 --
 -- >>> showColourVec defaultStandardColours
 -- ["#000000ff","#c00000ff","#00c000ff","#c0c000ff","#0000c0ff","#c000c0ff","#00c0c0ff","#c0c0c0ff"]
-defaultStandardColours :: (Ord b, Floating b) => Vec N8 (AlphaColour b)
+defaultStandardColours :: (Ord b, Floating b) => List8 (AlphaColour b)
 defaultStandardColours = coloursFromBits 192 0
 
 -- | A 'Vec' of extended (light) colors.  Default value for 'ExtendedPalette'.
 --
 -- >>> showColourVec defaultLightColours
 -- ["#3f3f3fff","#ff3f3fff","#3fff3fff","#ffff3fff","#3f3fffff","#ff3fffff","#3fffffff","#ffffffff"]
-defaultLightColours :: (Ord b, Floating b) => Vec N8 (AlphaColour b)
+defaultLightColours :: (Ord b, Floating b) => List8 (AlphaColour b)
 defaultLightColours = coloursFromBits 192 63
 
 -- | Convert an 'AlphaColour' to a 'Colour'.
@@ -317,8 +515,20 @@ createColour
 createColour r g b = sRGB32 r g b 255
 
 -- | A helper function for showing all the colors in 'Vec' of colors.
-showColourVec :: forall n. Vec n (AlphaColour Double) -> [String]
-showColourVec = fmap sRGB32show . Data.Foldable.toList
+showColourVec :: List8 (AlphaColour Double) -> [String]
+showColourVec (List8 xs) = fmap sRGB32show xs
+
+genMatrix :: (Int -> Int -> Int -> a) -> [a]
+genMatrix f = [ f x y z | x <- [0..5], y <- [0..5], z <- [0..5] ]
+
+build :: ((a -> [a] -> [a]) -> [a] -> [a]) -> [a]
+build g = g (:) []
+
+chunksOf :: Int -> [e] -> [[e]]
+chunksOf i ls = map (take i) (build (splitter ls)) where
+  splitter :: [e] -> ([e] -> a -> a) -> a -> a
+  splitter [] _ n = n
+  splitter l c n  = l `c` splitter (drop i l) c n
 
 -- | Specify a colour cube with one colour vector for its displacement and three
 -- colour vectors for its edges. Produces a uniform 6x6x6 grid bounded by
@@ -326,16 +536,17 @@ showColourVec = fmap sRGB32show . Data.Foldable.toList
 cube ::
      forall b. Fractional b
   => AlphaColour b
-  -> Vec N3 (AlphaColour b)
-  -> Matrix '[ N6, N6, N6] (AlphaColour b)
-cube d (i :* j :* k :* EmptyVec) =
-  genMatrix_ $
-    \(x :< y :< z :< EmptyHList) ->
-      affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] $ opaque black
+  -> AlphaColour b
+  -> AlphaColour b
+  -> AlphaColour b
+  -> Matrix (AlphaColour b)
+cube d i j k =
+  let xs = genMatrix $ \x y z ->
+        affineCombo [(1, d), (coef x, i), (coef y, j), (coef z, k)] $ opaque black
+  in unsafeMkMatrix $ chunksOf 6 $ chunksOf 6 xs
   where
-    coef :: Fin N6 -> b
-    coef fin' = fromIntegral (toIntFin fin') / 5
-
+    coef :: Int -> b
+    coef x = fromIntegral x / 5
 -- | A matrix of a 6 x 6 x 6 color cube. Default value for 'ColourCubePalette'.
 --
 -- >>> putStrLn $ pack $ showColourCube defaultColourCube
@@ -382,22 +593,19 @@ cube d (i :* j :* k :* EmptyVec) =
 --   , #ffff00ff, #ffff5fff, #ffff87ff, #ffffafff, #ffffd7ff, #ffffffff
 --   ]
 -- ]
-defaultColourCube :: (Ord b, Floating b) => Matrix '[N6, N6, N6] (AlphaColour b)
+defaultColourCube :: (Ord b, Floating b) => Matrix (AlphaColour b)
 defaultColourCube =
-  genMatrix_ $ \(x :< y :< z :< EmptyHList) -> opaque $ sRGB24 (cmp x) (cmp y) (cmp z)
+  let xs = genMatrix $ \x y z -> opaque $ sRGB24 (cmp x) (cmp y) (cmp z)
+  in unsafeMkMatrix $ chunksOf 6 $ chunksOf 6 xs
   where
-    cmp :: Fin N6 -> Word8
-    cmp i =
-      let i' = fromIntegral (toIntFin i)
-      in signum i' * 55 + 40 * i'
+    cmp :: Int -> Word8
+    cmp i = let i' = fromIntegral i in signum i' * 55 + 40 * i'
 
 -- | Helper function for showing all the colors in a color cube. This is used
 -- for debugging.
-showColourCube :: Matrix '[N6, N6, N6] (AlphaColour Double) -> String
+showColourCube :: Matrix (AlphaColour Double) -> String
 showColourCube matrix =
-  -- TODO: This function will only work with a 6x6x6 matrix, but it could be
-  -- generalized to work with any Rank-3 matrix.
-  let itemList = Data.Foldable.toList matrix
+  let itemList = (mconcat . mconcat) $ getMatrix matrix
   in showSColourCube itemList ""
   where
     showSColourCube :: [AlphaColour Double] -> String -> String
@@ -450,14 +658,15 @@ showColourCube matrix =
     showCol :: AlphaColour Double -> String -> String
     showCol col str = sRGB32show col <> str
 
--- | A 'Vec' of a grey scale.  Default value for 'FullPalette'.
+-- | A List of a grey scale.  Default value for 'FullPalette'.
 --
--- >>> showColourVec defaultGreyscale
--- ["#080808ff","#121212ff","#1c1c1cff","#262626ff","#303030ff","#3a3a3aff","#444444ff","#4e4e4eff","#585858ff","#626262ff","#6c6c6cff","#767676ff","#808080ff","#8a8a8aff","#949494ff","#9e9e9eff","#a8a8a8ff","#b2b2b2ff","#bcbcbcff","#c6c6c6ff","#d0d0d0ff","#dadadaff","#e4e4e4ff","#eeeeeeff"]
-defaultGreyscale :: (Ord b, Floating b) => Vec N24 (AlphaColour b)
-defaultGreyscale = genVec_ $ \n ->
-  let l = 8 + 10 * fromIntegral (toIntFin n)
-  in opaque $ sRGB24 l l l
+-- >>> fmap sRGB32show defaultGreyscale
+-- List24 {getList24 = ["#080808ff","#121212ff","#1c1c1cff","#262626ff","#303030ff","#3a3a3aff","#444444ff","#4e4e4eff","#585858ff","#626262ff","#6c6c6cff","#767676ff","#808080ff","#8a8a8aff","#949494ff","#9e9e9eff","#a8a8a8ff","#b2b2b2ff","#bcbcbcff","#c6c6c6ff","#d0d0d0ff","#dadadaff","#e4e4e4ff","#eeeeeeff"]}
+defaultGreyscale :: (Ord b, Floating b) => List24 (AlphaColour b)
+defaultGreyscale = unsafeMkList24 $ do
+  n <- [0..23]
+  let l = 8 + 10 * n
+  pure $ opaque $ sRGB24 l l l
 
 -- | The configuration for the colors used by Termonad.
 --
@@ -665,3 +874,4 @@ addColourHook
 addColourHook newHook oldHook tmState term = do
   oldHook tmState term
   newHook tmState term
+
