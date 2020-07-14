@@ -78,6 +78,9 @@
             ]
     ```
 
+    Also see the functions `setAtList8`, `overAtList8`, `setAtList24`,
+    `overAtList24`, etc.
+
 ## 3.1.0.1
 
 *   Correct the solarized colours

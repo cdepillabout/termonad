@@ -31,12 +31,20 @@ module Termonad.Config.Colour
     , Matrix
     , mkList8
     , unsafeMkList8
+    , setAtList8
+    , overAtList8
     , mkList6
     , unsafeMkList6
+    , setAtList6
+    , overAtList6
     , mkList24
     , unsafeMkList24
+    , setAtList24
+    , overAtList24
     , mkMatrix
     , unsafeMkMatrix
+    , setAtMatrix
+    , overAtMatrix
     -- ** Colour Config Lenses
     , lensCursorFgColour
     , lensCursorBgColour
@@ -71,6 +79,8 @@ module Termonad.Config.Colour
     , paletteToList
     , coloursFromBits
     , cube
+    , setAt
+    , overAt
     -- * Doctest setup
     -- $setup
   ) where
@@ -129,7 +139,7 @@ import Termonad.Types
 -- Colour Config --
 -------------------
 
--- | This newtype is for length 8 lists. Construct it with `mkList8` or `unsafeMkList8`
+-- | This newtype is for length 8 lists. Construct it with 'mkList8' or 'unsafeMkList8'
 newtype List8 a = List8 { getList8 :: [a] }
   deriving (Show, Eq, Foldable, Functor)
 
@@ -142,9 +152,73 @@ unsafeMkList8 :: [a] -> List8 a
 unsafeMkList8 xs =
   case mkList8 xs of
     Just xs' -> xs'
-    Nothing  -> error "List must contain 8 elements"
+    Nothing  ->
+      error $
+        "unsafeMkList8: input list contains " <> show (length xs) <>
+        " elements.  Must contain exactly 8 elements."
 
--- | This newtype is for length 6 lists. Construct it with `mkList6` or `unsafeMkList6`
+-- | Set a given value in a list.
+--
+-- >>> setAt 2 "hello" ["a","b","c","d"]
+-- ["a","b","hello","d"]
+--
+-- You can set the first and last values in the list as well:
+--
+-- >>> setAt 0 "hello" ["a","b","c","d"]
+-- ["hello","b","c","d"]
+-- >>> setAt 3 "hello" ["a","b","c","d"]
+-- ["a","b","c","hello"]
+--
+-- If you try to set a value outside of the list, you'll get back the same
+-- list:
+--
+-- >>> setAt (-10) "hello" ["a","b","c","d"]
+-- ["a","b","c","d"]
+-- >>> setAt 100 "hello" ["a","b","c","d"]
+-- ["a","b","c","d"]
+setAt :: forall a. Int -> a -> [a] -> [a]
+setAt n newVal = overAt n (\_ -> newVal)
+
+-- | Update a given value in a list.
+--
+-- >>> overAt 2 (\x -> x ++ x) ["a","b","c","d"]
+-- ["a","b","cc","d"]
+--
+-- You can update the first and last values in the list as well:
+--
+-- >>> overAt 0 (\x -> "bye") ["a","b","c","d"]
+-- ["bye","b","c","d"]
+-- >>> overAt 3 (\x -> "") ["a","b","c","d"]
+-- ["a","b","c",""]
+--
+-- If you try to set a value outside of the list, you'll get back the same
+-- list:
+--
+-- >>> overAt (-10) (\_ -> "foobar") ["a","b","c","d"]
+-- ["a","b","c","d"]
+-- >>> overAt 100 (\_ -> "baz") ["a","b","c","d"]
+-- ["a","b","c","d"]
+overAt :: forall a. Int -> (a -> a) -> [a] -> [a]
+overAt n f = foldr go [] . zip [0..]
+  where
+    go :: (Int, a) -> [a] -> [a]
+    go (i, a) next
+      | i == n = f a : next
+      | otherwise = a : next
+
+-- | Set a given value in a 'List8'.
+--
+-- Internally uses 'setAt'.  See documentation on 'setAt' for some examples.
+setAtList8 :: Int -> a -> List8 a -> List8 a
+setAtList8 n a (List8 l) = List8 (setAt n a l)
+
+-- | Set a given value in a 'List8'.
+--
+-- Internally uses 'overAt'.  See documentation on 'overAt' for some examples.
+overAtList8 :: Int -> (a -> a) -> List8 a -> List8 a
+overAtList8 n f (List8 l) = List8 (overAt n f l)
+
+-- | This newtype is for length 6 lists. Construct it with 'mkList6' or 'unsafeMkList6'
 newtype List6 a = List6 { getList6 :: [a] }
   deriving (Show, Eq, Foldable, Functor)
 
@@ -157,9 +231,24 @@ unsafeMkList6 :: [a] -> List6 a
 unsafeMkList6 xs =
   case mkList6 xs of
     Just xs' -> xs'
-    Nothing  -> error "List must contain 6 elements"
+    Nothing  ->
+      error $
+        "unsafeMkList6: input list contains " <> show (length xs) <>
+        " elements.  Must contain exactly 6 elements."
 
--- | This newtype is for length 24 lists. Construct it with `mkList24` or `unsafeMkList24`
+-- | Set a given value in a 'List6'.
+--
+-- Internally uses 'setAt'.  See documentation on 'setAt' for some examples.
+setAtList6 :: Int -> a -> List6 a -> List6 a
+setAtList6 n a (List6 l) = List6 (setAt n a l)
+
+-- | Set a given value in a 'List6'.
+--
+-- Internally uses 'overAt'.  See documentation on 'overAt' for some examples.
+overAtList6 :: Int -> (a -> a) -> List6 a -> List6 a
+overAtList6 n f (List6 l) = List6 (overAt n f l)
+
+-- | This newtype is for length 24 lists. Construct it with 'mkList24' or 'unsafeMkList24'
 newtype List24 a = List24 { getList24 :: [a] }
   deriving (Show, Eq, Foldable, Functor)
 
@@ -174,7 +263,19 @@ unsafeMkList24 xs =
     Just xs' -> xs'
     Nothing  -> error "List must contain 24 elements"
 
--- | This newtype is for 6x6x6 matrices.. Construct it with `mkMatrix` or `unsafeMkMatrix`
+-- | Set a given value in a 'List24'.
+--
+-- Internally uses 'setAt'.  See documentation on 'setAt' for some examples.
+setAtList24 :: Int -> a -> List24 a -> List24 a
+setAtList24 n a (List24 l) = List24 (setAt n a l)
+
+-- | Set a given value in a 'List24'.
+--
+-- Internally uses 'overAt'.  See documentation on 'overAt' for some examples.
+overAtList24 :: Int -> (a -> a) -> List24 a -> List24 a
+overAtList24 n f (List24 l) = List24 (overAt n f l)
+
+-- | This newtype is for 6x6x6 matrices.. Construct it with 'mkMatrix' or 'unsafeMkMatrix'
 newtype Matrix a = Matrix (List6 (List6 (List6 a)))
   deriving (Show, Eq, Functor, Foldable)
 
@@ -195,6 +296,22 @@ unsafeMkMatrix xs =
   case mkMatrix xs of
     Just xs' -> xs'
     Nothing  -> error "Matrix must be 6x6x6"
+    Nothing  ->
+      error $
+        "unsafeMkMatrix: input list must be exactly 6x6x6"
+
+-- | Set a given value in a 'Matrix'.
+--
+-- Internally uses 'setAt'.  See documentation on 'setAt' for some examples.
+setAtMatrix :: Int -> Int -> Int -> a -> Matrix a -> Matrix a
+setAtMatrix x y z a m = overAtMatrix x y z (\_ -> a) m
+
+-- | Set a given value in a 'Matrix'.
+--
+-- Internally uses 'overAt'.  See documentation on 'overAt' for some examples.
+overAtMatrix :: Int -> Int -> Int -> (a -> a) -> Matrix a -> Matrix a
+overAtMatrix x y z f (Matrix l6) =
+  Matrix (overAtList6 x (overAtList6 y (overAtList6 z f)) l6)
 
 -- | This is the color palette to use for the terminal. Each data constructor
 -- lets you set progressively more colors.  These colors are used by the
