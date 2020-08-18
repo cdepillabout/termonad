@@ -295,8 +295,7 @@ unsafeMkMatrix :: [[[a]]] -> Matrix a
 unsafeMkMatrix xs =
   case mkMatrix xs of
     Just xs' -> xs'
-    Nothing  -> error "Matrix must be 6x6x6"
-    Nothing  ->
+    Nothing ->
       error $
         "unsafeMkMatrix: input list must be exactly 6x6x6"
 
