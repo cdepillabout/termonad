@@ -13,6 +13,12 @@
 , # Build all the examples bundled with termonad.  Normally this is only used
   # in CI for testing that the examples all still compile.
   buildExamples ? false
+, # This is only used for `termonadShell`.
+  #
+  # If this is `true`, Hoogle will also index the Termonad libraries,
+  # however this will mean the environment will need to be rebuilt every
+  # time the termonad source changes.
+  indexTermonad ? false
 }:
 
 let
@@ -73,6 +79,41 @@ let
     # don't need to figure out the correct compiler version to use when it is
     # not given by the user.
     termonadKnownWorkingHaskellPkgSet = self.haskell.packages.${compilerVersion};
+
+    # This is a shell environment for hacking on Termonad with cabal.  See the
+    # top-level shell.nix for an explanation.
+    termonadShell =
+      let
+        # Nix-shell environment for hacking on termonad.
+        termonadEnv = self.termonadKnownWorkingHaskellPkgSet.termonad.env;
+
+        # Build tools that are nice to have.  It is okay to get Haskell build tools
+        # from any Haskell package set, since they do not depend on the GHC version
+        # we are using.  We get these from the normal haskellPackages pkg set because
+        # then they don't have to be compiled from scratch.
+        convenientNativeBuildTools = [
+          self.cabal-install
+          self.gnome3.glade
+          self.haskellPackages.ghcid
+        ];
+      in
+
+      if indexTermonad
+        then
+          termonadEnv.overrideAttrs (oldAttrs: {
+            nativeBuildInputs =
+              let
+                ghcEnvWithTermonad =
+                  self.termonadKnownWorkingHaskellPkgSet.ghcWithHoogle (hpkgs: [ hpkgs.termonad ]);
+              in
+              oldAttrs.nativeBuildInputs ++ convenientNativeBuildTools ++ [ ghcEnvWithTermonad ];
+          })
+        else
+          self.termonadKnownWorkingHaskellPkgSet.shellFor {
+            withHoogle = true;
+            packages = hpkgs: [ hpkgs.termonad ];
+            nativeBuildInputs = termonadEnv.nativeBuildInputs ++ convenientNativeBuildTools;
+          };
   };
 
 in import nixpkgsSrc { overlays = [ haskellPackagesOverlay ] ++ additionalOverlays; }
