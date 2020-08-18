@@ -1,3 +1,11 @@
+## 4.0.0.1
+
+*   Update Termonad to be able to be built with the latest versions of the
+    haskell-gi libraries.  This shouldn't affect most users building with
+    `stack`. It is only used
+    [currently](https://github.com/NixOS/nixpkgs/pull/95434) for building
+    Termonad with packages from Nixpkgs.
+
 ## 4.0.0.0
 
 *   Remove the dependently typed code for specifying terminal colors.
