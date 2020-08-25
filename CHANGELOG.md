@@ -1,121 +1,228 @@
+## 4.0.0.1
+
+*   Update Termonad to be able to be built with the latest versions of the
+    haskell-gi libraries.  This shouldn't affect most users building with
+    `stack`. It is only used
+    [currently](https://github.com/NixOS/nixpkgs/pull/95434) for building
+    Termonad with packages from Nixpkgs.
+
+## 4.0.0.0
+
+*   Remove the dependently typed code for specifying terminal colors.
+    [#161](https://github.com/cdepillabout/termonad/pull/161).
+    Thanks [@ssbothwell](https://github.com/ssbothwell)!
+
+    The `Palette` data type has been updated to not used length-indexed lists,
+    but instead just newtype wrappers around normal lists.
+
+    In prevous versions, the `Palette` data type looked like this:
+
+    ```haskell
+    data Palette c
+      = NoPalette
+      | BasicPalette !(Vec N8 c)
+      | ExtendedPalette !(Vec N8 c) !(Vec N8 c)
+      | ColourCubePalette !(Vec N8 c) !(Vec N8 c) !(Matrix '[N6, N6, N6] c)
+      | FullPalette !(Vec N8 c) !(Vec N8 c) !(Matrix '[N6, N6, N6] c) !(Vec N24 c)
+    ```
+
+    In 4.0.0.0, `Palette` has been changed to the following:
+
+    ```haskell
+    data Palette c
+      = NoPalette
+      | BasicPalette !(List8 c)
+      | ExtendedPalette !(List8 c) !(List8 c)
+      | ColourCubePalette !(List8 c) !(List8 c) !(Matrix c)
+      | FullPalette !(List8 c) !(List8 c) !(Matrix c) !(List24 c)
+    ```
+
+    Instead of using types like `Vec N8 c`, you will use types like `List8 c`.
+
+    When setting the `palette` field of in a `ColourConfig`, you can now do
+    it like the following.  Note that there is both a `mkList8` function that
+    returns `Maybe`, and an `unsafeMkList8` that throws a runtime error.
+    Most users will probably want to use the `unsafeMkList8` function, since
+    it is easy to use, and you can eyeball whether the list has the correct
+    number of elements.  If you're doing something more complicated, you may
+    want to use the `mkList8` function:
+
+    ```haskell
+    myColourConfig :: ColourConfig (AlphaColour Double)
+    myColourConfig =
+      defaultColourConfig
+        { palette =
+            ExtendedPalette
+              myStandardColours (maybe defaultLightColours id myLightColours)
+        }
+      where
+        -- This is a an example of creating a linked-list of colours,
+        -- This function uses an unsafe method for generating the list.
+        -- An exception will be thrown if your list does not have exactly 8 elements.
+        myStandardColours :: List8 (AlphaColour Double)
+        myStandardColours = unsafeMkList8
+          [ createColour  40  30  20 -- dark brown (used as background colour)
+          , createColour 180  30  20 -- red
+          , createColour  40 160  20 -- green
+          , createColour 180 160  20 -- dark yellow
+          , createColour  40  30 120 -- dark purple
+          , createColour 180  30 120 -- bright pink
+          , createColour  40 160 120 -- teal
+          , createColour 180 160 120 -- light brown
+          ]
+
+        -- This is an example of creating a linked-list of colours with a type
+        -- safe method. mkList8 produces a Maybe value which must be handled explicitely.
+        myLightColours :: Maybe (List8 (AlphaColour Double))
+        myLightColours = mkList8
+            [ createColour  70  60  50 -- brown
+            , createColour 220  30  20 -- light red
+            , createColour  40 210  20 -- light green
+            , createColour 220 200  20 -- yellow
+            , createColour  40  30 180 -- purple
+            , createColour 140  30 80  -- dark pink
+            , createColour  50 200 160 -- light teal
+            , createColour 220 200 150 -- light brown
+            ]
+    ```
+
+    Also see the functions `setAtList8`, `overAtList8`, `setAtList24`,
+    `overAtList24`, etc.
+
 ## 3.1.0.1
 
-* Correct the solarized colours
-  [#148](https://github.com/cdepillabout/termonad/pull/148).
-  Thanks [@craigem](https://github.com/craigem)!
+*   Correct the solarized colours
+    [#148](https://github.com/cdepillabout/termonad/pull/148).
+    Thanks [@craigem](https://github.com/craigem)!
 
-* Add an example showing Gruvbox colours
-  [#149](https://github.com/cdepillabout/termonad/pull/149).
-  Thanks again [@craigem](https://github.com/craigem)!
+*   Add an example showing Gruvbox colours
+    [#149](https://github.com/cdepillabout/termonad/pull/149).
+    Thanks again [@craigem](https://github.com/craigem)!
 
-* Set an upperbound on `base` so we make sure that only GHC-8.8 is used.  Some
-  of the dependencies of Termonad don't support GHC-8.10 yet.
-
+*   Set an upperbound on `base` so we make sure that only GHC-8.8 is used.  Some
+    of the dependencies of Termonad don't support GHC-8.10 yet.
 
 ## 3.1.0.0
 
-* Fix up deprecated functions used in Setup.hs.  This should allow Termonad to
-  be compiled with Cabal-3.0.0.0 (which is used by default in GHC-8.8).
-  [#144](https://github.com/cdepillabout/termonad/pull/144) Thanks
-  [mdorman](https://github.com/mdorman)!
+*   Fix up deprecated functions used in Setup.hs.  This should allow Termonad to
+    be compiled with Cabal-3.0.0.0 (which is used by default in GHC-8.8).
+    [#144](https://github.com/cdepillabout/termonad/pull/144) Thanks
+    [mdorman](https://github.com/mdorman)!
 
-* Fully update to LTS-15 and GHC-8.8.  Termonad now requires GHC-8.8 in order
-  to be compiled. [#145](https://github.com/cdepillabout/termonad/pull/145).
+*   Fully update to LTS-15 and GHC-8.8.  Termonad now requires GHC-8.8 in order
+    to be compiled. [#145](https://github.com/cdepillabout/termonad/pull/145).
 
 ## 3.0.0.0
 
-* Remove the one-pixel white border around the `GtkNotebook` (the GTK widget thing
-  that contains the tabs). [#138](https://github.com/cdepillabout/termonad/pull/138)
-* Add a right-click menu for the terminal.  It currently allows copy and
-  paste.  [#136](https://github.com/cdepillabout/termonad/pull/136)  Thanks
-  @jecaro!
-* Add a preferences file that settings will be saved to and read from at
-  `~/.config/termonad/termonad.yaml`.  You can change settings with the
-  Preferences dialog.  **The settings will only be used from this file if you
-  do not have a `~/.config/termonad/termonad.hs` file**.
-  [#140](https://github.com/cdepillabout/termonad/pull/140) Thanks again
-  @jecaro!
+*   Remove the one-pixel white border around the `GtkNotebook` (the GTK widget thing
+    that contains the tabs). [#138](https://github.com/cdepillabout/termonad/pull/138)
+
+*   Add a right-click menu for the terminal.  It currently allows copy and
+    paste.  [#136](https://github.com/cdepillabout/termonad/pull/136)  Thanks
+    @jecaro!
+
+*   Add a preferences file that settings will be saved to and read from at
+    `~/.config/termonad/termonad.yaml`.  You can change settings with the
+    Preferences dialog.  **The settings will only be used from this file if you
+    do not have a `~/.config/termonad/termonad.hs` file**.
+    [#140](https://github.com/cdepillabout/termonad/pull/140) Thanks again
+    @jecaro!
 
 ## 2.1.0.0
 
-* Add a menu option to set preferences for a running Termonad session.  The preferences you have set are lost when you end the Termonad session. [#130](https://github.com/cdepillabout/termonad/pull/130)  Thanks @jecaro!
+*   Add a menu option to set preferences for a running Termonad session.
+    The preferences you have set are lost when you end the Termonad session.
+    [#130](https://github.com/cdepillabout/termonad/pull/130)  Thanks @jecaro!
 
 ## 2.0.0.0
 
-* Added menu option to search for a regex within the terminal output.
-  This removes support for versions of VTE-2.91 older than 0.46.
-  This means that compiling on older versions of Debian and Ubuntu may no
-  longer work. [#118](https://github.com/cdepillabout/termonad/pull/118)
+*   Added menu option to search for a regex within the terminal output.
+    This removes support for versions of VTE-2.91 older than 0.46.
+    This means that compiling on older versions of Debian and Ubuntu may no
+    longer work. [#118](https://github.com/cdepillabout/termonad/pull/118)
 
 ## 1.3.0.0
 
-* Change all uses of
-  [`Colour`](http://hackage.haskell.org/package/colour-2.3.5/docs/Data-Colour.html#t:Colour)
-  to
-  [`AlphaColour`](http://hackage.haskell.org/package/colour-2.3.5/docs/Data-Colour.html#t:AlphaColour)
-  in `Termonad.Config.Colour`.  Users should now use `AlphaColour` instead of
-  `Colour`.  Also, all uses of `sRGB24` should be replaced with `createColour`.
-  This change is mechanical and should not affect how Termonad works at all.
-  Thanks to @jecaro and @amir! [#116](https://github.com/cdepillabout/termonad/pull/116)
+*   Change all uses of
+    [`Colour`](http://hackage.haskell.org/package/colour-2.3.5/docs/Data-Colour.html#t:Colour)
+    to
+    [`AlphaColour`](http://hackage.haskell.org/package/colour-2.3.5/docs/Data-Colour.html#t:AlphaColour)
+    in `Termonad.Config.Colour`.  Users should now use `AlphaColour` instead of
+    `Colour`.  Also, all uses of `sRGB24` should be replaced with `createColour`.
+    This change is mechanical and should not affect how Termonad works at all.
+    Thanks to @jecaro and @amir! [#116](https://github.com/cdepillabout/termonad/pull/116)
 
 ## 1.2.0.0
 
-* Got the code for setting the backgroud color of the terminal actually
-  working.  Thanks @dakotaclemenceplaza.
-  [#111](https://github.com/cdepillabout/termonad/pull/111)
-  * This changes the type of `ColourConfig` to make the foreground and
-    background colors of the terminal optional.
-* Various cleanup in the nix files.
+*   Got the code for setting the backgroud color of the terminal actually
+    working.  Thanks @dakotaclemenceplaza.
+    [#111](https://github.com/cdepillabout/termonad/pull/111)
+    *   This changes the type of `ColourConfig` to make the foreground and
+        background colors of the terminal optional.
+
+*   Various cleanup in the nix files.
 
 ## 1.1.0.0
 
-* Added an
-  [example](https://github.com/cdepillabout/termonad/blob/0cd741d51958806092418b55abdf1c1dc078841c/example-config/ExampleSolarizedColourExtension.hs)
-  of how to setup a solarized color scheme. Thanks @craigem.
-  [#90](https://github.com/cdepillabout/termonad/pull/90) and [#103](https://github.com/cdepillabout/termonad/pull/103)
-* Various fixes in the nix files.
-  * Make sure Termonad can see the GTK icons.
+*   Added an
+    [example](https://github.com/cdepillabout/termonad/blob/0cd741d51958806092418b55abdf1c1dc078841c/example-config/ExampleSolarizedColourExtension.hs)
+    of how to setup a solarized color scheme. Thanks @craigem.
+    [#90](https://github.com/cdepillabout/termonad/pull/90) and [#103](https://github.com/cdepillabout/termonad/pull/103)
+
+*   Various fixes in the nix files.  Make sure Termonad can see the GTK icons.
     [#91](https://github.com/cdepillabout/termonad/pull/91) and
     [#92](https://github.com/cdepillabout/termonad/pull/92)
-* Add a menu option to change the font size at runtime.  You should be able to
-  do this with the `Ctrl-+` and `Ctrl--` keys.
-  [#95](https://github.com/cdepillabout/termonad/pull/95)
-* Get building with GHC 8.6. Thanks @clinty. [#98](https://github.com/cdepillabout/termonad/pull/98)
+
+*   Add a menu option to change the font size at runtime.  You should be able to
+    do this with the `Ctrl-+` and `Ctrl--` keys.
+    [#95](https://github.com/cdepillabout/termonad/pull/95)
+
+*   Get building with GHC 8.6. Thanks @clinty.
+    [#98](https://github.com/cdepillabout/termonad/pull/98)
 
 ## 1.0.1.0
 
-* Stop using the `widgetSetFocusOnClick` function, which is not supported on
-  older versions of GTK. This lets Termonad be compiled with older versions
-  of GTK. [#87](https://github.com/cdepillabout/termonad/pull/87).
-* Add CI. [#87](https://github.com/cdepillabout/termonad/pull/87).
-* Support versions of VTE-2.91 older than 0.44.
-  [#87](https://github.com/cdepillabout/termonad/pull/87).
-* Add some functions for converting from a list to a `Vec` in
-  `Termonad.Config.Vec`: `fromListVec` and `fromListVec_`.  Commit 883eb98b5f.
-* Fix the paste hotkey. [#86](https://github.com/cdepillabout/termonad/pull/86).
+*   Stop using the `widgetSetFocusOnClick` function, which is not supported on
+    older versions of GTK. This lets Termonad be compiled with older versions
+    of GTK. [#87](https://github.com/cdepillabout/termonad/pull/87).
+
+*   Add CI. [#87](https://github.com/cdepillabout/termonad/pull/87).
+
+*   Support versions of VTE-2.91 older than 0.44.
+    [#87](https://github.com/cdepillabout/termonad/pull/87).
+
+*   Add some functions for converting from a list to a `Vec` in
+    `Termonad.Config.Vec`: `fromListVec` and `fromListVec_`.  Commit 883eb98b5f.
+
+*   Fix the paste hotkey. [#86](https://github.com/cdepillabout/termonad/pull/86).
 
 ## 1.0.0.0
 
-* The API for configuring Termonad is now completely different. Many, many
-  changes have gone into this version.  You should approach it as a
-  completely different application.
+*   The API for configuring Termonad is now completely different. Many, many
+    changes have gone into this version.  You should approach it as a
+    completely different application.
 
-  The CHANGELOG will be kept up-to-date for future releases.
+    The CHANGELOG will be kept up-to-date for future releases.
 
 ## 0.2.1.0
 
-* Make sure the window title is set to "Termonad".
-* Relabel tabs when termonad is started.
+*   Make sure the window title is set to "Termonad".
+
+*   Relabel tabs when termonad is started.
 
 ## 0.2.0.0
 
-* Open dialog asking if you want to quit when you try to use your WM to quit.
-* Termonad will attempt to open up a new terminal in the working directory of
-  the current terminal.
-* Make sure termonad won't crash if dyre can't find GHC.
-* Add a few more ways to compile on NixOS.
-* Add an icon for termonad.
+*   Open dialog asking if you want to quit when you try to use your WM to quit.
+
+*   Termonad will attempt to open up a new terminal in the working directory of
+    the current terminal.
+
+*   Make sure termonad won't crash if dyre can't find GHC.
+
+*   Add a few more ways to compile on NixOS.
+
+*   Add an icon for termonad.
 
 ## 0.1.0.0
 
-* Initial release.
+*   Initial release.

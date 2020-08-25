@@ -1,5 +1,5 @@
 name:                termonad
-version:             3.1.0.1
+version:             4.0.0.1
 synopsis:            Terminal emulator configurable in Haskell
 description:         Please see <https://github.com/cdepillabout/termonad#readme README.md>.
 homepage:            https://github.com/cdepillabout/termonad
@@ -43,7 +43,6 @@ library
                      , Termonad.App
                      , Termonad.Config
                      , Termonad.Config.Colour
-                     , Termonad.Config.Vec
                      , Termonad.Gtk
                      , Termonad.Keys
                      , Termonad.Lenses
@@ -80,7 +79,6 @@ library
                      , mono-traversable
                      , pretty-simple
                      , QuickCheck
-                     , singletons
                      , text
                      , transformers
                      , yaml
@@ -148,8 +146,6 @@ test-suite termonad-test
   type:                exitcode-stdio-1.0
   main-is:             Test.hs
   hs-source-dirs:      test
-  -- other-modules:       Test.FocusList
-  --                    , Test.FocusList.Invariants
   build-depends:       base
                      , genvalidity-containers
                      , genvalidity-hspec
@@ -203,7 +199,6 @@ executable termonad-example-colour-extension
   build-depends:       base
                      , termonad
                      , colour
-                     , singletons
   default-language:    Haskell2010
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
 
@@ -217,7 +212,6 @@ executable termonad-example-colour-extension-gruvbox
   build-depends:       base
                      , termonad
                      , colour
-                     , singletons
   default-language:    Haskell2010
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
 
@@ -231,7 +225,6 @@ executable termonad-example-colour-extension-solarized
   build-depends:       base
                      , termonad
                      , colour
-                     , singletons
   default-language:    Haskell2010
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
 

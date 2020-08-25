@@ -13,6 +13,12 @@
 , # Build all the examples bundled with termonad.  Normally this is only used
   # in CI for testing that the examples all still compile.
   buildExamples ? false
+, # This is only used for `termonadShell`.
+  #
+  # If this is `true`, Hoogle will also index the Termonad libraries,
+  # however this will mean the environment will need to be rebuilt every
+  # time the termonad source changes.
+  indexTermonad ? false
 }:
 
 let
@@ -20,13 +26,13 @@ let
     if isNull nixpkgs
       then
         builtins.fetchTarball {
-          # Recent version of nixpkgs master as of 2020-07-01 which uses LTS-16.2.
-          url = "https://github.com/NixOS/nixpkgs/archive/7db146538e49ad4bee4b5c4fea073c38586df7e2.tar.gz";
-          sha256 = "06vhwys3rpj6grxn76n1sj14wf4hn9z8bmd2k1yhcy29cqri0xhk";
+          # Recent version of nixpkgs master as of 2020-08-18 which uses LTS-16.9.
+          url = "https://github.com/NixOS/nixpkgs/archive/c5815280e92112a25d958a2ec8b3704d7d90c506.tar.gz";
+          sha256 = "09ic4s9s7w3lm0gmcxszm5j20cfv4n5lfvhdvgi7jzdbbbdps1nh";
         }
       else nixpkgs;
 
-  compilerVersion = if isNull compiler then "ghc883" else compiler;
+  compilerVersion = if isNull compiler then "ghc884" else compiler;
 
   # An overlay that adds termonad to all haskell package sets.
   haskellPackagesOverlay = self: super: {
@@ -73,6 +79,41 @@ let
     # don't need to figure out the correct compiler version to use when it is
     # not given by the user.
     termonadKnownWorkingHaskellPkgSet = self.haskell.packages.${compilerVersion};
+
+    # This is a shell environment for hacking on Termonad with cabal.  See the
+    # top-level shell.nix for an explanation.
+    termonadShell =
+      let
+        # Nix-shell environment for hacking on termonad.
+        termonadEnv = self.termonadKnownWorkingHaskellPkgSet.termonad.env;
+
+        # Build tools that are nice to have.  It is okay to get Haskell build tools
+        # from any Haskell package set, since they do not depend on the GHC version
+        # we are using.  We get these from the normal haskellPackages pkg set because
+        # then they don't have to be compiled from scratch.
+        convenientNativeBuildTools = [
+          self.cabal-install
+          self.gnome3.glade
+          self.haskellPackages.ghcid
+        ];
+      in
+
+      if indexTermonad
+        then
+          termonadEnv.overrideAttrs (oldAttrs: {
+            nativeBuildInputs =
+              let
+                ghcEnvWithTermonad =
+                  self.termonadKnownWorkingHaskellPkgSet.ghcWithHoogle (hpkgs: [ hpkgs.termonad ]);
+              in
+              oldAttrs.nativeBuildInputs ++ convenientNativeBuildTools ++ [ ghcEnvWithTermonad ];
+          })
+        else
+          self.termonadKnownWorkingHaskellPkgSet.shellFor {
+            withHoogle = true;
+            packages = hpkgs: [ hpkgs.termonad ];
+            nativeBuildInputs = termonadEnv.nativeBuildInputs ++ convenientNativeBuildTools;
+          };
   };
 
 in import nixpkgsSrc { overlays = [ haskellPackagesOverlay ] ++ additionalOverlays; }

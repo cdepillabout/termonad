@@ -19,15 +19,16 @@ import GI.Gdk
   )
 import GI.Gdk.Constants (pattern BUTTON_SECONDARY)
 import GI.Gio
-  ( menuAppend
+  ( Cancellable
+  , menuAppend
   , menuNew
-  , noCancellable
   )
 import GI.GLib
   ( SpawnFlags(SpawnFlagsDefault)
   )
 import GI.Gtk
-  ( Align(AlignFill)
+  ( Adjustment
+  , Align(AlignFill)
   , ApplicationWindow
   , Box
   , Button
@@ -55,7 +56,6 @@ import GI.Gtk
   , menuAttachToWidget
   , menuNewFromModel
   , menuPopupAtPointer
-  , noAdjustment
   , notebookAppendPage
   , notebookDetachTab
   , notebookGetNPages
@@ -254,7 +254,10 @@ createScrolledWin mvarTMState = do
   let showScrollbarVal =
         tmState ^. lensTMStateConfig . lensOptions . lensShowScrollbar
       vScrollbarPolicy = showScrollbarToPolicy showScrollbarVal
-  scrolledWin <- scrolledWindowNew noAdjustment noAdjustment
+  scrolledWin <-
+    scrolledWindowNew
+      (Nothing :: Maybe Adjustment)
+      (Nothing :: Maybe Adjustment)
   widgetShow scrolledWin
   scrolledWindowSetPolicy scrolledWin PolicyTypeAutomatic vScrollbarPolicy
   pure scrolledWin
@@ -370,7 +373,7 @@ launchShell vteTerm maybeCurrDir = do
       Nothing
       ([SpawnFlagsDefault] :: [SpawnFlags])
       Nothing
-      noCancellable
+      (Nothing :: Maybe Cancellable)
   pure (fromIntegral shellPid)
 
 -- | Add a page to the notebook and switch to it.
