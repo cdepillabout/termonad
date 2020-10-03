@@ -1,3 +1,10 @@
+## 4.0.1.0
+
+*   Add Preferences link to context menu.  This is a convenient way to open the
+    Preferences if you don't have the menu shown by default.
+    [#171](https://github.com/cdepillabout/termonad/pull/171) Thanks
+    [@maridonkers](https://github.com/maridonkers)!
+
 ## 4.0.0.1
 
 *   Update Termonad to be able to be built with the latest versions of the
