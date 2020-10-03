@@ -479,6 +479,7 @@ handleMousePress vteTerm event = do
     menuModel <- menuNew
     menuAppend menuModel (Just "Copy") (Just "app.copy")
     menuAppend menuModel (Just "Paste") (Just "app.paste")
+    menuAppend menuModel (Just "Preferences") (Just "app.preferences")
     menu <- menuNewFromModel menuModel
     menuAttachToWidget menu vteTerm Nothing
     menuPopupAtPointer menu Nothing

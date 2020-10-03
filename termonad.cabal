@@ -1,5 +1,5 @@
 name:                termonad
-version:             4.0.0.1
+version:             4.0.1.0
 synopsis:            Terminal emulator configurable in Haskell
 description:
   Termonad is a terminal emulator configurable in Haskell.  It is extremely
