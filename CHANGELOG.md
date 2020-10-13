@@ -1,3 +1,9 @@
+## 4.0.1.1
+
+*   Bump upper dependency on `base` so that Termonad is compatible with
+    GHC-8.10. [#172](https://github.com/cdepillabout/termonad/pull/172).
+    Thanks [@mimi1vx](https://github.com/mimi1vx)!
+
 ## 4.0.1.0
 
 *   Add Preferences link to context menu.  This is a convenient way to open the
