@@ -4,6 +4,7 @@
 
 module Main where
 
+import Data.Maybe (fromMaybe)
 import Termonad
   ( CursorBlinkMode(CursorBlinkModeOn)
   , Option(Set)
