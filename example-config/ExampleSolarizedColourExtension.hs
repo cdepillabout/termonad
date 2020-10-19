@@ -4,6 +4,7 @@
 
 module Main where
 
+import Data.Maybe (fromMaybe)
 import Termonad
   ( CursorBlinkMode(CursorBlinkModeOn)
   , Option(Set)
@@ -70,7 +71,7 @@ solarizedDark =
     }
   where
     solarizedDark1 :: List8 (AlphaColour Double)
-    solarizedDark1 = maybe defaultStandardColours id $ mkList8
+    solarizedDark1 = fromMaybe defaultStandardColours $ mkList8
       [ createColour   7  54  66 -- base02
       , createColour 220  50  47 -- red
       , createColour 133 153   0 -- green
@@ -82,7 +83,7 @@ solarizedDark =
       ]
 
     solarizedDark2 :: List8 (AlphaColour Double)
-    solarizedDark2 = maybe defaultStandardColours id $ mkList8
+    solarizedDark2 = fromMaybe defaultStandardColours $ mkList8
       [ createColour   0  43  54 -- base03
       , createColour 203  75  22 -- orange
       , createColour  88 110 117 -- base01
@@ -105,7 +106,7 @@ solarizedLight =
     }
   where
     solarizedLight1 :: List8 (AlphaColour Double)
-    solarizedLight1 = maybe defaultLightColours id $ mkList8
+    solarizedLight1 = fromMaybe defaultLightColours $ mkList8
       [ createColour   7  54  66 -- base02
       , createColour 220  50  47 -- red
       , createColour 133 153   0 -- green
@@ -117,7 +118,7 @@ solarizedLight =
       ]
 
     solarizedLight2 :: List8 (AlphaColour Double)
-    solarizedLight2 = maybe defaultLightColours id $ mkList8
+    solarizedLight2 = fromMaybe defaultLightColours $ mkList8
       [ createColour   0  43  54 -- base03
       , createColour 203  75  22 -- orange
       , createColour  88 110 117 -- base01

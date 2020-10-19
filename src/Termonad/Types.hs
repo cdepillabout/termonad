@@ -155,9 +155,7 @@ createTMTerm trm pd unq =
     }
 
 newTMTerm :: Terminal -> Int -> IO TMTerm
-newTMTerm trm pd = do
-  unq <- newUnique
-  pure $ createTMTerm trm pd unq
+newTMTerm trm pd = createTMTerm trm pd <$> newUnique
 
 getFocusedTermFromState :: TMState -> IO (Maybe Terminal)
 getFocusedTermFromState mvarTMState =
@@ -342,7 +340,7 @@ data Option a = Unset | Set !a
 -- []
 whenSet :: Monoid m => Option a -> (a -> m) -> m
 whenSet = \case
-  Unset -> \_ -> mempty
+  Unset -> const mempty
   Set x -> \f -> f x
 
 -- | Whether or not to show the scroll bar in a terminal.
@@ -464,7 +462,7 @@ defaultTMConfig =
 -- termonad's behaviour in order to implement new functionality. Fields should
 -- have sane @Semigroup@ and @Monoid@ instances so that config extensions can
 -- be combined uniformly and new hooks can be added without incident.
-data ConfigHooks = ConfigHooks {
+newtype ConfigHooks = ConfigHooks {
   -- | Produce an IO action to run on creation of new @Terminal@, given @TMState@
   -- and the @Terminal@ in question.
   createTermHook :: TMState -> Terminal -> IO ()
@@ -535,7 +533,7 @@ invariantTMState' tmState =
       maybeWidgetFromNote <- notebookGetNthPage tmNote index32
       let focusList = tmNotebookTabs $ tmStateNotebook tmState
           maybeScrollWinFromFL =
-            fmap tmNotebookTabTermContainer $ getFocusItemFL $ focusList
+            tmNotebookTabTermContainer <$> getFocusItemFL focusList
           idx = fromIntegral index32
       case (maybeWidgetFromNote, maybeScrollWinFromFL) of
         (Nothing, Nothing) -> pure Nothing
@@ -575,7 +573,7 @@ invariantTMState' tmState =
     invariantTabsAllMatch = do
       let tmNote = tmNotebook $ tmStateNotebook tmState
           focusList = tmNotebookTabs $ tmStateNotebook tmState
-          flList = fmap tmNotebookTabTermContainer $ toList focusList
+          flList = tmNotebookTabTermContainer <$> toList focusList
       noteList <- notebookToList tmNote
       tabsMatch noteList flList
       where

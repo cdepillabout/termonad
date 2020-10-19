@@ -102,7 +102,7 @@ createVteVersionCPPOpts
   :: Version
   -> [String]
 createVteVersionCPPOpts vers =
-  catMaybes $
+  catMaybes
     [ if vers >= mkVersion [0,44] then Just "-DVTE_VERSION_GEQ_0_44" else Nothing
     ]
 
@@ -116,7 +116,7 @@ createGtkVersionCPPOpts
   :: Version  -- ^ 'Version' of the GTK3 library as reported by @pkg-config@.
   -> [String] -- ^ A list of CPP macros to show the GTK version.
 createGtkVersionCPPOpts gtkVersion =
-  catMaybes $
+  catMaybes
     [ if gtkVersion >= mkVersion [3,22] then Just "-DGTK_VERSION_GEQ_3_22" else Nothing
     ]
 

@@ -4,6 +4,7 @@
 
 module Main where
 
+import Data.Maybe (fromMaybe)
 import Termonad
   ( CursorBlinkMode(CursorBlinkModeOn)
   , Option(Set)
@@ -70,7 +71,7 @@ gruvboxDark =
     }
   where
     gruvboxDark1 :: List8 (AlphaColour Double)
-    gruvboxDark1 = maybe defaultStandardColours id $ mkList8
+    gruvboxDark1 = fromMaybe defaultStandardColours $ mkList8
       [ createColour  40  40  40 -- bg0
       , createColour 204  36  29 -- red.1
       , createColour 152 151  26 -- green.2
@@ -82,7 +83,7 @@ gruvboxDark =
       ]
 
     gruvboxDark2 :: List8 (AlphaColour Double)
-    gruvboxDark2 = maybe defaultStandardColours id $ mkList8
+    gruvboxDark2 = fromMaybe defaultStandardColours $ mkList8
       [ createColour 124 111 100 -- bg4
       , createColour 251  71  52 -- red.9
       , createColour 184 187  38 -- green.10
@@ -105,7 +106,7 @@ gruvboxLight =
     }
   where
     gruvboxLight1 :: List8 (AlphaColour Double)
-    gruvboxLight1 = maybe defaultLightColours id $ mkList8
+    gruvboxLight1 = fromMaybe defaultLightColours $ mkList8
       [ createColour 251 241 199 -- bg0
       , createColour 204  36  29 -- red.1
       , createColour 152 151  26 -- green.2
@@ -117,7 +118,7 @@ gruvboxLight =
       ]
 
     gruvboxLight2 :: List8 (AlphaColour Double)
-    gruvboxLight2 = maybe defaultLightColours id $ mkList8
+    gruvboxLight2 = fromMaybe defaultLightColours $ mkList8
       [ createColour 168 153 132 -- bg4
       , createColour 157   0   6 -- red.9
       , createColour 121 116  14 -- green.10

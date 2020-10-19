@@ -177,7 +177,7 @@ unsafeMkList8 xs =
 -- >>> setAt 100 "hello" ["a","b","c","d"]
 -- ["a","b","c","d"]
 setAt :: forall a. Int -> a -> [a] -> [a]
-setAt n newVal = overAt n (\_ -> newVal)
+setAt n newVal = overAt n (const newVal)
 
 -- | Update a given value in a list.
 --
@@ -280,14 +280,14 @@ newtype Matrix a = Matrix (List6 (List6 (List6 a)))
   deriving (Show, Eq, Functor, Foldable)
 
 getMatrix :: Matrix a -> [[[a]]]
-getMatrix (Matrix (List6 m)) = fmap getList6 $ (fmap . fmap) getList6 m
+getMatrix (Matrix (List6 m)) = fmap (getList6 . fmap getList6) m
 
 -- | Unsafe smart constructor for 6x6x6 Matrices.
 mkMatrix :: [[[a]]] -> Maybe (Matrix a)
 mkMatrix xs =
   if length xs == 6 && all (\x -> length x == 6) xs
                     && all (all (\x -> length x == 6)) xs
-  then Just $ Matrix $ List6 (fmap List6 ((fmap . fmap) List6 xs))
+  then Just $ Matrix $ List6 (fmap (List6 . fmap List6) xs)
   else Nothing
 
 -- | Unsafe smart constructor for 6x6x6 Matrices.
@@ -296,14 +296,14 @@ unsafeMkMatrix xs =
   case mkMatrix xs of
     Just xs' -> xs'
     Nothing ->
-      error $
+      error
         "unsafeMkMatrix: input list must be exactly 6x6x6"
 
 -- | Set a given value in a 'Matrix'.
 --
 -- Internally uses 'setAt'.  See documentation on 'setAt' for some examples.
 setAtMatrix :: Int -> Int -> Int -> a -> Matrix a -> Matrix a
-setAtMatrix x y z a m = overAtMatrix x y z (\_ -> a) m
+setAtMatrix x y z a = overAtMatrix x y z (const a)
 
 -- | Set a given value in a 'Matrix'.
 --
@@ -496,7 +496,7 @@ sRGB32
 sRGB32 r g b 255 = withOpacity (sRGB24 r g b) 1
 sRGB32 r g b a =
   let aDouble = fromIntegral a / 255
-  in (withOpacity (sRGB24 r g b) aDouble)
+  in withOpacity (sRGB24 r g b) aDouble
 
 -- | Create an 'AlphaColour' that is fully 'opaque'.
 --
@@ -873,4 +873,3 @@ addColourHook
 addColourHook newHook oldHook tmState term = do
   oldHook tmState term
   newHook tmState term
-

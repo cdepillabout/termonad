@@ -95,6 +95,7 @@ let
           self.cabal-install
           self.gnome3.glade
           self.haskellPackages.ghcid
+          self.hlint
         ];
       in
 

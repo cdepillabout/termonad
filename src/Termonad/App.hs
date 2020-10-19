@@ -1,5 +1,3 @@
-{-# LANGUAGE ForeignFunctionInterface #-}
-
 module Termonad.App where
 
 import Termonad.Prelude
@@ -315,6 +313,7 @@ updateFLTabPos mvarTMState oldPos newPos =
 --
 -- If 'confirmExit' is 'False', then this function always returns
 -- 'ResponseTypeYes'.
+{- HLINT ignore "Reduce duplication" -}
 askShouldExit :: TMState -> IO ResponseType
 askShouldExit mvarTMState = do
   tmState <- readMVar mvarTMState
@@ -691,9 +690,9 @@ applyNewPreferences mvarTMState = do
   tmState <- readMVar mvarTMState
   let appWin = tmState ^. lensTMStateAppWin
       config = tmState ^. lensTMStateConfig
-      notebook = tmState ^. lensTMStateNotebook ^. lensTMNotebook
-      tabFocusList = tmState ^. lensTMStateNotebook ^. lensTMNotebookTabs
-      showMenu = config  ^. lensOptions ^. lensShowMenu
+      notebook = tmState ^. lensTMStateNotebook . lensTMNotebook
+      tabFocusList = tmState ^. lensTMStateNotebook . lensTMNotebookTabs
+      showMenu = config  ^. lensOptions . lensShowMenu
   applicationWindowSetShowMenubar appWin showMenu
   setShowTabs config notebook
   -- Sets the remaining preferences to each tab
@@ -703,9 +702,9 @@ applyNewPreferencesToTab :: TMState -> TMNotebookTab -> IO ()
 applyNewPreferencesToTab mvarTMState tab = do
   tmState <- readMVar mvarTMState
   let fontDesc = tmState ^. lensTMStateFontDesc
-      term = tab ^. lensTMNotebookTabTerm ^. lensTerm
+      term = tab ^. lensTMNotebookTabTerm . lensTerm
       scrolledWin = tab ^. lensTMNotebookTabTermContainer
-      options = tmState ^. lensTMStateConfig ^. lensOptions
+      options = tmState ^. lensTMStateConfig . lensOptions
   terminalSetFont term (Just fontDesc)
   terminalSetCursorBlinkMode term (options ^. lensCursorBlinkMode)
   terminalSetWordCharExceptions term (options ^. lensWordCharExceptions)
@@ -799,7 +798,7 @@ showPreferencesDialog mvarTMState = do
   when (toEnum (fromIntegral res) == ResponseTypeAccept) $ do
     maybeFontDesc <- fontChooserGetFontDesc fontButton
     maybeFontConfig <-
-      liftM join $ mapM fontConfigFromFontDescription maybeFontDesc
+      join <$> mapM fontConfigFromFontDescription maybeFontDesc
     maybeShowScrollbar <-
       comboBoxGetActive showScrollbarComboBoxText [ShowScrollbarNever ..]
     maybeShowTabBar <-
@@ -923,7 +922,7 @@ defaultMain tmConfig = do
             "configuration file and running termonad with default settings."
           start tmConfig
       | otherwise -> do
-          putStrLn $ "IO error occurred when trying to run termonad:"
+          putStrLn "IO error occurred when trying to run termonad:"
           print ioErr
           putStrLn "Don't know how to recover.  Exiting."
     Right _ -> pure ()

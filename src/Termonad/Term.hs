@@ -362,7 +362,7 @@ launchShell vteTerm maybeCurrDir = do
   -- Should probably use GI.Vte.Functions.getUserShell, but contrary to its
   -- documentation it raises an exception rather wrap in Maybe.
   mShell <- lookupEnv "SHELL"
-  let argv = fromMaybe ["/usr/bin/env", "bash"] (pure <$> mShell)
+  let argv = maybe ["/usr/bin/env", "bash"] pure mShell
   -- Launch the shell
   shellPid <-
     terminalSpawnSync
@@ -484,4 +484,3 @@ handleMousePress vteTerm event = do
     menuAttachToWidget menu vteTerm Nothing
     menuPopupAtPointer menu Nothing
   pure rightClick
-

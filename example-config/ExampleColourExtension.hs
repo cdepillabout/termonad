@@ -4,6 +4,8 @@
 
 module Main where
 
+import Data.Maybe (fromMaybe)
+
 import Termonad
   ( CursorBlinkMode(CursorBlinkModeOff), Option(Set)
   , ShowScrollbar(ShowScrollbarNever), TMConfig, confirmExit, cursorBlinkMode
@@ -44,7 +46,7 @@ myColourConfig =
     -- Set the extended palette that has 8 colours standard colors and then 8
     -- light colors.
     , palette = ExtendedPalette myStandardColours
-                                (maybe defaultLightColours id myLightColours)
+                                (fromMaybe defaultLightColours myLightColours)
     }
   where
     -- This is a an example of creating a linked-list of colours,
