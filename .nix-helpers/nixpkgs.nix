@@ -27,24 +27,12 @@ let
       then
         builtins.fetchTarball {
           # Recent version of nixpkgs master as of 2020-12-27 which uses nightly-2020-12-14.
-          # url = "https://github.com/NixOS/nixpkgs/archive/84917aa00bf23c88e5874c683abe05edb0ba4078.tar.gz";
-          # sha256 = "1x3qh815d7k9yc72zpn5cfaaq2b1942q4pka6rx8b5i33yz4m61q";
-
-          # bad
-          url = "https://github.com/NixOS/nixpkgs/archive/06279ee84f5dd62.tar.gz";
-          sha256 = "1p033qi1bq565alfmjnhw1xmnnq6vh4gjlpjd3fn2lv80f9ww8pb";
-
-          # good
-          # url = "https://github.com/nixos/nixpkgs/archive/774d5acfcfd244397f.tar.gz";
-          # sha256 = "07aj8y8r28ca72d47qp5l1pgprgxqs5dx2kg0f0c99gpvph8nxq0";
-
-          # old
-          # url = "https://github.com/NixOS/nixpkgs/archive/c5815280e92112.tar.gz";
-          # sha256 = "09ic4s9s7w3lm0gmcxszm5j20cfv4n5lfvhdvgi7jzdbbbdps1nh";
+          url = "https://github.com/NixOS/nixpkgs/archive/84917aa00bf23c88e5874c683abe05edb0ba4078.tar.gz";
+          sha256 = "1x3qh815d7k9yc72zpn5cfaaq2b1942q4pka6rx8b5i33yz4m61q";
         }
       else nixpkgs;
 
-  compilerVersion = if isNull compiler then "ghc8102" else compiler;
+  compilerVersion = if isNull compiler then "ghc8103" else compiler;
 
   # An overlay that adds termonad to all haskell package sets.
   haskellPackagesOverlay = self: super: {
@@ -72,57 +60,18 @@ let
               extraCabal2nixOptions =
                 self.lib.optionalString buildExamples "-fbuildexamples";
 
-              termonadPkg =
-                { mkDerivation, adjunctions, base, Cabal, cabal-doctest
-                , classy-prelude, colour, constraints, containers, data-default
-                , directory, distributive, doctest, dyre, file-embed, filepath
-                , focuslist, genvalidity-containers, genvalidity-hspec, gi-gdk
-                , gi-gio, gi-glib, gi-gtk, gi-pango, gi-vte, gtk3, haskell-gi-base
-                , hedgehog, inline-c, lens, mono-traversable, pcre2, pretty-simple
-                , QuickCheck, stdenv, tasty, tasty-hedgehog, tasty-hspec
-                , template-haskell, text, transformers, vte_291, xml-conduit
-                , xml-html-qq, yaml
-                }:
-                mkDerivation {
-                  pname = "termonad";
-                  version = "4.0.1.1";
-                  inherit src;
-                  isLibrary = true;
-                  isExecutable = true;
-                  enableSeparateDataOutput = true;
-                  setupHaskellDepends = [ base Cabal cabal-doctest ];
-                  libraryHaskellDepends = [
-                    adjunctions base classy-prelude colour constraints containers
-                    data-default directory distributive dyre file-embed filepath
-                    focuslist gi-gdk gi-gio gi-glib gi-gtk gi-pango gi-vte
-                    haskell-gi-base inline-c lens mono-traversable pretty-simple
-                    QuickCheck text transformers xml-conduit xml-html-qq yaml
-                  ];
-                  libraryPkgconfigDepends = [ gtk3 pcre2 vte_291 ];
-                  executableHaskellDepends = [ base ];
-                  testHaskellDepends = [
-                    base doctest genvalidity-containers genvalidity-hspec hedgehog lens
-                    QuickCheck tasty tasty-hedgehog tasty-hspec template-haskell
-                  ];
-                  homepage = "https://github.com/cdepillabout/termonad";
-                  description = "Terminal emulator configurable in Haskell";
-                  license = stdenv.lib.licenses.bsd3;
-                };
-
               termonadDrv =
-                # hself.callCabal2nixWithOptions
-                #   "termonad"
-                #   src
-                #   extraCabal2nixOptions
-                #   {
-                #     inherit (self) gtk3;
-                #     vte_291 = self.vte;
-                #   };
-                hself.callPackage termonadPkg {
-                  gtk3 = self.gtk3;
-                  pcre2 = self.pcre2;
-                  vte_291 = self.vte;
-                };
+                hself.callCabal2nixWithOptions
+                  "termonad"
+                  src
+                  extraCabal2nixOptions
+                  {
+                    # There are Haskell packages called gtk3 and pcre2, which
+                    # makes these system dependencies not able to be resolved
+                    # correctly.
+                    inherit (self) gtk3 pcre2;
+                    vte_291 = self.vte;
+                  };
             in
             termonadDrv;
         };

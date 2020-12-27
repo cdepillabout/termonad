@@ -147,6 +147,7 @@ test-suite doctests
                      , doctest
                      , QuickCheck
                      , template-haskell
+                     , termonad
   default-language:    Haskell2010
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
 
