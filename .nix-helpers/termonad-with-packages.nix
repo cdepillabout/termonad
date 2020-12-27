@@ -115,7 +115,7 @@ let
 in
 
 stdenv.mkDerivation {
-  name = "termonad-with-packages-${env.version}";
+  name = "termonad-with-packages-ghc-${env.version}";
   buildInputs = [ gdk_pixbuf gnome3.adwaita-icon-theme hicolor-icon-theme ];
   nativeBuildInputs = [ wrapGAppsHook ];
   dontBuild = true;
