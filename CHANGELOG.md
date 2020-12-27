@@ -1,3 +1,9 @@
+## 4.0.1.2
+
+*   Disable doctest test-suite when building with GHC-8.10.3.  The doctests
+    appear to be segfaulting, but only when compiled with GHC-8.10.3.
+    [#175](https://github.com/cdepillabout/termonad/pull/175).
+
 ## 4.0.1.1
 
 *   Bump upper dependency on `base` so that Termonad is compatible with
