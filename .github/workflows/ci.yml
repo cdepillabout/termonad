@@ -18,6 +18,7 @@ jobs:
         cabal: ["latest"]
         ghc:
           - "8.8.4"
+          - "8.10.2" # doctests are disabled on 8.10.3, but still working on 8.10.2.
           - "8.10.3"
 
     steps:
