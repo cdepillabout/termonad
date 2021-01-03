@@ -391,6 +391,8 @@ data ConfigOptions = ConfigOptions
     -- ^ When to show the tab bar.
   , cursorBlinkMode :: !CursorBlinkMode
     -- ^ How to handle cursor blink.
+  , boldIsBright :: !Bool
+    -- ^ Which color to use for bold text
   } deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
 instance FromJSON CursorBlinkMode where
@@ -421,6 +423,7 @@ instance ToJSON CursorBlinkMode where
 --           , showMenu = True
 --           , showTabBar = ShowTabBarIfNeeded
 --           , cursorBlinkMode = CursorBlinkModeOn
+--           , boldIsBright = False
 --           }
 --   in defaultConfigOptions == defConfOpt
 -- :}
@@ -436,6 +439,7 @@ defaultConfigOptions =
     , showMenu = True
     , showTabBar = ShowTabBarIfNeeded
     , cursorBlinkMode = CursorBlinkModeOn
+    , boldIsBright = False
     }
 
 -- | The Termonad 'ConfigOptions' along with the 'ConfigHooks'.
