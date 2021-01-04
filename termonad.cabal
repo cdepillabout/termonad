@@ -1,5 +1,5 @@
 name:                termonad
-version:             4.0.1.2
+version:             4.1.0.0
 synopsis:            Terminal emulator configurable in Haskell
 description:
   Termonad is a terminal emulator configurable in Haskell.  It is extremely
@@ -152,6 +152,7 @@ test-suite doctests
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   -- For some reason doctests appear to be segfaulting when compiling with
   -- ghc-8.10.3, so only build them when using ghc-8.10.2 or earlier.
+  -- See https://github.com/cdepillabout/termonad/issues/174.
   if impl(ghc <= 8.10.2)
     buildable:         True
   else

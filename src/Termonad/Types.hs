@@ -391,6 +391,23 @@ data ConfigOptions = ConfigOptions
     -- ^ When to show the tab bar.
   , cursorBlinkMode :: !CursorBlinkMode
     -- ^ How to handle cursor blink.
+  , boldIsBright :: !Bool
+    -- ^ This option controls whether or not to force bold text to use colors
+    -- from the 'Termonad.Config.Colour.ExtendedPalatte'.
+    --
+    -- If 'True', then colored bold text will /always/ use colors from the
+    -- 'Termonad.Config.Colour.ExtendedPalatte'.  There will be no way to print
+    -- bold text colored with the 'Termonad.Config.Colour.BasicPalatte'.
+    --
+    -- This often isn't a big problem, since many TUI applications use
+    -- bold in combination with colors from the 'Termonad.Config.Colour.ExtendedPalatte'.
+    -- Also, the VTE default blue color can be difficult to read with a dark
+    -- background, and enabling this can work around the problem.
+    -- See <https://github.com/cdepillabout/termonad/issues/177> for more information.
+    --
+    -- If 'False', then bold can be applied separately to colors from both the
+    -- 'Termonad.Config.Colour.BasicPalatte' and
+    -- 'Termonad.Config.Colour.ExtendedPalatte'.
   } deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
 instance FromJSON CursorBlinkMode where
@@ -421,6 +438,7 @@ instance ToJSON CursorBlinkMode where
 --           , showMenu = True
 --           , showTabBar = ShowTabBarIfNeeded
 --           , cursorBlinkMode = CursorBlinkModeOn
+--           , boldIsBright = False
 --           }
 --   in defaultConfigOptions == defConfOpt
 -- :}
@@ -436,6 +454,7 @@ defaultConfigOptions =
     , showMenu = True
     , showTabBar = ShowTabBarIfNeeded
     , cursorBlinkMode = CursorBlinkModeOn
+    , boldIsBright = False
     }
 
 -- | The Termonad 'ConfigOptions' along with the 'ConfigHooks'.

@@ -58,6 +58,7 @@ $(makeLensesFor
     , ("showMenu", "lensShowMenu")
     , ("showTabBar", "lensShowTabBar")
     , ("cursorBlinkMode", "lensCursorBlinkMode")
+    , ("boldIsBright", "lensBoldIsBright")
     ]
     ''ConfigOptions
  )

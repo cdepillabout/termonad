@@ -1,3 +1,10 @@
+## 4.1.0.0
+
+*   Add an option for enabling "bold is bright".  This forces colors from the
+    extended light palette to be used whenever Termonad prints bold text.
+    [#178](https://github.com/cdepillabout/termonad/pull/178).
+    Thanks [@M0M097](https://github.com/M0M097)!
+
 ## 4.0.1.2
 
 *   Disable doctest test-suite when building with GHC-8.10.3.  The doctests

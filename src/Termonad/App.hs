@@ -115,6 +115,7 @@ import GI.Vte
   , terminalSearchFindPrevious
   , terminalSearchSetRegex
   , terminalSearchSetWrapAround
+  , terminalSetBoldIsBright
   , terminalSetCursorBlinkMode
   , terminalSetFont
   , terminalSetScrollbackLines
@@ -127,7 +128,8 @@ import Paths_termonad (getDataFileName)
 import Termonad.Gtk (appNew, objFromBuildUnsafe)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Lenses
-  ( lensConfirmExit
+  ( lensBoldIsBright
+  , lensConfirmExit
   , lensCursorBlinkMode
   , lensFontConfig
   , lensOptions
@@ -156,7 +158,8 @@ import Termonad.Term
   , showScrollbarToPolicy
   )
 import Termonad.Types
-  ( FontConfig(..)
+  ( ConfigOptions(..)
+  , FontConfig(..)
   , FontSize(FontSizePoints, FontSizeUnits)
   , ShowScrollbar(..)
   , ShowTabBar(..)
@@ -706,9 +709,11 @@ applyNewPreferencesToTab mvarTMState tab = do
       scrolledWin = tab ^. lensTMNotebookTabTermContainer
       options = tmState ^. lensTMStateConfig . lensOptions
   terminalSetFont term (Just fontDesc)
-  terminalSetCursorBlinkMode term (options ^. lensCursorBlinkMode)
-  terminalSetWordCharExceptions term (options ^. lensWordCharExceptions)
-  terminalSetScrollbackLines term (fromIntegral (options ^. lensScrollbackLen))
+  terminalSetCursorBlinkMode term (cursorBlinkMode options)
+  terminalSetWordCharExceptions term (wordCharExceptions options)
+  terminalSetScrollbackLines term (fromIntegral (scrollbackLen options))
+  terminalSetBoldIsBright term (boldIsBright options)
+
   let vScrollbarPolicy = showScrollbarToPolicy (options ^. lensShowScrollbar)
   scrolledWindowSetPolicy scrolledWin PolicyTypeAutomatic vScrollbarPolicy
 
@@ -731,6 +736,8 @@ showPreferencesDialog mvarTMState = do
     objFromBuildUnsafe preferencesBuilder "confirmExit" CheckButton
   showMenuCheckButton <-
     objFromBuildUnsafe preferencesBuilder "showMenu" CheckButton
+  boldIsBrightCheckButton <-
+    objFromBuildUnsafe preferencesBuilder "boldIsBright" CheckButton
   wordCharExceptionsEntryBuffer <-
     objFromBuildUnsafe preferencesBuilder "wordCharExceptions" Entry >>=
       getEntryBuffer
@@ -778,18 +785,14 @@ showPreferencesDialog mvarTMState = do
   -- Init with current state
   fontChooserSetFontDesc fontButton (tmState ^. lensTMStateFontDesc)
   let options = tmState ^. lensTMStateConfig . lensOptions
-  comboBoxSetActive showScrollbarComboBoxText $ options ^. lensShowScrollbar
-  comboBoxSetActive showTabBarComboBoxText $ options ^. lensShowTabBar
-  comboBoxSetActive cursorBlinkModeComboBoxText $ options ^. lensCursorBlinkMode
-  spinButtonSetValue
-    scrollbackLenSpinButton
-    (fromIntegral $ options ^. lensScrollbackLen)
-  toggleButtonSetActive confirmExitCheckButton $ options ^. lensConfirmExit
-  toggleButtonSetActive showMenuCheckButton $ options ^. lensShowMenu
-  entryBufferSetText
-    wordCharExceptionsEntryBuffer
-    (options ^. lensWordCharExceptions)
-    (-1)
+  comboBoxSetActive showScrollbarComboBoxText $ showScrollbar options
+  comboBoxSetActive showTabBarComboBoxText $ showTabBar options
+  comboBoxSetActive cursorBlinkModeComboBoxText $ cursorBlinkMode options
+  spinButtonSetValue scrollbackLenSpinButton (fromIntegral $ scrollbackLen options)
+  toggleButtonSetActive confirmExitCheckButton $ confirmExit options
+  toggleButtonSetActive showMenuCheckButton $ showMenu options
+  toggleButtonSetActive boldIsBrightCheckButton $ boldIsBright options
+  entryBufferSetText wordCharExceptionsEntryBuffer (wordCharExceptions options) (-1)
 
   -- Run dialog then close
   res <- dialogRun preferencesDialog
@@ -805,21 +808,23 @@ showPreferencesDialog mvarTMState = do
       comboBoxGetActive showTabBarComboBoxText [ShowTabBarNever ..]
     maybeCursorBlinkMode <-
       comboBoxGetActive cursorBlinkModeComboBoxText [CursorBlinkModeSystem ..]
-    scrollbackLen <-
+    scrollbackLenVal <-
       fromIntegral <$> spinButtonGetValueAsInt scrollbackLenSpinButton
-    confirmExit <- toggleButtonGetActive confirmExitCheckButton
-    showMenu <- toggleButtonGetActive showMenuCheckButton
-    wordCharExceptions <- entryBufferGetText wordCharExceptionsEntryBuffer
+    confirmExitVal <- toggleButtonGetActive confirmExitCheckButton
+    showMenuVal <- toggleButtonGetActive showMenuCheckButton
+    boldIsBrightVal <- toggleButtonGetActive boldIsBrightCheckButton
+    wordCharExceptionsVal <- entryBufferGetText wordCharExceptionsEntryBuffer
 
     -- Apply the changes to mvarTMState
     modifyMVar_ mvarTMState $ pure
       . over lensTMStateFontDesc (`fromMaybe` maybeFontDesc)
       . over (lensTMStateConfig . lensOptions)
-        ( set lensConfirmExit confirmExit
-        . set lensShowMenu showMenu
-        . set lensWordCharExceptions wordCharExceptions
+        ( set lensConfirmExit confirmExitVal
+        . set lensShowMenu showMenuVal
+        . set lensBoldIsBright boldIsBrightVal
+        . set lensWordCharExceptions wordCharExceptionsVal
         . over lensFontConfig (`fromMaybe` maybeFontConfig)
-        . set lensScrollbackLen scrollbackLen
+        . set lensScrollbackLen scrollbackLenVal
         . over lensShowScrollbar (`fromMaybe` maybeShowScrollbar)
         . over lensShowTabBar (`fromMaybe` maybeShowTabBar)
         . over lensCursorBlinkMode (`fromMaybe` maybeCursorBlinkMode)
