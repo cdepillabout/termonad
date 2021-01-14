@@ -509,4 +509,3 @@ would like to add, please submit an issue or PR.
 ## Maintainers
 
 - [cdepillabout](https://github.com/cdepillabout)
-- [LSLeary](https://github.com/LSLeary)
