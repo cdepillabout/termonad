@@ -68,6 +68,8 @@ import GI.Gtk
   , labelNew
   , notebookGetNPages
   , notebookNew
+  , notebookNextPage
+  , notebookPrevPage
   , notebookSetShowBorder
   , onEntryActivate
   , onNotebookPageRemoved
@@ -153,6 +155,8 @@ import Termonad.PreferencesFile (saveToPreferencesFile)
 import Termonad.Term
   ( createTerm
   , relabelTabs
+  , termNextPage
+  , termPrevPage
   , termExitFocused
   , setShowTabs
   , showScrollbarToPolicy
@@ -428,6 +432,18 @@ setupTermonad tmConfig app win builder = do
   void $ onSimpleActionActivate newTabAction $ \_ -> void $ createTerm handleKeyPress mvarTMState
   actionMapAddAction app newTabAction
   applicationSetAccelsForAction app "app.newtab" ["<Shift><Ctrl>T"]
+
+  nextPageAction <- simpleActionNew "nextpage" Nothing
+  void $ onSimpleActionActivate nextPageAction $ \_ ->
+    termNextPage mvarTMState
+  actionMapAddAction app nextPageAction
+  applicationSetAccelsForAction app "app.nextpage" ["<Ctrl>Page_Down"]
+
+  prevPageAction <- simpleActionNew "prevpage" Nothing
+  void $ onSimpleActionActivate prevPageAction $ \_ ->
+    termPrevPage mvarTMState
+  actionMapAddAction app prevPageAction
+  applicationSetAccelsForAction app "app.prevpage" ["<Ctrl>Page_Up"]
 
   closeTabAction <- simpleActionNew "closetab" Nothing
   void $ onSimpleActionActivate closeTabAction $ \_ ->

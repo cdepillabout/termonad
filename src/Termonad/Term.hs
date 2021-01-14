@@ -59,7 +59,9 @@ import GI.Gtk
   , notebookAppendPage
   , notebookDetachTab
   , notebookGetNPages
+  , notebookNextPage
   , notebookPageNum
+  , notebookPrevPage
   , notebookSetCurrentPage
   , notebookSetShowTabs
   , notebookSetTabReorderable
@@ -138,6 +140,16 @@ focusTerm i mvarTMState = do
 
 altNumSwitchTerm :: Int -> TMState -> IO ()
 altNumSwitchTerm = focusTerm
+
+termNextPage :: TMState -> IO ()
+termNextPage mvarTMState = do
+  note <- tmNotebook . tmStateNotebook <$> readMVar mvarTMState
+  notebookNextPage note
+
+termPrevPage :: TMState -> IO ()
+termPrevPage mvarTMState = do
+  note <- tmNotebook . tmStateNotebook <$> readMVar mvarTMState
+  notebookPrevPage note
 
 termExitFocused :: TMState -> IO ()
 termExitFocused mvarTMState = do
