@@ -297,6 +297,8 @@ Termonad provides the following default key bindings.
 | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>i</kbd> | Find the regex **below** the current position. |
 | <kbd>Ctrl</kbd> <kbd>+</kbd> | Increase font size. |
 | <kbd>Ctrl</kbd> <kbd>-</kbd> | Decrease font size. |
+| <kbd>Ctrl</kbd> <kbd>PgUp</kbd> | Switch to previous tab. |
+| <kbd>Ctrl</kbd> <kbd>PgDown</kbd> | Switch to next tab. |
 | <kbd>Alt</kbd> <kbd>(number key)</kbd> | Switch to tab `number`.  For example, <kbd>Alt</kbd> <kbd>2</kbd> switches to tab 2. |
 
 ### Configuring Termonad
