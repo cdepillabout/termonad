@@ -1,3 +1,11 @@
+## 4.1.1.0
+
+*   Add new shortcuts to switch to the next and previous tab:
+    <kbd>Ctrl</kbd><kbd>PgDown</kbd> and <kbd>Ctrl</kbd><kbd>PgUp</kbd>.
+    This works similar to gnome-terminal and xfce4-terminal.
+    [#180](https://github.com/cdepillabout/termonad/pull/180).
+    Thanks [@juliendehos](https://github.com/juliendehos)!
+
 ## 4.1.0.0
 
 *   Add an option for enabling "bold is bright".  This forces colors from the
