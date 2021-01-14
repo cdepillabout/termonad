@@ -16,7 +16,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Dennis Gosnell
 maintainer:          cdep.illabout@gmail.com
-copyright:           2017 Dennis Gosnell
+copyright:           2017-2021 Dennis Gosnell
 category:            Text
 build-type:          Custom
 cabal-version:       1.12
