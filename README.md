@@ -8,7 +8,6 @@ Termonad
 [![Stackage Nightly](http://stackage.org/package/termonad/badge/nightly)](http://stackage.org/nightly/package/termonad)
 [![BSD3 license](https://img.shields.io/badge/license-BSD3-blue.svg)](./LICENSE)
 [![Join the chat at https://gitter.im/termonad/Lobby](https://badges.gitter.im/termonad/Lobby.svg)](https://gitter.im/termonad/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Join the chat in #termonad on irc.freenode.net](https://img.shields.io/badge/%23termonad-irc.freenode.net-brightgreen.svg)](https://webchat.freenode.net/)
 
 Termonad is a terminal emulator configurable in Haskell.  It is extremely
 customizable and provides hooks to modify the default behavior.  It can be
