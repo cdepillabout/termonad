@@ -153,10 +153,10 @@ test-suite doctests
   -- For some reason doctests appear to be segfaulting when compiling with
   -- ghc-8.10.3, so only build them when using ghc-8.10.2 or earlier.
   -- See https://github.com/cdepillabout/termonad/issues/174.
-  if impl(ghc <= 8.10.2)
-    buildable:         True
-  else
-    buildable:         False
+  -- if impl(ghc <= 8.10.2)
+  --   buildable:         True
+  -- else
+  --   buildable:         False
 
 test-suite termonad-test
   type:                exitcode-stdio-1.0
