@@ -11,12 +11,12 @@ import System.Posix.Process (forkProcess)
 import Test.DocTest (doctest)
 
 -- Original thing that segfaults.
--- main :: IO ()
--- main = do
---   doctest args
---   where
---     args :: [String]
---     args = flags ++ pkgs ++ module_sources
+main :: IO ()
+main = do
+  doctest args
+  where
+    args :: [String]
+    args = flags ++ pkgs ++ module_sources
 
 -- This works, but fails when run with cabal because cabal doesn't
 -- put the doctest binary on the PATH.
@@ -51,19 +51,19 @@ import Test.DocTest (doctest)
 --       putMVar mvar ()
 
 -- Fork a full OS process.  This also segfaults.
-main :: IO ()
-main = do
-  mvar <- newEmptyMVar
-  void $ forkProcess (go mvar)
-  takeMVar mvar
-  print "finally finished"
-  where
-    args :: [String]
-    args = flags ++ pkgs ++ module_sources
+-- main :: IO ()
+-- main = do
+--   mvar <- newEmptyMVar
+--   void $ forkProcess (go mvar)
+--   takeMVar mvar
+--   print "finally finished"
+--   where
+--     args :: [String]
+--     args = flags ++ pkgs ++ module_sources
 
-    go :: MVar () -> IO ()
-    go mvar = do
-      print "starting doctests"
-      doctest args
-      print "finished doctests"
-      putMVar mvar ()
+--     go :: MVar () -> IO ()
+--     go mvar = do
+--       print "starting doctests"
+--       doctest args
+--       print "finished doctests"
+--       putMVar mvar ()
