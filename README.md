@@ -2,7 +2,7 @@
 Termonad
 =========
 
-[![Build Status](https://secure.travis-ci.org/cdepillabout/termonad.svg)](http://travis-ci.org/cdepillabout/termonad)
+[![CI](https://github.com/cdepillabout/termonad/actions/workflows/ci.yml/badge.svg)](https://github.com/cdepillabout/termonad/actions/workflows/ci.yml)
 [![Hackage](https://img.shields.io/hackage/v/termonad.svg)](https://hackage.haskell.org/package/termonad)
 [![Stackage LTS](http://stackage.org/package/termonad/badge/lts)](http://stackage.org/lts/package/termonad)
 [![Stackage Nightly](http://stackage.org/package/termonad/badge/nightly)](http://stackage.org/nightly/package/termonad)
