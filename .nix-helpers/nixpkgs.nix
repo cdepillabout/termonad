@@ -46,6 +46,8 @@ let
                 ".nix-helpers"
                 "result"
                 ".stack-work"
+                "stack.yaml"
+                "stack-nightly.yaml"
                 ".travis.yml"
               ];
 
