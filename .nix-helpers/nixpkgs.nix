@@ -26,13 +26,13 @@ let
     if isNull nixpkgs
       then
         builtins.fetchTarball {
-          # Recent version of nixpkgs master as of 2020-12-27 which uses nightly-2020-12-14.
-          url = "https://github.com/NixOS/nixpkgs/archive/84917aa00bf23c88e5874c683abe05edb0ba4078.tar.gz";
-          sha256 = "1x3qh815d7k9yc72zpn5cfaaq2b1942q4pka6rx8b5i33yz4m61q";
+          # Recent version of nixpkgs master as of 2021-05-09 which uses nightly-2020-05-07.
+          url = "https://github.com/NixOS/nixpkgs/archive/1c16013bd6e94da748b41cc123c6b509a23eb440.tar.gz";
+          sha256 = "1m2wif0qnci0q14plbqlb95vx214pxqgw5li86lyw6hsiy7y3zfn";
         }
       else nixpkgs;
 
-  compilerVersion = if isNull compiler then "ghc8103" else compiler;
+  compilerVersion = if isNull compiler then "ghc8104" else compiler;
 
   # An overlay that adds termonad to all haskell package sets.
   haskellPackagesOverlay = self: super: {
@@ -51,7 +51,7 @@ let
 
               src =
                 builtins.filterSource
-                  (path: type: with self.stdenv.lib;
+                  (path: type: with self.lib;
                     ! elem (baseNameOf path) filesToIgnore &&
                     ! any (flip hasPrefix (baseNameOf path)) [ "dist" ".ghc" ]
                   )
