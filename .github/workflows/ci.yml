@@ -37,6 +37,9 @@ jobs:
         path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
         key: ${{ runner.os }}-${{ matrix.ghc }}-cabal
 
+    - name: Update apt
+      run: sudo apt-get update
+
     - name: Install Required System Packages
       run: sudo apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
 
@@ -73,6 +76,9 @@ jobs:
       with:
         path: ~/.stack
         key: ${{ runner.os }}-stack-${{ matrix.resolver }}
+
+    - name: Update apt
+      run: sudo apt-get update
 
     - name: Install Required System Packages
       run: sudo apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
