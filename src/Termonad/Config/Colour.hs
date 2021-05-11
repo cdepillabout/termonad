@@ -119,6 +119,8 @@ import GI.Vte
 #endif
   , terminalSetColorBackground
   , terminalSetColorForeground
+  , terminalSetColorHighlight
+  , terminalSetColorHighlightForeground
   )
 import Text.Printf (printf)
 import Text.Show (showString)
@@ -672,11 +674,14 @@ defaultGreyscale = unsafeMkList24 $ do
 -- 'foregroundColour' and 'backgroundColour' allow you to set the color of the
 -- foreground text and background of the terminal.
 --
+-- 'highlightFgColour' and 'highlightBgColour' allow you to set the color of
+-- the foreground and background of the highlighted text.
+--
 -- 'palette' allows you to set the full color palette used by the terminal.
 -- See 'Palette' for more information.
 --
--- If you don't set 'foregroundColour', 'backgroundColour', or 'palette', the
--- defaults from VTE are used.
+-- If you don't set 'foregroundColour', 'backgroundColour', 'highlightFgColour',
+-- 'highlightBgColour', or 'palette', the defaults from VTE are used.
 --
 -- If you want to use a terminal with a white (or light) background and a black
 -- foreground, it may be a good idea to change some of the colors in the
@@ -751,22 +756,28 @@ data ColourConfig c = ColourConfig
     -- ^ Color of the default foreground text in the terminal.
   , backgroundColour :: !(Option c)
     -- ^ Background color for the terminal
+  , highlightFgColour :: !(Option c)
+    -- ^ Foreground color for the highlighted text.
+  , highlightBgColour :: !(Option c)
+    -- ^ Background color for the highlighted text.
   , palette :: !(Palette c)
     -- ^ Color palette for the terminal.  See 'Palette'.
   } deriving (Eq, Show, Functor)
 
 -- | Default setting for a 'ColourConfig'.  The cursor colors, font foreground
--- color, background color, and color palette are all left at the defaults set
--- by VTE.
+-- color, background color, highlighted text color, and color palette are all
+-- left at the defaults set by VTE.
 --
 -- >>> defaultColourConfig
--- ColourConfig {cursorFgColour = Unset, cursorBgColour = Unset, foregroundColour = Unset, backgroundColour = Unset, palette = NoPalette}
+-- ColourConfig {cursorFgColour = Unset, cursorBgColour = Unset, foregroundColour = Unset, backgroundColour = Unset, highlightFgColour = Unset, highlightBgColour = Unset, palette = NoPalette}
 defaultColourConfig :: ColourConfig (AlphaColour Double)
 defaultColourConfig = ColourConfig
   { cursorFgColour = Unset
   , cursorBgColour = Unset
   , foregroundColour = Unset
   , backgroundColour = Unset
+  , highlightFgColour = Unset
+  , highlightBgColour = Unset
   , palette = NoPalette
   }
 
@@ -775,6 +786,8 @@ $(makeLensesFor
     , ("cursorBgColour", "lensCursorBgColour")
     , ("foregroundColour", "lensForegroundColour")
     , ("backgroundColour", "lensBackgroundColour")
+    , ("highlightFgColour", "lensHighlightFgColour")
+    , ("highlightBgColour", "lensHighlightBgColour")
     , ("palette", "lensPalette")
     ]
     ''ColourConfig
@@ -813,6 +826,10 @@ colourHook mvarColourConf _ vteTerm = do
   whenSet (cursorFgColour colourConf) $
     terminalSetColorCursorForeground vteTerm . Just <=< colourToRgba
 #endif
+  whenSet (highlightFgColour colourConf) $
+    terminalSetColorHighlightForeground vteTerm . Just <=< colourToRgba
+  whenSet (highlightBgColour colourConf) $
+    terminalSetColorHighlight vteTerm . Just <=< colourToRgba
 
 colourToRgba :: AlphaColour Double -> IO RGBA
 colourToRgba colour = do
