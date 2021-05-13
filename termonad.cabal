@@ -64,6 +64,7 @@ library
   other-modules:       Paths_termonad
   build-depends:       base >= 4.13 && < 5
                      , adjunctions
+                     , aeson
                      , classy-prelude
                      , colour
                      , constraints

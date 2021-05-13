@@ -3,7 +3,11 @@ module Termonad.PreferencesFile where
 
 import Termonad.Prelude
 
-import Data.Yaml (decodeFileEither, encode, prettyPrintParseException)
+import Control.Monad.Trans.Except (ExceptT(..), runExceptT, throwE, withExceptT)
+import Data.Aeson (Result(..), fromJSON)
+import Data.Yaml (ToJSON (toJSON), decodeFileEither, encode, prettyPrintParseException)
+import Data.Yaml.Aeson (Value(..))
+
 import System.Directory
   ( XdgDirectory(XdgConfig)
   , createDirectoryIfMissing
@@ -37,15 +41,26 @@ tmConfigFromPreferencesFile = do
   exists <- doesFileExist confFile
   unless exists $ writePreferencesFile confFile defaultConfigOptions
   -- Read the configuration file
-  eitherOptions <- decodeFileEither confFile
-  options <-
-    case eitherOptions of
-      Left err -> do
-        hPutStrLn stderr $ "Error parsing file " <> pack confFile
-        hPutStrLn stderr $ pack $ prettyPrintParseException err
-        pure defaultConfigOptions
-      Right options -> pure options
-  pure $ TMConfig { options = options, hooks = defaultConfigHooks }
+  eitherOptions <- readFileWithDefaults confFile
+  options <- case eitherOptions of
+               Left err -> do
+                 hPutStrLn stderr $ "Error parsing file " <> pack confFile
+                 hPutStrLn stderr err
+                 pure defaultConfigOptions
+               Right options -> pure options
+  pure TMConfig { options = options, hooks = defaultConfigHooks }
+  where
+    readFileWithDefaults file = runExceptT $ do
+      -- Read the configuration file as a JSON object
+      objectOptionsInFile <- withExceptT parseExceptionToText . ExceptT $ decodeFileEither file
+      objectDefaultOptions <- toObject . toJSON $ defaultConfigOptions
+      -- Then merge it with the default options in JSON before converting it to a 'TMConfig'
+      toExcept . fromJSON . Object $ objectOptionsInFile <> objectDefaultOptions
+    parseExceptionToText = pack . prettyPrintParseException
+    toObject (Object obj) = pure obj
+    toObject v = throwE $ "The JSON value is not an Object: " <> (pack . show $ v)
+    toExcept (Success v) = pure v
+    toExcept (Error str) = throwE (pack str)
 
 writePreferencesFile :: FilePath -> ConfigOptions -> IO ()
 writePreferencesFile confFile options = do
