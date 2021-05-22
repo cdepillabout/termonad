@@ -1,3 +1,10 @@
+## (next) 4.2.0.0
+
+*   Add new options `highlightFgColour` and `highlightBgColour` for setting
+    the color of highlighted text
+    [#190](https://github.com/cdepillabout/termonad/pull/190).
+    Thanks [@zanculmarktum](https://github.com/zanculmarktum)!
+
 ## 4.1.1.0
 
 *   Add new shortcuts to switch to the next and previous tab:
