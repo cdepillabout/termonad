@@ -5,15 +5,15 @@
 
 packages:
 - completed:
-    hackage: gi-vte-2.91.25@sha256:db9e86693b72c4e211d68c221cab68c621f6fc4a4408a6ca4afac314dd35cbc4,3729
+    hackage: gi-vte-2.91.27@sha256:22faf2c2333ca2fe90780d44defcc7b095c619b72f27b90c9de1f5e2a960a5e3,3731
     pantry-tree:
-      size: 355
-      sha256: b7d9e7c48f86fd41e374d2e3a14706d57d3b7141844d74f005c60b98da922465
+      size: 356
+      sha256: 2bfa50f6abba8feda2a8b5b1a36c589562d4f31ecc3c351239bdd3b4454c4458
   original:
-    hackage: gi-vte-2.91.25
+    hackage: gi-vte-2.91.27@sha256:22faf2c2333ca2fe90780d44defcc7b095c619b72f27b90c9de1f5e2a960a5e3,3731
 snapshots:
 - completed:
-    size: 532380
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/9.yaml
-    sha256: 14a7cec114424e4286adde73364438927a553ed248cc50f069a30a67e3ee1e69
-  original: lts-16.9
+    size: 567241
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/17/10.yaml
+    sha256: 321b3b9f0c7f76994b39e0dabafdc76478274b4ff74cc5e43d410897a335ad3b
+  original: lts-17.10
