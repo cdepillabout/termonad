@@ -68,8 +68,6 @@ import GI.Gtk
   , labelNew
   , notebookGetNPages
   , notebookNew
-  , notebookNextPage
-  , notebookPrevPage
   , notebookSetShowBorder
   , onEntryActivate
   , onNotebookPageRemoved
