@@ -5,7 +5,8 @@ import Termonad.Prelude
 
 import Control.Monad.Trans.Except (ExceptT(..), runExceptT, throwE, withExceptT)
 import Data.Aeson (Result(..), fromJSON)
-import Data.Yaml (ToJSON (toJSON), decodeFileEither, encode, prettyPrintParseException)
+import qualified Data.HashMap.Strict as HashMap
+import Data.Yaml (ParseException, ToJSON (toJSON), decodeFileEither, encode, prettyPrintParseException)
 import Data.Yaml.Aeson (Value(..))
 
 import System.Directory
@@ -34,6 +35,9 @@ getPreferencesFile = do
 -- @~\/.config\/termonad\/termonad.yaml@. This file stores only the 'options' of
 -- 'TMConfig' so 'hooks' are initialized with 'defaultConfigHooks'.  If the
 -- file doesn't exist, create it with the default values.
+--
+-- Any options that do not exist will get initialized with values from
+-- 'defaultConfigOptions'.
 tmConfigFromPreferencesFile :: IO TMConfig
 tmConfigFromPreferencesFile = do
   confFile <- getPreferencesFile
@@ -42,25 +46,99 @@ tmConfigFromPreferencesFile = do
   unless exists $ writePreferencesFile confFile defaultConfigOptions
   -- Read the configuration file
   eitherOptions <- readFileWithDefaults confFile
-  options <- case eitherOptions of
-               Left err -> do
-                 hPutStrLn stderr $ "Error parsing file " <> pack confFile
-                 hPutStrLn stderr err
-                 pure defaultConfigOptions
-               Right options -> pure options
+  options <-
+    case eitherOptions of
+      Left err -> do
+        hPutStrLn stderr $ "Error parsing file " <> pack confFile <> ": " <> err
+        pure defaultConfigOptions
+      Right options -> pure options
   pure TMConfig { options = options, hooks = defaultConfigHooks }
+
+-- | Read the 'ConfigOptions' out of a configuration file.
+--
+-- Merge the raw 'ConfigOptions' with 'defaultConfigOptions'.  This makes sure
+-- that old versions of the configuration file will still be able to be read
+-- even if new options are added to 'ConfigOptions' in new versions of
+-- Termonad.
+readFileWithDefaults :: FilePath -> IO (Either Text ConfigOptions)
+readFileWithDefaults file = runExceptT $ do
+  -- Read the configuration file as a JSON object
+  optsFromFile :: Value <-
+    withExceptT parseExceptionToText . ExceptT $ decodeFileEither file
+  let optsDefault :: Value = toJSON $ defaultConfigOptions
+  -- Then merge it with the default options in JSON before converting it to
+  -- a 'ConfigOptions'
+  resultToExcept . fromJSON $ mergeObjVals optsFromFile optsDefault
   where
-    readFileWithDefaults file = runExceptT $ do
-      -- Read the configuration file as a JSON object
-      objectOptionsInFile <- withExceptT parseExceptionToText . ExceptT $ decodeFileEither file
-      objectDefaultOptions <- toObject . toJSON $ defaultConfigOptions
-      -- Then merge it with the default options in JSON before converting it to a 'TMConfig'
-      toExcept . fromJSON . Object $ objectOptionsInFile <> objectDefaultOptions
+    parseExceptionToText :: ParseException -> Text
     parseExceptionToText = pack . prettyPrintParseException
-    toObject (Object obj) = pure obj
-    toObject v = throwE $ "The JSON value is not an Object: " <> (pack . show $ v)
-    toExcept (Success v) = pure v
-    toExcept (Error str) = throwE (pack str)
+
+    resultToExcept :: Result a -> ExceptT Text IO a
+    resultToExcept (Success v) = pure v
+    resultToExcept (Error str) = throwE (pack str)
+
+-- | Merge 'Value's recursively.
+--
+-- This merges 'Value's recursively in 'Object' values, taking values that
+-- have been explicitly over the defaults.  The defaults are only used if
+-- there is no value that has been explicitly set.
+--
+-- For 'Array', 'String', 'Number', 'Bool', and 'Null', take the first 'Value'
+-- (the one that has been explicitly set in the user's config file):
+--
+-- >>> mergeObjVals (Array [Number 1, Number 2]) (Array [String "hello"])
+-- Array [Number 1.0,Number 2.0]
+-- >>> mergeObjVals (String "hello") (String "bye")
+-- String "hello"
+-- >>> mergeObjVals (Number 1) (Number 2)
+-- Number 1.0
+-- >>> mergeObjVals (Bool True) (Bool False)
+-- Bool True
+-- >>> mergeObjVals Null Null
+-- Null
+--
+-- Note that 'Value's in 'Array's are not recursed into:
+--
+-- >>> let obj1 = Object $ HashMap.singleton "hello" (Number 2)
+-- >>> let obj2 = Object $ HashMap.singleton "hello" (String "bye")
+-- >>> mergeObjVals (Array [obj1]) (Array [obj2])
+-- Array [Object (fromList [("hello",Number 2.0)])]
+--
+-- 'Object's are recursed into.  Unique keys from both Maps will be used.
+-- Keys that are in both Maps will be merged according to the rules above:
+--
+-- >>> let hash1 = HashMap.fromList [("hello", Number 1), ("bye", Number 100)]
+-- >>> let hash2 = HashMap.fromList [("hello", Number 2), ("goat", String "chicken")]
+-- >>> mergeObjVals (Object hash1) (Object hash2)
+-- Object (fromList [("bye",Number 100.0),("goat",String "chicken"),("hello",Number 1.0)])
+mergeObjVals
+  :: Value
+     -- ^ Value that has been set explicitly in the User's configuration
+     -- file.
+  -> Value
+     -- ^ Default value that will be used if no explicitly set value.
+  -> Value
+     -- ^ Merged values.
+mergeObjVals optsFromFile optsDefault =
+  case (optsFromFile, optsDefault) of
+    -- Both the options from the file and the default options are an Object
+    -- here.  Recursively merge the keys and values.
+    (Object optsFromFileHashMap, Object optsDefaultHashMap) ->
+      Object $ HashMap.unionWith mergeObjVals optsFromFileHashMap optsDefaultHashMap
+    -- Both the value from the file and the default value are the same type.
+    -- Use the value from the file.
+    --
+    -- XXX: This will end up causing readFileWithDefaults to fail if the value
+    -- from the file is old and can no longer properly be decoded into a value
+    -- expected by ConfigOptions.
+    (Array fromFile, Array _) -> Array fromFile
+    (String fromFile, String _) -> String fromFile
+    (Number fromFile, Number _) -> Number fromFile
+    (Bool fromFile, Bool _) -> Bool fromFile
+    (Null, Null) -> Null
+    -- The value from the file and the default value are different types. Just
+    -- use the default value.
+    (_, defVal) -> defVal
 
 writePreferencesFile :: FilePath -> ConfigOptions -> IO ()
 writePreferencesFile confFile options = do
