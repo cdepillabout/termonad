@@ -1,9 +1,20 @@
-## (next) 4.2.0.0
+## 4.2.0.0
 
 *   Add new options `highlightFgColour` and `highlightBgColour` for setting
     the color of highlighted text
     [#190](https://github.com/cdepillabout/termonad/pull/190).
     Thanks [@zanculmarktum](https://github.com/zanculmarktum)!
+
+*   Termonad creates a configuration file in `~/.config/termonad/termonad.yaml`
+    for use with the Preferences editor.  This is only used if you don't
+    have a `termonad.hs` file.
+
+    The configuration file loading code has been updated to be more robust in
+    loading configurations that are missing fields.  This means that if you
+    update Termonad from an old version, your preferences will still be able to
+    be loaded in most cases
+    [#191](https://github.com/cdepillabout/termonad/pull/191).  Thanks again
+    [@jecaro](https://github.com/jecaro)!
 
 ## 4.1.1.0
 
