@@ -50,6 +50,8 @@ module Termonad.Config.Colour
     , lensCursorBgColour
     , lensForegroundColour
     , lensBackgroundColour
+    , lensHighlightFgColour
+    , lensHighlightBgColour
     , lensPalette
     -- * Colour Extension
     , ColourExtension(..)
