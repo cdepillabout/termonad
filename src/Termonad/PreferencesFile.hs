@@ -111,6 +111,16 @@ readFileWithDefaults file = runExceptT $ do
 -- >>> let hash2 = HashMap.fromList [("hello", Number 2), ("goat", String "chicken")]
 -- >>> mergeObjVals (Object hash1) (Object hash2)
 -- Object (fromList [("bye",Number 100.0),("goat",String "chicken"),("hello",Number 1.0)])
+--
+-- 'Value's of different types will use the second 'Value':
+--
+-- >>> mergeObjVals Null (String "bye")
+-- String "bye"
+-- >>> mergeObjVals (Bool True) (Number 2)
+-- Number 2.0
+-- >>> mergeObjVals (Object mempty) (Bool False)
+-- Bool False
+--
 mergeObjVals
   :: Value
      -- ^ Value that has been set explicitly in the User's configuration
