@@ -16,6 +16,11 @@
     [#191](https://github.com/cdepillabout/termonad/pull/191).  Thanks again
     [@jecaro](https://github.com/jecaro)!
 
+*   Added an
+    [example](https://github.com/cdepillabout/termonad/blob/74d04ba1469184cd8667f88d24dfbc7d50d7f658/example-config/ExamplePaperColourColourExtension.hs)
+    of how to setup a PaperColour color scheme. Thanks @craigem!
+    [#193](https://github.com/cdepillabout/termonad/pull/193)
+
 ## 4.1.1.0
 
 *   Add new shortcuts to switch to the next and previous tab:
