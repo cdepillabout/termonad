@@ -218,6 +218,19 @@ executable termonad-example-colour-extension
   else
     buildable:         False
 
+executable termonad-example-colour-extension-dracula
+  main-is:             example-config/ExampleDraculaColourExtension.hs
+  build-depends:       base
+                     , termonad
+                     , colour
+  default-language:    Haskell2010
+  ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
+
+  if flag(buildexamples)
+    buildable:         True
+  else
+    buildable:         False
+
 executable termonad-example-colour-extension-gruvbox
   main-is:             example-config/ExampleGruvboxColourExtension.hs
   build-depends:       base
