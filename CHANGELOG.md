@@ -1,3 +1,10 @@
+## (next)
+
+*   Added an
+    [example](https://github.com/cdepillabout/termonad/blob/50b20dc3f5bb2a4a080fd703e818bf721c9c3884/example-config/ExampleDraculaColourExtension.hs)
+    of how to setup a Dracula color scheme. Thanks @craigem!
+    [#195](https://github.com/cdepillabout/termonad/pull/195)
+
 ## 4.2.0.0
 
 *   Add new options `highlightFgColour` and `highlightBgColour` for setting
