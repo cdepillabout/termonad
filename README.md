@@ -79,13 +79,18 @@ $ stack install
 ```
 
 ### Ubuntu / Debian
-Installing Termonad through Debian's/ Ubuntu apt package manager.
-Use command `sudo apt install termonad`. 
-This way you install a program that is fully usable, but the functionality of any configuration is limited. 
-To fully configure this terminal emulator, you should install the package called `libghc-termonad-dev`. 
-This way you will be able to fully configure termonad using a Haskell-based settings file `termonad.hs`.
 
-### For compiling from source
+Termonad can be installed through `apt` on Debian and Ubuntu:
+
+```console
+$ sudo apt install termonad libghc-termonad-dev
+```
+
+Note that the `libghc-termonad-dev` package is necessary if you want to be able
+to compile the Haskell-based settings file, `termonad.hs`.
+
+#### Compiling from source on Ubuntu / Debian
+
 First, you must install the required GTK system libraries:
 
 ```sh
