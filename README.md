@@ -80,6 +80,17 @@ $ stack install
 
 ### Ubuntu / Debian
 
+Termonad can be installed through `apt` on Debian and Ubuntu:
+
+```console
+$ sudo apt install termonad libghc-termonad-dev
+```
+
+Note that the `libghc-termonad-dev` package is necessary if you want to be able
+to compile the Haskell-based settings file, `termonad.hs`.
+
+#### Compiling from source on Ubuntu / Debian
+
 First, you must install the required GTK system libraries:
 
 ```sh
