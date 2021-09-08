@@ -5,12 +5,12 @@
 
 packages:
 - completed:
-    hackage: gi-vte-2.91.27@sha256:22faf2c2333ca2fe90780d44defcc7b095c619b72f27b90c9de1f5e2a960a5e3,3731
+    hackage: gi-vte-2.91.28@sha256:1f3d7b5d0e3681fb4bf8690a85b1110ba8d3bccda88dddb34fa4481210990ba3,3726
     pantry-tree:
-      size: 356
-      sha256: 2bfa50f6abba8feda2a8b5b1a36c589562d4f31ecc3c351239bdd3b4454c4458
+      size: 357
+      sha256: 7422b9980b3551821f798f14bd526cee8dd1e73892ae46c61f75d6ff7a82d7d8
   original:
-    hackage: gi-vte-2.91.27@sha256:22faf2c2333ca2fe90780d44defcc7b095c619b72f27b90c9de1f5e2a960a5e3,3731
+    hackage: gi-vte-2.91.28@sha256:1f3d7b5d0e3681fb4bf8690a85b1110ba8d3bccda88dddb34fa4481210990ba3,3726
 snapshots:
 - completed:
     size: 586923
