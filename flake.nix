@@ -55,18 +55,14 @@
 
       devShell = forAllSystems (system: nixpkgsFor.${system}.termonadShell);
 
-      # defaultApp = forAllSystems (system: self.apps.${system}.analyze);
+      defaultApp = forAllSystems (system: self.apps.${system}.termonad);
 
-      # apps = forAllSystems (system: {
-      #   analyze = {
-      #     type = "app";
-      #     program = "${self.packages.${system}.analyze}/bin/analyze";
-      #   };
-      #   data-importer = {
-      #     type = "app";
-      #     program = "${self.packages.${system}.data-importer}/bin/data-importer";
-      #   };
-      # });
+      apps = forAllSystems (system: {
+        termonad = {
+          type = "app";
+          program = "${self.packages.${system}.termonad}/bin/termonad";
+        };
+      });
 
       # Tests run by 'nix flake check' and by Hydra.
       # checks = forAllSystems
