@@ -23,5 +23,5 @@
 , buildExamples ? false
 }@args:
 
-import .nix-helpers/termonad-with-packages.nix args
+(import .nix-helpers/nixpkgs.nix args).termonad-with-packages
 

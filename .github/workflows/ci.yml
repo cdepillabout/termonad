@@ -18,7 +18,7 @@ jobs:
         cabal: ["latest"]
         ghc:
           - "8.8.4"
-          - "8.10.4"
+          - "8.10.7"
 
     steps:
     - uses: actions/checkout@v2
@@ -95,8 +95,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - uses: cachix/install-nix-action@v12
+    - uses: cachix/install-nix-action@v13
       with:
         nix_path: nixpkgs=channel:nixos-unstable
     - run: nix-build
     - run: nix-build shell.nix
+
+  nix-flakes:
+    name: nix flakes / ubuntu-latest
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: cachix/install-nix-action@v13
+      with:
+        # This is taken from https://github.com/ngi-nix/summer-of-nix/blob/master/2021/snippets-and-templates/github-actions.yml
+        install_url: https://github.com/numtide/nix-unstable-installer/releases/download/nix-2.4pre20210604_8e6ee1b/install
+        extra_nix_config: |
+          experimental-features = nix-command flakes
+          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+        nix_path: nixpkgs=channel:nixos-unstable
+    - run: nix flake show
+    - run: nix build
+    - run: nix flake check
+    - run: nix build .#devShell.x86_64-linux
