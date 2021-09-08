@@ -26,13 +26,14 @@
 }:
 
 let
+  flake-lock = builtins.fromJSON (builtins.readFile ../flake.lock);
+
   nixpkgsSrc =
     if isNull nixpkgs
       then
         builtins.fetchTarball {
-          # Recent version of nixos-unstable as of 2021-09-08 which uses LTS-18.
-          url = "https://github.com/NixOS/nixpkgs/archive/23d5823337f4502dfa17e192d8c53a47cabcb6b4.tar.gz";
-          sha256 = "1zbyyf2710kpjhrss7v59m1gjlriisx5nxvbhjan9vjzx7l64civ";
+          url = "https://github.com/NixOS/nixpkgs/archive/${flake-lock.nodes.nixpkgs.locked.rev}.tar.gz";
+          sha256 = flake-lock.nodes.nixpkgs.locked.narHash;
         }
       else nixpkgs;
 
