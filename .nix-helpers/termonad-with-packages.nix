@@ -87,50 +87,17 @@
 # }
 # ```
 
-let
-  # Default Haskell packages that you can use in your Termonad configuration.
-  # This is only used if the user doesn't specify the extraHaskellPackages
-  # option.
-  defaultPackages = hpkgs: with hpkgs; [
-    colour
-    lens
-  ];
-in
-
-{ extraHaskellPackages ? defaultPackages
+{ extraHaskellPackages ? null
 , nixpkgs ? null
 , additionalOverlays ? []
 , compiler ? null
 , buildExamples ? false
 }@args:
 
-with (import ./nixpkgs.nix { inherit compiler nixpkgs additionalOverlays buildExamples; });
-
 let
-  # GHC environment that has termonad available, as well as the packages
-  # specified above in extraHaskellPackages.
-  env =
-    termonadKnownWorkingHaskellPkgSet.ghcWithPackages
-      (hpkgs: [ hpkgs.termonad ] ++ extraHaskellPackages hpkgs);
+  pkgs = import ./nixpkgs.nix {
+    inherit compiler nixpkgs additionalOverlays buildExamples extraHaskellPackages;
+  };
 in
 
-stdenv.mkDerivation {
-  name = "termonad-with-packages-ghc-${env.version}";
-  buildInputs = [ gdk_pixbuf gnome3.adwaita-icon-theme hicolor-icon-theme ];
-  nativeBuildInputs = [ wrapGAppsHook ];
-  dontBuild = true;
-  unpackPhase = ":";
-  # Using installPhase instead of buildCommand was recommended here:
-  # https://github.com/cdepillabout/termonad/pull/109
-  installPhase = ''
-    runHook preInstall
-    mkdir -p $out/bin
-    ln -sf ${env}/bin/termonad $out/bin/termonad
-    gappsWrapperArgs+=(
-      --set NIX_GHC "${env}/bin/ghc"
-    )
-    runHook postInstall
-  '';
-  preferLocalBuild = true;
-  allowSubstitutes = false;
-}
+pkgs.termonad-with-packages

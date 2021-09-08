@@ -19,6 +19,10 @@
   # however this will mean the environment will need to be rebuilt every
   # time the termonad source changes.
   indexTermonad ? false
+  # Extra Haskell packages that will be visible by Termonad when it compiles
+  # itself.  See ./termonad-with-packages.nix for an example of how to use
+  # this.
+, extraHaskellPackages ? null
 }:
 
 let
@@ -42,6 +46,9 @@ let
     termonadBuildExamples = buildExamples;
 
     termonadIndexTermonad = indexTermonad;
+
+    termonadExtraHaskellPackages =
+      if isNull extraHaskellPackages then super.termonadExtraHaskellPackages else extraHaskellPackages;
   };
 
 in
