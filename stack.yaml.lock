@@ -13,7 +13,7 @@ packages:
     hackage: gi-vte-2.91.27@sha256:22faf2c2333ca2fe90780d44defcc7b095c619b72f27b90c9de1f5e2a960a5e3,3731
 snapshots:
 - completed:
-    size: 567241
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/17/10.yaml
-    sha256: 321b3b9f0c7f76994b39e0dabafdc76478274b4ff74cc5e43d410897a335ad3b
-  original: lts-17.10
+    size: 586923
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/9.yaml
+    sha256: 9f9fe35c949414146840a985fb228fd397c504d1781b834bfc9ab935f4d27df6
+  original: lts-18.9
