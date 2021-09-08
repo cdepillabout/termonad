@@ -8,9 +8,13 @@ let
           termonad =
             let
               filesToIgnore = [
+                "default.nix"
+                "flake.nix"
+                "flake.lock"
                 ".git"
                 ".nix-helpers"
                 "result"
+                "shell.nix"
                 ".stack-work"
                 "stack.yaml"
                 "stack-nightly.yaml"
@@ -18,12 +22,17 @@ let
               ];
 
               src =
-                builtins.filterSource
-                  (path: type: with self.lib;
+                builtins.path {
+                  # Naming this path makes sure that people will get the same
+                  # hash even if they checkout the termonad repo into a
+                  # directory called something else.
+                  name = "termonad-src";
+                  path = ./..;
+                  filter = path: type:
+                    with self.lib;
                     ! elem (baseNameOf path) filesToIgnore &&
-                    ! any (flip hasPrefix (baseNameOf path)) [ "dist" ".ghc" ]
-                  )
-                  ./..;
+                    ! any (flip hasPrefix (baseNameOf path)) [ "dist" ".ghc" ];
+                };
 
               extraCabal2nixOptions =
                 self.lib.optionalString self.termonadBuildExamples "-fbuildexamples";
