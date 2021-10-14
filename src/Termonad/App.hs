@@ -478,13 +478,13 @@ setupTermonad tmConfig app win builder = do
   void $ onSimpleActionActivate enlargeFontAction $ \_ ->
     modifyFontSizeForAllTerms (modFontSize 1) mvarTMState
   actionMapAddAction app enlargeFontAction
-  applicationSetAccelsForAction app "app.enlargefont" ["<Ctrl>plus"]
+  applicationSetAccelsForAction app "app.enlargefont" ["<Ctrl>KP_Add"]
 
   reduceFontAction <- simpleActionNew "reducefont" Nothing
   void $ onSimpleActionActivate reduceFontAction $ \_ ->
     modifyFontSizeForAllTerms (modFontSize (-1)) mvarTMState
   actionMapAddAction app reduceFontAction
-  applicationSetAccelsForAction app "app.reducefont" ["<Ctrl>minus"]
+  applicationSetAccelsForAction app "app.reducefont" ["<Ctrl>KP_Subtract"]
 
   findAction <- simpleActionNew "find" Nothing
   void $ onSimpleActionActivate findAction $ \_ -> doFind mvarTMState
