@@ -66,7 +66,7 @@ data TMNotebookTab = TMNotebookTab
   { tmNotebookTabTermContainer :: !ScrolledWindow
     -- ^ The 'ScrolledWindow' holding the VTE 'Terminal'.
   , tmNotebookTabTerm :: !TMTerm
-    -- ^ The 'Terminal' insidie the 'ScrolledWindow'.
+    -- ^ The 'Terminal' inside the 'ScrolledWindow'.
   , tmNotebookTabLabel :: !Label
     -- ^ The 'Label' holding the title of the 'Terminal' in the 'Notebook' tab.
   }
