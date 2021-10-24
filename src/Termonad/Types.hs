@@ -63,9 +63,10 @@ instance Show TMTerm where
       showsPrec (d + 1) (hashUnique unique) .
       showString "}"
 
--- | A container that holds everything in a given terminal window.  The 'term'
--- in the 'TMTerm' is inside the 'tmNotebookTabScrolledWindow' 'ScrolledWindow'.
--- The notebook tab 'Label' is also available.
+-- | A container that holds everything in a given notebook tab.  The 'term' in
+-- the 'TMTerm' is inside the 'tmNotebookTabScrolledWindow' 'ScrolledWindow',
+-- which is in turn inside the 'tmNotebookTabPaned' 'Paned'. The notebook tab
+-- 'Label' is also available.
 data TMNotebookTab = TMNotebookTab
   { tmNotebookTabPaned :: !Paned
     -- ^ The 'Paned' holding the 'ScrolledWindow'.
