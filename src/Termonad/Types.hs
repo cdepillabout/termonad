@@ -82,6 +82,9 @@ instance Show TMNotebookTab where
   showsPrec d TMNotebookTab{..} =
     showParen (d > 10) $
       showString "TMNotebookTab {" .
+      showString "tmNotebookTabPaned = " .
+      showString "(GI.GTK.Paned)" .
+      showString ", " .
       showString "tmNotebookTabScrolledWindow = " .
       showString "(GI.GTK.ScrolledWindow)" .
       showString ", " .
