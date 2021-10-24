@@ -29,10 +29,10 @@ import GI.Gtk
   , Entry(Entry)
   , FontButton(FontButton)
   , Label(Label)
+  , Paned(Paned)
   , PolicyType(PolicyTypeAutomatic)
   , PositionType(PositionTypeRight)
   , ResponseType(ResponseTypeAccept, ResponseTypeNo, ResponseTypeYes)
-  , ScrolledWindow(ScrolledWindow)
   , SpinButton(SpinButton)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , aboutDialogNew
@@ -173,7 +173,7 @@ import Termonad.Types
   , modFontSize
   , newEmptyTMState
   , tmNotebookTabs
-  , tmNotebookTabScrolledWindow
+  , tmNotebookTabPaned
   , tmStateApp
   , tmStateNotebook
   )
@@ -277,13 +277,13 @@ fontConfigFromFontDescription fontDescription = do
   maybeFontFamily <- fontDescriptionGetFamily fontDescription
   return $ (`FontConfig` fontSize) <$> maybeFontFamily
 
-compareScrolledWinAndTab :: ScrolledWindow -> TMNotebookTab -> Bool
-compareScrolledWinAndTab scrollWin flTab =
-  let ScrolledWindow managedPtrFLTab = tmNotebookTabScrolledWindow flTab
+comparePanedAndTab :: Paned -> TMNotebookTab -> Bool
+comparePanedAndTab paned flTab =
+  let Paned managedPtrFLTab = tmNotebookTabPaned flTab
       foreignPtrFLTab = managedForeignPtr managedPtrFLTab
-      ScrolledWindow managedPtrScrollWin = scrollWin
-      foreignPtrScrollWin = managedForeignPtr managedPtrScrollWin
-  in foreignPtrFLTab == foreignPtrScrollWin
+      Paned managedPtrPaned = paned
+      foreignPtrPaned = managedForeignPtr managedPtrPaned
+  in foreignPtrFLTab == foreignPtrPaned
 
 updateFLTabPos :: TMState -> Int -> Int -> IO ()
 updateFLTabPos mvarTMState oldPos newPos =
@@ -404,23 +404,23 @@ setupTermonad tmConfig app win builder = do
               lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
 
   void $ onNotebookPageReordered note $ \childWidg pageNum -> do
-    maybeScrollWin <- castTo ScrolledWindow childWidg
-    case maybeScrollWin of
+    maybePaned <- castTo Paned childWidg
+    case maybePaned of
       Nothing ->
         fail $
           "In setupTermonad, in callback for onNotebookPageReordered, " <>
-          "child widget is not a ScrolledWindow.\n" <>
+          "child widget is not a Paned.\n" <>
           "Don't know how to continue.\n"
-      Just scrollWin -> do
+      Just paned -> do
         TMState{tmStateNotebook} <- readMVar mvarTMState
         let fl = tmStateNotebook ^. lensTMNotebookTabs
         let maybeOldPosition =
-              findIndexR (compareScrolledWinAndTab scrollWin) (focusList fl)
+              findIndexR (comparePanedAndTab paned) (focusList fl)
         case maybeOldPosition of
           Nothing ->
             fail $
               "In setupTermonad, in callback for onNotebookPageReordered, " <>
-              "the ScrolledWindow is not already in the FocusList.\n" <>
+              "the Paned is not already in the FocusList.\n" <>
               "Don't know how to continue.\n"
           Just oldPos -> do
             updateFLTabPos mvarTMState oldPos (fromIntegral pageNum)
