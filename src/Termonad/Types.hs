@@ -4,6 +4,7 @@ module Termonad.Types where
 
 import Termonad.Prelude
 
+import Control.Monad.Trans.Except (ExceptT, runExceptT, throwE, withExceptT)
 import Control.Monad.Fail (fail)
 import Data.FocusList (FocusList, emptyFL, singletonFL, getFocusItemFL, lengthFL)
 import Data.Unique (Unique, hashUnique, newUnique)
@@ -565,7 +566,7 @@ invariantTMState' tmState =
     runInvariants = fmap catMaybes . sequence
 
     invariantFocusSame :: IO (Maybe TMStateInvariantErr)
-    invariantFocusSame = do
+    invariantFocusSame = execExceptT $ do
       let tmNote = tmNotebook $ tmStateNotebook tmState
       index32 <- notebookGetCurrentPage tmNote
       maybeWidgetFromNote <- notebookGetNthPage tmNote index32
@@ -574,61 +575,87 @@ invariantTMState' tmState =
             tmNotebookTabTermContainer <$> getFocusItemFL focusList
           idx = fromIntegral index32
       case (maybeWidgetFromNote, maybeScrollWinFromFL) of
-        (Nothing, Nothing) -> pure Nothing
+        (Nothing, Nothing) -> pure ()
         (Just _, Nothing) ->
-          pure $
-            Just $
-              FocusNotSame NotebookTabWidgetExistsButNoFocusListFocus idx
+          throwE $ FocusNotSame NotebookTabWidgetExistsButNoFocusListFocus idx
         (Nothing, Just _) ->
-          pure $
-            Just $
-              FocusNotSame FocusListFocusExistsButNoNotebookTabWidget idx
+          throwE $ FocusNotSame FocusListFocusExistsButNoNotebookTabWidget idx
         (Just widgetFromNote, Just scrollWinFromFL) -> do
-          isEq <- widgetEq widgetFromNote scrollWinFromFL
-          if isEq
-            then pure Nothing
-            else
-              pure $
-                Just $
-                  FocusNotSame NotebookTabWidgetDiffersFromFocusListFocus idx
+          withExceptT (\() -> FocusNotSame NotebookTabWidgetDiffersFromFocusListFocus idx) $ do
+            paneFromNote <- expect Gtk.Paned widgetFromNote
+            (scrollWinFromNote, _) <- expectTwoChildren paneFromNote
+            expectSameWidgets scrollWinFromNote scrollWinFromFL
 
     invariantTMTabLength :: IO (Maybe TMStateInvariantErr)
-    invariantTMTabLength = do
+    invariantTMTabLength = execExceptT $ do
       let tmNote = tmNotebook $ tmStateNotebook tmState
       noteLength32 <- notebookGetNPages tmNote
       let noteLength = fromIntegral noteLength32
           focusListLength = lengthFL $ tmNotebookTabs $ tmStateNotebook tmState
           lengthEqual = focusListLength == noteLength
-      if lengthEqual
-        then pure Nothing
-        else  pure $
-               Just $
-                TabsDoNotMatch $
-                 TabLengthsDifferent noteLength focusListLength
+      when (not lengthEqual) $ do
+        throwE $ TabsDoNotMatch $ TabLengthsDifferent noteLength focusListLength
 
     -- Turns a FocusList and Notebook into two lists of widgets and compares each widget for equality
     invariantTabsAllMatch :: IO (Maybe TMStateInvariantErr)
-    invariantTabsAllMatch = do
-      let tmNote = tmNotebook $ tmStateNotebook tmState
-          focusList = tmNotebookTabs $ tmStateNotebook tmState
-          flList = tmNotebookTabTermContainer <$> toList focusList
-      noteList <- notebookToList tmNote
-      tabsMatch noteList flList
-      where
-        tabsMatch
-          :: forall a b
-           . (IsWidget a, IsWidget b)
-          => [a]
-          -> [b]
-          -> IO (Maybe TMStateInvariantErr)
-        tabsMatch xs ys = foldr go (pure Nothing) (zip3 xs ys [0..])
-          where
-            go :: (a, b, Int) -> IO (Maybe TMStateInvariantErr) -> IO (Maybe TMStateInvariantErr)
-            go (x, y, i) acc = do
-              isEq <- widgetEq x y
-              if isEq
-                then acc
-                else pure . Just $ TabsDoNotMatch (TabAtIndexDifferent i)
+    invariantTabsAllMatch = execExceptT $ do
+      withExceptT (\i -> TabsDoNotMatch (TabAtIndexDifferent i)) $ do
+        let tmNote = tmNotebook $ tmStateNotebook tmState
+            focusList = tmNotebookTabs $ tmStateNotebook tmState
+            flList = tmNotebookTabTermContainer <$> toList focusList
+        widgetsFromNote <- liftIO $ notebookToList tmNote
+        panesFromNote <- for (zip widgetsFromNote [0..]) $ \(widgetFromNote, i) -> do
+          withExceptT (\() -> i) $ do
+            expect Gtk.Paned widgetFromNote
+        scrollWinsFromNote <- for (zip panesFromNote [0..]) $ \(paneFromNote, i) -> do
+          withExceptT (\() -> i) $ do
+            (scrollWinFromNote, _) <- expectTwoChildren paneFromNote
+            pure scrollWinFromNote
+        for_ (zip3 scrollWinsFromNote flList [0..]) $ \(scrollWinFromNote, scrollWinFromFL, i) -> do
+          withExceptT (\() -> i) $ do
+            expectSameWidgets scrollWinFromNote scrollWinFromFL
+
+    expect
+      :: forall a b
+       . (IsWidget a, Gtk.GObject b)
+      => (Gtk.ManagedPtr b -> b) -> a -> ExceptT () IO b
+    expect mkB x = do
+      maybeB <- liftIO $ Gtk.castTo mkB x
+      case maybeB of
+        Nothing -> do
+          throwE ()
+        Just box -> do
+          pure box
+
+    expectTwoChildren
+      :: forall a
+       . Gtk.IsContainer a
+      => a -> ExceptT () IO (Widget, Widget)
+    expectTwoChildren x = do
+      children <- Gtk.containerGetChildren x
+      case children of
+        [child1, child2] -> do
+          pure (child1, child2)
+        _ -> do
+          throwE ()
+
+    expectSameWidgets
+      :: forall a b
+       . (IsWidget a, IsWidget b)
+      => a -> b -> ExceptT () IO ()
+    expectSameWidgets x y = do
+      isEq <- widgetEq x y
+      when (not isEq) $ do
+        throwE ()
+
+    execExceptT :: forall e m. Monad m => ExceptT e m () -> m (Maybe e)
+    execExceptT body = do
+      eOrUnit <- runExceptT body
+      case eOrUnit of
+        Left e -> do
+          pure (Just e)
+        Right () -> do
+          pure Nothing
 
 -- | Check the invariants for 'TMState', and call 'fail' if we find that they
 -- have been violated.

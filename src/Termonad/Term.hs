@@ -80,6 +80,7 @@ import GI.Gtk
   , windowSetFocus
   , windowSetTransientFor
   )
+import qualified GI.Gtk as Gtk
 import GI.Pango (EllipsizeMode(EllipsizeModeMiddle), FontDescription)
 import GI.Vte
   ( PtyFlags(PtyFlagsDefault)
@@ -411,8 +412,17 @@ addPage mvarTMState notebookTab tabLabelBox = do
           note = tmNotebook notebook
           tabs = tmNotebookTabs notebook
           scrolledWin = tmNotebookTabTermContainer notebookTab
-      pageIndex <- notebookAppendPage note scrolledWin (Just tabLabelBox)
-      notebookSetTabReorderable note scrolledWin True
+
+      ---- Create a spurious container and add the scrolling window in it
+      paned <- Gtk.panedNew Gtk.OrientationVertical
+      Gtk.panedSetWideHandle paned True
+      button <- Gtk.buttonNewWithLabel "Button"
+      Gtk.panedAdd1 paned scrolledWin
+      Gtk.panedAdd2 paned button
+      Gtk.widgetShowAll paned
+
+      pageIndex <- notebookAppendPage note paned (Just tabLabelBox)
+      notebookSetTabReorderable note paned True
       setShowTabs (tmState ^. lensTMStateConfig) note
       let newTabs = appendFL tabs notebookTab
           newTMState =
@@ -445,7 +455,7 @@ createTerm handleKeyPress mvarTMState = do
   termShellPid <- launchShell vteTerm maybeCurrDir
   tmTerm <- newTMTerm vteTerm termShellPid
 
-  -- Create the container add the VTE term in it
+  -- Create the scrolling window container add the VTE term in it
   scrolledWin <- createScrolledWin mvarTMState
   containerAdd scrolledWin vteTerm
 
