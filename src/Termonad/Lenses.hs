@@ -14,7 +14,8 @@ $(makeLensesFor
  )
 
 $(makeLensesFor
-    [ ("tmNotebookTabScrolledWindow", "lensTMNotebookTabScrolledWindow")
+    [ ("tmNotebookTabPaned", "lensTMNotebookTabPaned")
+    , ("tmNotebookTabScrolledWindow", "lensTMNotebookTabScrolledWindow")
     , ("tmNotebookTabTerm", "lensTMNotebookTabTerm")
     , ("tmNotebookTabLabel", "lensTMNotebookTabLabel")
     ]

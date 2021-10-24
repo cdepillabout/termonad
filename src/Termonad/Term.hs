@@ -129,6 +129,7 @@ import Termonad.Types
   , newTMTerm
   , pid
   , tmNotebook
+  , tmNotebookTabPaned
   , tmNotebookTabScrolledWindow
   , tmNotebookTabTerm
   , tmNotebookTabs
@@ -411,15 +412,7 @@ addPage mvarTMState notebookTab tabLabelBox = do
       let notebook = tmStateNotebook tmState
           note = tmNotebook notebook
           tabs = tmNotebookTabs notebook
-          scrolledWin = tmNotebookTabScrolledWindow notebookTab
-
-      ---- Create a spurious container and add the scrolling window in it
-      paned <- Gtk.panedNew Gtk.OrientationVertical
-      Gtk.panedSetWideHandle paned True
-      button <- Gtk.buttonNewWithLabel "Button"
-      Gtk.panedAdd1 paned scrolledWin
-      Gtk.panedAdd2 paned button
-      Gtk.widgetShowAll paned
+          paned = tmNotebookTabPaned notebookTab
 
       pageIndex <- notebookAppendPage note paned (Just tabLabelBox)
       notebookSetTabReorderable note paned True
@@ -459,11 +452,19 @@ createTerm handleKeyPress mvarTMState = do
   scrolledWin <- createScrolledWin mvarTMState
   containerAdd scrolledWin vteTerm
 
+  -- Create the paned window container add the VTE term in it
+  paned <- Gtk.panedNew Gtk.OrientationVertical
+  Gtk.panedSetWideHandle paned True
+  button <- Gtk.buttonNewWithLabel "Button"
+  Gtk.panedAdd1 paned scrolledWin
+  Gtk.panedAdd2 paned button
+  Gtk.widgetShowAll paned
+
   -- Create the GTK widget for the Notebook tab
   (tabLabelBox, tabLabel, tabCloseButton) <- createNotebookTabLabel
 
   -- Create notebook state
-  let notebookTab = createTMNotebookTab tabLabel scrolledWin tmTerm
+  let notebookTab = createTMNotebookTab tabLabel paned scrolledWin tmTerm
 
   -- Add the new notebooktab to the notebook.
   addPage mvarTMState notebookTab tabLabelBox

@@ -20,6 +20,7 @@ import GI.Gtk
   , IsWidget
   , Label
   , Notebook
+  , Paned
   , ScrolledWindow
   , Widget
   , notebookGetCurrentPage
@@ -66,7 +67,9 @@ instance Show TMTerm where
 -- in the 'TMTerm' is inside the 'tmNotebookTabScrolledWindow' 'ScrolledWindow'.
 -- The notebook tab 'Label' is also available.
 data TMNotebookTab = TMNotebookTab
-  { tmNotebookTabScrolledWindow :: !ScrolledWindow
+  { tmNotebookTabPaned :: !Paned
+    -- ^ The 'Paned' holding the 'ScrolledWindow'.
+  , tmNotebookTabScrolledWindow :: !ScrolledWindow
     -- ^ The 'ScrolledWindow' holding the VTE 'Terminal'.
   , tmNotebookTabTerm :: !TMTerm
     -- ^ The 'Terminal' inside the 'ScrolledWindow'.
@@ -170,10 +173,11 @@ getFocusedTermFromState mvarTMState =
             getFocusItemFL $ tmNotebookTabs $ tmStateNotebook tmState
       pure $ fmap (term . tmNotebookTabTerm) maybeNotebookTab
 
-createTMNotebookTab :: Label -> ScrolledWindow -> TMTerm -> TMNotebookTab
-createTMNotebookTab tabLabel scrollWin trm =
+createTMNotebookTab :: Label -> Paned -> ScrolledWindow -> TMTerm -> TMNotebookTab
+createTMNotebookTab tabLabel paned scrollWin trm =
   TMNotebookTab
-    { tmNotebookTabScrolledWindow = scrollWin
+    { tmNotebookTabPaned = paned
+    , tmNotebookTabScrolledWindow = scrollWin
     , tmNotebookTabTerm = trm
     , tmNotebookTabLabel = tabLabel
     }
@@ -226,14 +230,15 @@ newTMStateSingleTerm ::
   -> ApplicationWindow
   -> Notebook
   -> Label
+  -> Paned
   -> ScrolledWindow
   -> Terminal
   -> Int
   -> FontDescription
   -> IO TMState
-newTMStateSingleTerm tmConfig app appWin note label scrollWin trm pd fontDesc = do
+newTMStateSingleTerm tmConfig app appWin note label paned scrollWin trm pd fontDesc = do
   tmTerm <- newTMTerm trm pd
-  let tmNoteTab = createTMNotebookTab label scrollWin tmTerm
+  let tmNoteTab = createTMNotebookTab label paned scrollWin tmTerm
       tabs = singletonFL tmNoteTab
       tmNote = createTMNotebook note tabs
   newTMState tmConfig app appWin tmNote fontDesc
