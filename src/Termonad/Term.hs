@@ -130,7 +130,6 @@ import Termonad.Types
   , pid
   , tmNotebook
   , tmNotebookTabPaned
-  , tmNotebookTabScrolledWindow
   , tmNotebookTabTerm
   , tmNotebookTabs
   )
@@ -205,7 +204,7 @@ termExit tab mvarTMState = do
           detachTabAction =
             notebookDetachTab
               (tmNotebook notebook)
-              (tmNotebookTabScrolledWindow tab)
+              (tmNotebookTabPaned tab)
       let newTabs = deleteFL tab (tmNotebookTabs notebook)
       let newTMState =
             set (lensTMStateNotebook . lensTMNotebookTabs) newTabs tmState
