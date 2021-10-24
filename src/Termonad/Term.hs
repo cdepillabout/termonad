@@ -36,6 +36,7 @@ import GI.Gtk
   , Label
   , Notebook
   , Orientation(OrientationHorizontal)
+  , Paned
   , PolicyType(PolicyTypeAlways, PolicyTypeAutomatic, PolicyTypeNever)
   , ReliefStyle(ReliefStyleNone)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
@@ -105,7 +106,7 @@ import Termonad.Lenses
   , lensShowScrollbar
   , lensShowTabBar
   , lensTMNotebookTabLabel
-  , lensTMNotebookTabScrolledWindow
+  , lensTMNotebookTabPaned
   , lensTMNotebookTabTerm
   , lensTMNotebookTabs
   , lensTMStateApp
@@ -222,9 +223,9 @@ relabelTabs mvarTMState = do
     go :: Notebook -> TMNotebookTab -> IO ()
     go notebook tmNotebookTab = do
       let label = tmNotebookTab ^. lensTMNotebookTabLabel
-          scrolledWin = tmNotebookTab ^. lensTMNotebookTabScrolledWindow
+          paned = tmNotebookTab ^. lensTMNotebookTabPaned
           term' = tmNotebookTab ^. lensTMNotebookTabTerm . lensTerm
-      relabelTab notebook label scrolledWin term'
+      relabelTab notebook label paned term'
 
 -- | Compute the text for a 'Label' for a GTK Notebook tab.
 --
@@ -250,9 +251,9 @@ computeTabLabel pageNum maybeTitle =
 -- | Update the given 'Label' for a GTK Notebook tab.
 --
 -- The new text for the label is determined by the 'computeTabLabel' function.
-relabelTab :: Notebook -> Label -> ScrolledWindow -> Terminal -> IO ()
-relabelTab notebook label scrolledWin term' = do
-  tabNum <- notebookPageNum notebook scrolledWin
+relabelTab :: Notebook -> Label -> Paned -> Terminal -> IO ()
+relabelTab notebook label paned term' = do
+  tabNum <- notebookPageNum notebook paned
   maybeTitle <- terminalGetWindowTitle term'
   let labelText = computeTabLabel (fromIntegral tabNum) maybeTitle
   labelSetLabel label labelText
@@ -471,14 +472,14 @@ createTerm handleKeyPress mvarTMState = do
   -- Setup the initial label for the notebook tab.  This needs to happen
   -- after we add the new page to the notebook, so that the page can get labelled
   -- appropriately.
-  relabelTab (tmNotebook currNote) tabLabel scrolledWin vteTerm
+  relabelTab (tmNotebook currNote) tabLabel paned vteTerm
 
   -- Connect callbacks
   void $ onButtonClicked tabCloseButton $ termClose notebookTab mvarTMState
   void $ onTerminalWindowTitleChanged vteTerm $ do
     TMState{tmStateNotebook} <- readMVar mvarTMState
     let notebook = tmNotebook tmStateNotebook
-    relabelTab notebook tabLabel scrolledWin vteTerm
+    relabelTab notebook tabLabel paned vteTerm
   void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
   void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
   void $ onWidgetButtonPressEvent vteTerm $ handleMousePress vteTerm
