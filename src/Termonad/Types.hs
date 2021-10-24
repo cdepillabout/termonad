@@ -580,20 +580,18 @@ invariantTMState' tmState =
       index32 <- notebookGetCurrentPage tmNote
       maybeWidgetFromNote <- notebookGetNthPage tmNote index32
       let focusList = tmNotebookTabs $ tmStateNotebook tmState
-          maybeScrollWinFromFL =
-            tmNotebookTabScrolledWindow <$> getFocusItemFL focusList
+          maybePanedFromFL =
+            tmNotebookTabPaned <$> getFocusItemFL focusList
           idx = fromIntegral index32
-      case (maybeWidgetFromNote, maybeScrollWinFromFL) of
+      case (maybeWidgetFromNote, maybePanedFromFL) of
         (Nothing, Nothing) -> pure ()
         (Just _, Nothing) ->
           throwE $ FocusNotSame NotebookTabWidgetExistsButNoFocusListFocus idx
         (Nothing, Just _) ->
           throwE $ FocusNotSame FocusListFocusExistsButNoNotebookTabWidget idx
-        (Just widgetFromNote, Just scrollWinFromFL) -> do
+        (Just widgetFromNote, Just panedFromFL) -> do
           withExceptT (\() -> FocusNotSame NotebookTabWidgetDiffersFromFocusListFocus idx) $ do
-            paneFromNote <- expect Gtk.Paned widgetFromNote
-            (scrollWinFromNote, _) <- expectTwoChildren paneFromNote
-            expectSameWidgets scrollWinFromNote scrollWinFromFL
+            expectSameWidgets widgetFromNote panedFromFL
 
     invariantTMTabLength :: IO (Maybe TMStateInvariantErr)
     invariantTMTabLength = execExceptT $ do
@@ -611,42 +609,11 @@ invariantTMState' tmState =
       withExceptT (\i -> TabsDoNotMatch (TabAtIndexDifferent i)) $ do
         let tmNote = tmNotebook $ tmStateNotebook tmState
             focusList = tmNotebookTabs $ tmStateNotebook tmState
-            flList = tmNotebookTabScrolledWindow <$> toList focusList
+            flList = tmNotebookTabPaned <$> toList focusList
         widgetsFromNote <- liftIO $ notebookToList tmNote
-        panesFromNote <- for (zip widgetsFromNote [0..]) $ \(widgetFromNote, i) -> do
+        for_ (zip3 widgetsFromNote flList [0..]) $ \(scrollWinFromNote, panedFromFL, i) -> do
           withExceptT (\() -> i) $ do
-            expect Gtk.Paned widgetFromNote
-        scrollWinsFromNote <- for (zip panesFromNote [0..]) $ \(paneFromNote, i) -> do
-          withExceptT (\() -> i) $ do
-            (scrollWinFromNote, _) <- expectTwoChildren paneFromNote
-            pure scrollWinFromNote
-        for_ (zip3 scrollWinsFromNote flList [0..]) $ \(scrollWinFromNote, scrollWinFromFL, i) -> do
-          withExceptT (\() -> i) $ do
-            expectSameWidgets scrollWinFromNote scrollWinFromFL
-
-    expect
-      :: forall a b
-       . (IsWidget a, Gtk.GObject b)
-      => (Gtk.ManagedPtr b -> b) -> a -> ExceptT () IO b
-    expect mkB x = do
-      maybeB <- liftIO $ Gtk.castTo mkB x
-      case maybeB of
-        Nothing -> do
-          throwE ()
-        Just box -> do
-          pure box
-
-    expectTwoChildren
-      :: forall a
-       . Gtk.IsContainer a
-      => a -> ExceptT () IO (Widget, Widget)
-    expectTwoChildren x = do
-      children <- Gtk.containerGetChildren x
-      case children of
-        [child1, child2] -> do
-          pure (child1, child2)
-        _ -> do
-          throwE ()
+            expectSameWidgets scrollWinFromNote panedFromFL
 
     expectSameWidgets
       :: forall a b
