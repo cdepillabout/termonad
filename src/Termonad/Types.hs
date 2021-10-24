@@ -63,10 +63,10 @@ instance Show TMTerm where
       showString "}"
 
 -- | A container that holds everything in a given terminal window.  The 'term'
--- in the 'TMTerm' is inside the 'tmNotebookTabTermContainer' 'ScrolledWindow'.
+-- in the 'TMTerm' is inside the 'tmNotebookTabScrolledWindow' 'ScrolledWindow'.
 -- The notebook tab 'Label' is also available.
 data TMNotebookTab = TMNotebookTab
-  { tmNotebookTabTermContainer :: !ScrolledWindow
+  { tmNotebookTabScrolledWindow :: !ScrolledWindow
     -- ^ The 'ScrolledWindow' holding the VTE 'Terminal'.
   , tmNotebookTabTerm :: !TMTerm
     -- ^ The 'Terminal' inside the 'ScrolledWindow'.
@@ -79,7 +79,7 @@ instance Show TMNotebookTab where
   showsPrec d TMNotebookTab{..} =
     showParen (d > 10) $
       showString "TMNotebookTab {" .
-      showString "tmNotebookTabTermContainer = " .
+      showString "tmNotebookTabScrolledWindow = " .
       showString "(GI.GTK.ScrolledWindow)" .
       showString ", " .
       showString "tmNotebookTabTerm = " .
@@ -173,7 +173,7 @@ getFocusedTermFromState mvarTMState =
 createTMNotebookTab :: Label -> ScrolledWindow -> TMTerm -> TMNotebookTab
 createTMNotebookTab tabLabel scrollWin trm =
   TMNotebookTab
-    { tmNotebookTabTermContainer = scrollWin
+    { tmNotebookTabScrolledWindow = scrollWin
     , tmNotebookTabTerm = trm
     , tmNotebookTabLabel = tabLabel
     }
@@ -572,7 +572,7 @@ invariantTMState' tmState =
       maybeWidgetFromNote <- notebookGetNthPage tmNote index32
       let focusList = tmNotebookTabs $ tmStateNotebook tmState
           maybeScrollWinFromFL =
-            tmNotebookTabTermContainer <$> getFocusItemFL focusList
+            tmNotebookTabScrolledWindow <$> getFocusItemFL focusList
           idx = fromIntegral index32
       case (maybeWidgetFromNote, maybeScrollWinFromFL) of
         (Nothing, Nothing) -> pure ()
@@ -602,7 +602,7 @@ invariantTMState' tmState =
       withExceptT (\i -> TabsDoNotMatch (TabAtIndexDifferent i)) $ do
         let tmNote = tmNotebook $ tmStateNotebook tmState
             focusList = tmNotebookTabs $ tmStateNotebook tmState
-            flList = tmNotebookTabTermContainer <$> toList focusList
+            flList = tmNotebookTabScrolledWindow <$> toList focusList
         widgetsFromNote <- liftIO $ notebookToList tmNote
         panesFromNote <- for (zip widgetsFromNote [0..]) $ \(widgetFromNote, i) -> do
           withExceptT (\() -> i) $ do

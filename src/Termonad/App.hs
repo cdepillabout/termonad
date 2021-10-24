@@ -138,8 +138,8 @@ import Termonad.Lenses
   , lensShowTabBar
   , lensScrollbackLen
   , lensTMNotebook
-  , lensTMNotebookTabTermContainer
   , lensTMNotebookTabs
+  , lensTMNotebookTabScrolledWindow
   , lensTMNotebookTabTerm
   , lensTMStateApp
   , lensTMStateAppWin
@@ -172,8 +172,8 @@ import Termonad.Types
   , getFocusedTermFromState
   , modFontSize
   , newEmptyTMState
-  , tmNotebookTabTermContainer
   , tmNotebookTabs
+  , tmNotebookTabScrolledWindow
   , tmStateApp
   , tmStateNotebook
   )
@@ -279,7 +279,7 @@ fontConfigFromFontDescription fontDescription = do
 
 compareScrolledWinAndTab :: ScrolledWindow -> TMNotebookTab -> Bool
 compareScrolledWinAndTab scrollWin flTab =
-  let ScrolledWindow managedPtrFLTab = tmNotebookTabTermContainer flTab
+  let ScrolledWindow managedPtrFLTab = tmNotebookTabScrolledWindow flTab
       foreignPtrFLTab = managedForeignPtr managedPtrFLTab
       ScrolledWindow managedPtrScrollWin = scrollWin
       foreignPtrScrollWin = managedForeignPtr managedPtrScrollWin
@@ -720,7 +720,7 @@ applyNewPreferencesToTab mvarTMState tab = do
   tmState <- readMVar mvarTMState
   let fontDesc = tmState ^. lensTMStateFontDesc
       term = tab ^. lensTMNotebookTabTerm . lensTerm
-      scrolledWin = tab ^. lensTMNotebookTabTermContainer
+      scrolledWin = tab ^. lensTMNotebookTabScrolledWindow
       options = tmState ^. lensTMStateConfig . lensOptions
   terminalSetFont term (Just fontDesc)
   terminalSetCursorBlinkMode term (cursorBlinkMode options)

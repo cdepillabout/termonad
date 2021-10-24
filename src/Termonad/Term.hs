@@ -105,8 +105,8 @@ import Termonad.Lenses
   , lensShowScrollbar
   , lensShowTabBar
   , lensTMNotebookTabLabel
+  , lensTMNotebookTabScrolledWindow
   , lensTMNotebookTabTerm
-  , lensTMNotebookTabTermContainer
   , lensTMNotebookTabs
   , lensTMStateApp
   , lensTMStateConfig
@@ -129,8 +129,8 @@ import Termonad.Types
   , newTMTerm
   , pid
   , tmNotebook
+  , tmNotebookTabScrolledWindow
   , tmNotebookTabTerm
-  , tmNotebookTabTermContainer
   , tmNotebookTabs
   )
 
@@ -204,7 +204,7 @@ termExit tab mvarTMState = do
           detachTabAction =
             notebookDetachTab
               (tmNotebook notebook)
-              (tmNotebookTabTermContainer tab)
+              (tmNotebookTabScrolledWindow tab)
       let newTabs = deleteFL tab (tmNotebookTabs notebook)
       let newTMState =
             set (lensTMStateNotebook . lensTMNotebookTabs) newTabs tmState
@@ -222,7 +222,7 @@ relabelTabs mvarTMState = do
     go :: Notebook -> TMNotebookTab -> IO ()
     go notebook tmNotebookTab = do
       let label = tmNotebookTab ^. lensTMNotebookTabLabel
-          scrolledWin = tmNotebookTab ^. lensTMNotebookTabTermContainer
+          scrolledWin = tmNotebookTab ^. lensTMNotebookTabScrolledWindow
           term' = tmNotebookTab ^. lensTMNotebookTabTerm . lensTerm
       relabelTab notebook label scrolledWin term'
 
@@ -411,7 +411,7 @@ addPage mvarTMState notebookTab tabLabelBox = do
       let notebook = tmStateNotebook tmState
           note = tmNotebook notebook
           tabs = tmNotebookTabs notebook
-          scrolledWin = tmNotebookTabTermContainer notebookTab
+          scrolledWin = tmNotebookTabScrolledWindow notebookTab
 
       ---- Create a spurious container and add the scrolling window in it
       paned <- Gtk.panedNew Gtk.OrientationVertical
