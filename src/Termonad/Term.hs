@@ -466,10 +466,10 @@ createTerms handleKeyPress mvarTMState = do
   containerAdd scrolledWin2 vteTerm2
 
   -- Create the paned window container add the VTE term in it
-  paned <- Gtk.panedNew Gtk.OrientationVertical
+  paned <- Gtk.panedNew OrientationHorizontal
   Gtk.panedSetWideHandle paned True
-  Gtk.panedAdd1 paned scrolledWin
-  Gtk.panedAdd2 paned scrolledWin2
+  Gtk.panedPack1 paned scrolledWin True True
+  Gtk.panedPack2 paned scrolledWin2 True True
   Gtk.widgetShowAll paned
 
   -- Create the GTK widget for the Notebook tab
