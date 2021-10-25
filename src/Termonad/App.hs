@@ -151,7 +151,7 @@ import Termonad.Lenses
   )
 import Termonad.PreferencesFile (saveToPreferencesFile)
 import Termonad.Term
-  ( createTerm
+  ( createTerms
   , relabelTabs
   , termNextPage
   , termPrevPage
@@ -382,7 +382,7 @@ setupTermonad tmConfig app win builder = do
   boxPackStart box note True True 0
 
   mvarTMState <- newEmptyTMState tmConfig app win note fontDesc
-  terminal <- createTerm handleKeyPress mvarTMState
+  (terminal, _terminal2) <- createTerms handleKeyPress mvarTMState
 
   void $ onNotebookPageRemoved note $ \_ _ -> do
     pages <- notebookGetNPages note
@@ -427,7 +427,7 @@ setupTermonad tmConfig app win builder = do
             relabelTabs mvarTMState
 
   newTabAction <- simpleActionNew "newtab" Nothing
-  void $ onSimpleActionActivate newTabAction $ \_ -> void $ createTerm handleKeyPress mvarTMState
+  void $ onSimpleActionActivate newTabAction $ \_ -> void $ createTerms handleKeyPress mvarTMState
   actionMapAddAction app newTabAction
   applicationSetAccelsForAction app "app.newtab" ["<Shift><Ctrl>T"]
 
@@ -528,6 +528,7 @@ setupTermonad tmConfig app win builder = do
         ResponseTypeYes -> False
         _ -> True
 
+  -- Focus on the first terminal
   widgetShowAll win
   widgetGrabFocus $ terminal ^. lensTerm
 

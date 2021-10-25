@@ -428,13 +428,14 @@ setFocusOn tmStateAppWin vteTerm = do
   widgetGrabFocus vteTerm
   windowSetFocus tmStateAppWin (Just vteTerm)
 
--- | Create a new 'TMTerm', setting it up and adding it to the GTKNotebook.
-createTerm
+-- | Create two new 'TMTerm's, setting them up and adding them to the
+-- GTKNotebook.
+createTerms
   :: (TMState -> EventKey -> IO Bool)
   -- ^ Funtion for handling key presses on the terminal.
   -> TMState
-  -> IO TMTerm
-createTerm handleKeyPress mvarTMState = do
+  -> IO (TMTerm, TMTerm)
+createTerms handleKeyPress mvarTMState = do
   -- Check preconditions
   assertInvariantTMState mvarTMState
 
@@ -444,20 +445,31 @@ createTerm handleKeyPress mvarTMState = do
 
   -- Create a new terminal and launch a shell in it
   vteTerm <- createAndInitVteTerm tmStateFontDesc (options tmStateConfig)
-  maybeCurrDir <- getCWDFromFocusedTab currNote
-  termShellPid <- launchShell vteTerm maybeCurrDir
-  tmTerm <- newTMTerm vteTerm termShellPid
+  tmTerm <- do
+    maybeCurrDir <- getCWDFromFocusedTab currNote
+    termShellPid <- launchShell vteTerm maybeCurrDir
+    newTMTerm vteTerm termShellPid
 
   -- Create the scrolling window container add the VTE term in it
   scrolledWin <- createScrolledWin mvarTMState
   containerAdd scrolledWin vteTerm
 
+  -- Create a second terminal and launch a second shell in it
+  vteTerm2 <- createAndInitVteTerm tmStateFontDesc (options tmStateConfig)
+  tmTerm2 <- do
+    maybeCurrDir <- getCWDFromFocusedTab currNote
+    termShellPid <- launchShell vteTerm2 maybeCurrDir
+    newTMTerm vteTerm termShellPid
+
+  -- Create a second scrolling window container add the VTE term in it
+  scrolledWin2 <- createScrolledWin mvarTMState
+  containerAdd scrolledWin2 vteTerm2
+
   -- Create the paned window container add the VTE term in it
   paned <- Gtk.panedNew Gtk.OrientationVertical
   Gtk.panedSetWideHandle paned True
-  button <- Gtk.buttonNewWithLabel "Button"
   Gtk.panedAdd1 paned scrolledWin
-  Gtk.panedAdd2 paned button
+  Gtk.panedAdd2 paned scrolledWin2
   Gtk.widgetShowAll paned
 
   -- Create the GTK widget for the Notebook tab
@@ -471,7 +483,9 @@ createTerm handleKeyPress mvarTMState = do
 
   -- Setup the initial label for the notebook tab.  This needs to happen
   -- after we add the new page to the notebook, so that the page can get labelled
-  -- appropriately.
+  -- appropriately. There are two terminals and only one tab label, so we use
+  -- the first terminal's title.
+  -- TODO: use the most recently-focused terminal instead.
   relabelTab (tmNotebook currNote) tabLabel paned vteTerm
 
   -- Connect callbacks
@@ -484,16 +498,21 @@ createTerm handleKeyPress mvarTMState = do
   void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
   void $ onWidgetButtonPressEvent vteTerm $ handleMousePress vteTerm
   void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState
+  void $ onWidgetKeyPressEvent vteTerm2 $ handleKeyPress mvarTMState
+  void $ onWidgetKeyPressEvent scrolledWin2 $ handleKeyPress mvarTMState
+  void $ onWidgetButtonPressEvent vteTerm2 $ handleMousePress vteTerm2
+  void $ onTerminalChildExited vteTerm2 $ \_ -> termExit notebookTab mvarTMState
 
-  -- Put the keyboard focus on the term
+  -- Put the keyboard focus on the first term
   setFocusOn tmStateAppWin vteTerm
 
   -- Make sure the state is still right
   assertInvariantTMState mvarTMState
 
-  -- Run user-defined hooks for modifying the newly-created VTE Terminal.
+  -- Run user-defined hooks for modifying the newly-created VTE Terminals.
   createTermHook (hooks tmStateConfig) mvarTMState vteTerm
-  pure tmTerm
+  createTermHook (hooks tmStateConfig) mvarTMState vteTerm2
+  pure (tmTerm, tmTerm2)
 
 -- | Popup the context menu on right click
 handleMousePress :: Terminal -> EventButton -> IO Bool
