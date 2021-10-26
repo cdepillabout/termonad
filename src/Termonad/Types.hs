@@ -37,10 +37,13 @@ import Text.Show (ShowS, showParen, showString)
 import Termonad.Gtk (widgetEq)
 
 -- | A wrapper around a VTE 'Terminal'.  This also stores the process ID of the
--- process running on this terminal, as well as a 'Unique' that can be used for
--- comparing terminals.
+-- process running on this terminal, the 'Unique' that can be used for
+-- comparing terminals, and the 'ScrolledWindow' which surrounds the
+-- 'Terminal', allowing the user to scroll up to see the history.
 data TMTerm = TMTerm
-  { term :: !Terminal
+  { tmTermScrolledWindow :: !ScrolledWindow
+    -- ^ The 'ScrolledWindow' holding the VTE 'Terminal'.
+  , term :: !Terminal
     -- ^ The actual 'Terminal'.
   , pid :: !Int
     -- ^ The process ID of the process running in 'term'.
@@ -53,6 +56,9 @@ instance Show TMTerm where
   showsPrec d TMTerm{..} =
     showParen (d > 10) $
       showString "TMTerm {" .
+      showString "tmTermScrolledWindow = " .
+      showString "(GI.GTK.ScrolledWindow)" .
+      showString ", " .
       showString "term = " .
       showString "(GI.GTK.Terminal)" .
       showString ", " .
@@ -63,19 +69,21 @@ instance Show TMTerm where
       showsPrec (d + 1) (hashUnique unique) .
       showString "}"
 
--- | A container that holds everything in a given notebook tab.  The 'term' in
--- the 'TMTerm' is inside the 'tmNotebookTabScrolledWindow' 'ScrolledWindow',
--- which is in turn inside the 'tmNotebookTabPaned' 'Paned'. The notebook tab
--- 'Label' is also available.
+-- | A container that holds everything in a given notebook tab.  Each tab is
+-- split in two terminals, one on the left and one on the right. The notebook
+-- tab 'Label' is also available.
 data TMNotebookTab = TMNotebookTab
   { tmNotebookTabPaned :: !Paned
-    -- ^ The 'Paned' holding the 'ScrolledWindow'.
-  , tmNotebookTabScrolledWindow :: !ScrolledWindow
-    -- ^ The 'ScrolledWindow' holding the VTE 'Terminal'.
-  , tmNotebookTabTerm :: !TMTerm
-    -- ^ The 'Terminal' inside the 'ScrolledWindow'.
+    -- ^ The 'Paned' holding the two 'TMTerm's.
+  , tmNotebookTabLeftTerm :: !TMTerm
+    -- ^ The left 'TMTerm'.
+  , tmNotebookTabRightTerm :: !TMTerm
+    -- ^ The right 'TMTerm'.
+  , tmNotebookTabFocusIsOnLeft :: !Bool
+    -- ^ Whether it is the left 'TMTerm' which has the focus (if 'True') or the
+    -- right 'TMTerm' (if 'False').
   , tmNotebookTabLabel :: !Label
-    -- ^ The 'Label' holding the title of the 'Terminal' in the 'Notebook' tab.
+    -- ^ The 'Label' holding the title of the left 'Terminal' in the 'Notebook' tab.
   }
 
 instance Show TMNotebookTab where
@@ -86,11 +94,11 @@ instance Show TMNotebookTab where
       showString "tmNotebookTabPaned = " .
       showString "(GI.GTK.Paned)" .
       showString ", " .
-      showString "tmNotebookTabScrolledWindow = " .
-      showString "(GI.GTK.ScrolledWindow)" .
+      showString "tmNotebookTabLeftTerm = " .
+      showsPrec (d + 1) tmNotebookTabLeftTerm .
       showString ", " .
-      showString "tmNotebookTabTerm = " .
-      showsPrec (d + 1) tmNotebookTabTerm .
+      showString "tmNotebookTabRightTerm = " .
+      showsPrec (d + 1) tmNotebookTabRightTerm .
       showString ", " .
       showString "tmNotebookTabLabel = " .
       showString "(GI.GTK.Label)" .
@@ -154,35 +162,41 @@ instance Eq TMTerm where
 
 instance Eq TMNotebookTab where
   (==) :: TMNotebookTab -> TMNotebookTab -> Bool
-  (==) = (==) `on` tmNotebookTabTerm
+  l == r = ((==) `on` tmNotebookTabLeftTerm) l r
+        && ((==) `on` tmNotebookTabRightTerm) l r
 
-createTMTerm :: Terminal -> Int -> Unique -> TMTerm
-createTMTerm trm pd unq =
+createTMTerm :: ScrolledWindow -> Terminal -> Int -> Unique -> TMTerm
+createTMTerm scrollWin trm pd unq =
   TMTerm
-    { term = trm
+    { tmTermScrolledWindow = scrollWin
+    , term = trm
     , pid = pd
     , unique = unq
     }
 
-newTMTerm :: Terminal -> Int -> IO TMTerm
-newTMTerm trm pd = createTMTerm trm pd <$> newUnique
+newTMTerm :: ScrolledWindow -> Terminal -> Int -> IO TMTerm
+newTMTerm scrollWin trm pd = createTMTerm scrollWin trm pd <$> newUnique
 
 getFocusedTermFromState :: TMState -> IO (Maybe Terminal)
 getFocusedTermFromState mvarTMState =
-  withMVar mvarTMState go
+  withMVar mvarTMState (pure . go)
   where
-    go :: TMState' -> IO (Maybe Terminal)
+    go :: TMState' -> Maybe Terminal
     go tmState = do
-      let maybeNotebookTab =
-            getFocusItemFL $ tmNotebookTabs $ tmStateNotebook tmState
-      pure $ fmap (term . tmNotebookTabTerm) maybeNotebookTab
+      notebookTab <- getFocusItemFL $ tmNotebookTabs $ tmStateNotebook tmState
+      let focusedTMTerm
+             = if tmNotebookTabFocusIsOnLeft notebookTab
+               then tmNotebookTabLeftTerm notebookTab
+               else tmNotebookTabRightTerm notebookTab
+      pure $ term focusedTMTerm
 
-createTMNotebookTab :: Label -> Paned -> ScrolledWindow -> TMTerm -> TMNotebookTab
-createTMNotebookTab tabLabel paned scrollWin trm =
+createTMNotebookTab :: Label -> Paned -> TMTerm -> TMTerm -> TMNotebookTab
+createTMNotebookTab tabLabel paned trmL trmR =
   TMNotebookTab
     { tmNotebookTabPaned = paned
-    , tmNotebookTabScrolledWindow = scrollWin
-    , tmNotebookTabTerm = trm
+    , tmNotebookTabLeftTerm = trmL
+    , tmNotebookTabRightTerm = trmR
+    , tmNotebookTabFocusIsOnLeft = True
     , tmNotebookTabLabel = tabLabel
     }
 
@@ -228,7 +242,7 @@ newEmptyTMState tmConfig app appWin note fontDesc =
       , tmStateConfig = tmConfig
       }
 
-newTMStateSingleTerm ::
+newTMStateSingleTab ::
      TMConfig
   -> Application
   -> ApplicationWindow
@@ -238,11 +252,15 @@ newTMStateSingleTerm ::
   -> ScrolledWindow
   -> Terminal
   -> Int
+  -> ScrolledWindow
+  -> Terminal
+  -> Int
   -> FontDescription
   -> IO TMState
-newTMStateSingleTerm tmConfig app appWin note label paned scrollWin trm pd fontDesc = do
-  tmTerm <- newTMTerm trm pd
-  let tmNoteTab = createTMNotebookTab label paned scrollWin tmTerm
+newTMStateSingleTab tmConfig app appWin note label paned scrollWinL trmL pdL scrollWinR trmR pdR fontDesc = do
+  tmTermL <- newTMTerm scrollWinL trmL pdL
+  tmTermR <- newTMTerm scrollWinR trmR pdR
+  let tmNoteTab = createTMNotebookTab label paned tmTermL tmTermR
       tabs = singletonFL tmNoteTab
       tmNote = createTMNotebook note tabs
   newTMState tmConfig app appWin tmNote fontDesc

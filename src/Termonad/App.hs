@@ -138,16 +138,17 @@ import Termonad.Lenses
   , lensShowTabBar
   , lensScrollbackLen
   , lensTMNotebook
+  , lensTMNotebookTabFocusedTerm
   , lensTMNotebookTabs
-  , lensTMNotebookTabScrolledWindow
-  , lensTMNotebookTabTerm
   , lensTMStateApp
   , lensTMStateAppWin
   , lensTMStateConfig
   , lensTMStateFontDesc
   , lensTMStateNotebook
+  , lensTMTermScrolledWindow
   , lensTerm
   , lensWordCharExceptions
+  , traversalTMNotebookTabTerms
   )
 import Termonad.PreferencesFile (saveToPreferencesFile)
 import Termonad.Term
@@ -169,6 +170,7 @@ import Termonad.Types
   , TMNotebookTab
   , TMState
   , TMState'(TMState)
+  , TMTerm
   , getFocusedTermFromState
   , modFontSize
   , newEmptyTMState
@@ -257,7 +259,7 @@ modifyFontSizeForAllTerms modFontSizeFunc mvarTMState = do
           lensTMStateNotebook .
           lensTMNotebookTabs .
           traverse .
-          lensTMNotebookTabTerm .
+          traversalTMNotebookTabTerms .
           lensTerm
   foldMap (\vteTerm -> terminalSetFont vteTerm (Just fontDesc)) terms
 
@@ -382,7 +384,7 @@ setupTermonad tmConfig app win builder = do
   boxPackStart box note True True 0
 
   mvarTMState <- newEmptyTMState tmConfig app win note fontDesc
-  (terminal, _terminal2) <- createTerms handleKeyPress mvarTMState
+  (terminalL, _terminalR) <- createTerms handleKeyPress mvarTMState
 
   void $ onNotebookPageRemoved note $ \_ _ -> do
     pages <- notebookGetNPages note
@@ -398,7 +400,7 @@ setupTermonad tmConfig app win builder = do
       case maybeNewTabs of
         Nothing -> pure tmState
         Just (tab, newTabs) -> do
-          widgetGrabFocus $ tab ^. lensTMNotebookTabTerm . lensTerm
+          widgetGrabFocus $ tab ^. lensTMNotebookTabFocusedTerm . lensTerm
           pure $
             tmState &
               lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
@@ -528,9 +530,9 @@ setupTermonad tmConfig app win builder = do
         ResponseTypeYes -> False
         _ -> True
 
-  -- Focus on the first terminal
+  -- Focus on the left terminal
   widgetShowAll win
-  widgetGrabFocus $ terminal ^. lensTerm
+  widgetGrabFocus $ terminalL ^. lensTerm
 
 appActivate :: TMConfig -> Application -> IO ()
 appActivate tmConfig app = do
@@ -718,10 +720,15 @@ applyNewPreferences mvarTMState = do
 
 applyNewPreferencesToTab :: TMState -> TMNotebookTab -> IO ()
 applyNewPreferencesToTab mvarTMState tab = do
+  for_ (tab ^.. traversalTMNotebookTabTerms) $ \tmTerm -> do
+    applyNewPreferencesToTerm mvarTMState tmTerm
+
+applyNewPreferencesToTerm :: TMState -> TMTerm -> IO ()
+applyNewPreferencesToTerm mvarTMState tmTerm = do
   tmState <- readMVar mvarTMState
   let fontDesc = tmState ^. lensTMStateFontDesc
-      term = tab ^. lensTMNotebookTabTerm . lensTerm
-      scrolledWin = tab ^. lensTMNotebookTabScrolledWindow
+      term = tmTerm ^. lensTerm
+      scrolledWin = tmTerm ^. lensTMTermScrolledWindow
       options = tmState ^. lensTMStateConfig . lensOptions
   terminalSetFont term (Just fontDesc)
   terminalSetCursorBlinkMode term (cursorBlinkMode options)
@@ -731,6 +738,7 @@ applyNewPreferencesToTab mvarTMState tab = do
 
   let vScrollbarPolicy = showScrollbarToPolicy (options ^. lensShowScrollbar)
   scrolledWindowSetPolicy scrolledWin PolicyTypeAutomatic vScrollbarPolicy
+
 
 -- | Show the preferences dialog.
 --
