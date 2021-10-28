@@ -68,6 +68,7 @@ import GI.Gtk
   , notebookSetTabReorderable
   , onButtonClicked
   , onWidgetButtonPressEvent
+  , onWidgetFocusInEvent
   , onWidgetKeyPressEvent
   , scrolledWindowNew
   , scrolledWindowSetPolicy
@@ -106,13 +107,16 @@ import Termonad.Lenses
   , lensShowScrollbar
   , lensShowTabBar
   , lensTMNotebookTabFocusedTerm
+  , lensTMNotebookTabFocusIsOnLeft
   , lensTMNotebookTabLabel
+  , lensTMNotebookTabNonFocusedTerm
   , lensTMNotebookTabPaned
   , lensTMNotebookTabs
   , lensTMStateApp
   , lensTMStateConfig
   , lensTMStateNotebook
   , lensTerm
+  , traversalTMNotebookFocusedTab
   )
 import Termonad.Types
   ( ConfigHooks(createTermHook)
@@ -141,6 +145,14 @@ focusTerm i mvarTMState = do
 
 altNumSwitchTerm :: Int -> TMState -> IO ()
 altNumSwitchTerm = focusTerm
+
+termTogglePane :: TMState -> IO ()
+termTogglePane mvarTMState = do
+  tabs <- tmNotebookTabs . tmStateNotebook <$> readMVar mvarTMState
+  let maybeFocusedTab = getFocusItemFL tabs
+  for_ maybeFocusedTab $ \focusedTab -> do
+    let newFocus = focusedTab ^. lensTMNotebookTabNonFocusedTerm . lensTerm
+    widgetGrabFocus newFocus
 
 termNextPage :: TMState -> IO ()
 termNextPage mvarTMState = do
@@ -492,6 +504,19 @@ createTerms handleKeyPress mvarTMState = do
     void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState
   for_ @[ScrolledWindow] [scrolledWinL, scrolledWinR] $ \scrolledWin -> do
     void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
+
+  void $ onWidgetFocusInEvent vteTermL $ \_ -> do
+    modifyMVar_ mvarTMState $ \tmState -> do
+      pure $ tmState & lensTMStateNotebook
+                     . traversalTMNotebookFocusedTab
+                     . lensTMNotebookTabFocusIsOnLeft .~ True
+    pure False
+  void $ onWidgetFocusInEvent vteTermR $ \_ -> do
+    modifyMVar_ mvarTMState $ \tmState -> do
+      pure $ tmState & lensTMStateNotebook
+                     . traversalTMNotebookFocusedTab
+                     . lensTMNotebookTabFocusIsOnLeft .~ False
+    pure False
 
   -- Put the keyboard focus on the left term
   setFocusOn tmStateAppWin vteTermL

@@ -154,9 +154,10 @@ import Termonad.PreferencesFile (saveToPreferencesFile)
 import Termonad.Term
   ( createTerms
   , relabelTabs
+  , termExitFocused
   , termNextPage
   , termPrevPage
-  , termExitFocused
+  , termTogglePane
   , setShowTabs
   , showScrollbarToPolicy
   )
@@ -393,17 +394,22 @@ setupTermonad tmConfig app win builder = do
       else setShowTabs tmConfig note
 
   void $ onNotebookSwitchPage note $ \_ pageNum -> do
-    modifyMVar_ mvarTMState $ \tmState -> do
+    followUp <- modifyMVar mvarTMState $ \tmState -> do
       let notebook = tmStateNotebook tmState
           tabs = tmNotebookTabs notebook
           maybeNewTabs = updateFocusFL (fromIntegral pageNum) tabs
       case maybeNewTabs of
-        Nothing -> pure tmState
+        Nothing -> do
+          pure (tmState, pure ())
         Just (tab, newTabs) -> do
-          widgetGrabFocus $ tab ^. lensTMNotebookTabFocusedTerm . lensTerm
-          pure $
-            tmState &
-              lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+          let followUp = do
+                let newFocus = tab ^. lensTMNotebookTabFocusedTerm . lensTerm
+                widgetGrabFocus newFocus
+              tmState'
+                = tmState
+                & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+          pure (tmState', followUp)
+    followUp
 
   void $ onNotebookPageReordered note $ \childWidg pageNum -> do
     maybePaned <- castTo Paned childWidg
@@ -433,17 +439,29 @@ setupTermonad tmConfig app win builder = do
   actionMapAddAction app newTabAction
   applicationSetAccelsForAction app "app.newtab" ["<Shift><Ctrl>T"]
 
+  nextPaneAction <- simpleActionNew "nextpane" Nothing
+  void $ onSimpleActionActivate nextPaneAction $ \_ ->
+    termTogglePane mvarTMState
+  actionMapAddAction app nextPaneAction
+  applicationSetAccelsForAction app "app.nextpane" ["<Ctrl>Page_Down"]
+
+  prevPaneAction <- simpleActionNew "prevpane" Nothing
+  void $ onSimpleActionActivate prevPaneAction $ \_ ->
+    termTogglePane mvarTMState
+  actionMapAddAction app prevPaneAction
+  applicationSetAccelsForAction app "app.prevpane" ["<Ctrl>Page_Up"]
+
   nextPageAction <- simpleActionNew "nextpage" Nothing
   void $ onSimpleActionActivate nextPageAction $ \_ ->
     termNextPage mvarTMState
   actionMapAddAction app nextPageAction
-  applicationSetAccelsForAction app "app.nextpage" ["<Ctrl>Page_Down"]
+  applicationSetAccelsForAction app "app.nextpage" ["<Ctrl><Shift>Page_Down"]
 
   prevPageAction <- simpleActionNew "prevpage" Nothing
   void $ onSimpleActionActivate prevPageAction $ \_ ->
     termPrevPage mvarTMState
   actionMapAddAction app prevPageAction
-  applicationSetAccelsForAction app "app.prevpage" ["<Ctrl>Page_Up"]
+  applicationSetAccelsForAction app "app.prevpage" ["<Ctrl><Shift>Page_Up"]
 
   closeTabAction <- simpleActionNew "closetab" Nothing
   void $ onSimpleActionActivate closeTabAction $ \_ ->
