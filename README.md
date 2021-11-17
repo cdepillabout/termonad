@@ -63,7 +63,7 @@ installing `stack` can be found on
 
 ### Arch Linux
 
-First, you must install the required GTK system libraries:
+First, you must install the required Gnome/GTK system libraries:
 
 ```sh
 $ pacman -S vte3 gobject-introspection
@@ -78,6 +78,16 @@ $ cd termonad/
 $ stack install
 ```
 
+Note that Termonad depends on the [`haskell-gi`](https://github.com/haskell-gi/haskell-gi) family of Haskell libraries.  `haskell-gi` contains Haskell wrappers for for Gnome/GTK system libraries.  It uses the [GObject Introspection](https://gi.readthedocs.io/en/latest/) functionality from the Gnome libraries.
+
+One problem that Arch users often run into is that their system Gnome/GTK libraries are newer than what the `haskell-gi` dependencies from Stackage support.  If you run into this problem, there are a couple things you can try:
+
+- Manually switch to a newer Stackage resolver (probably Stackage Nightly).  Newer Stackage resolvers often have newer versions of the `haskell-gi` libraries.  Newer versions of the `haskell-gi` libraries are more likely to support your newer system Gnome/GTK libraries.  If you get something working like this, please open a PR.
+- Use `cabal` for building Termonad instead of `stack`.  Make sure `cabal`'s constraint solver picks the latest versions of the `haskell-gi` libraries on Hackage.
+- Use Nix for installing Termonad.
+
+My suggestion is to use Nix, since it is highly likely to "just work" (because with Nix, _all_ libraries are pinned to known working versions, even system libraries).
+
 ### Ubuntu / Debian
 
 Termonad can be installed through `apt` on Debian and Ubuntu:
@@ -91,7 +101,7 @@ to compile the Haskell-based settings file, `termonad.hs`.
 
 #### Compiling from source on Ubuntu / Debian
 
-First, you must install the required GTK system libraries:
+First, you must install the required Gnome/GTK system libraries:
 
 ```sh
 $ apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
