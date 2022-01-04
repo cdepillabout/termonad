@@ -58,7 +58,9 @@ $(makeLensesFor
     ''TMNotebook
  )
 
--- TODO: upstream this to the focuslist package
+-- TODO: This should be available in focuslist-0.1.1.0 as traversalFocusItem.
+-- focuslist-0.1.1.0 should likely be available in LTS-19.
+-- We should delete this function and use traversalFocusItem when Termonad moves to using LTS-19.
 traversalFLItem :: forall a. Traversal' (FocusList a) a
 traversalFLItem f flA
   = let seqA = FocusList.toSeqFL flA
