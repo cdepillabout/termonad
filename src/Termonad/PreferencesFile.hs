@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 
 module Termonad.PreferencesFile where
 
@@ -5,6 +6,9 @@ import Termonad.Prelude
 
 import Control.Monad.Trans.Except (ExceptT(..), runExceptT, throwE, withExceptT)
 import Data.Aeson (Result(..), fromJSON)
+#if MIN_VERSION_aeson(2, 0, 0)
+import qualified Data.Aeson.KeyMap as KeyMap
+#endif
 import qualified Data.HashMap.Strict as HashMap
 import Data.Yaml (ParseException, ToJSON (toJSON), decodeFileEither, encode, prettyPrintParseException)
 import Data.Yaml.Aeson (Value(..))
@@ -133,8 +137,22 @@ mergeObjVals optsFromFile optsDefault =
   case (optsFromFile, optsDefault) of
     -- Both the options from the file and the default options are an Object
     -- here.  Recursively merge the keys and values.
-    (Object optsFromFileHashMap, Object optsDefaultHashMap) ->
-      Object $ HashMap.unionWith mergeObjVals optsFromFileHashMap optsDefaultHashMap
+    (Object optsFromFileKeyMap, Object optsDefaultKeyMap) ->
+      let
+#if MIN_VERSION_aeson(2, 0, 0)
+          hashMapFromKeyMap = KeyMap.toHashMap
+          keyMapFromHashMap = KeyMap.fromHashMap
+#else
+          hashMapFromKeyMap = id
+          keyMapFromHashMap = id
+#endif
+          optsFromFileHashMap = hashMapFromKeyMap optsFromFileKeyMap
+          optsDefaultHashMap = hashMapFromKeyMap optsDefaultKeyMap
+          optsResultHashMap = HashMap.unionWith mergeObjVals
+                                optsFromFileHashMap
+                                optsDefaultHashMap
+          optsResultKeyMap = keyMapFromHashMap optsResultHashMap
+      in Object optsResultKeyMap
     -- Both the value from the file and the default value are the same type.
     -- Use the value from the file.
     --
