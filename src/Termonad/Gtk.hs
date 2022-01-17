@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP #-}
-
 module Termonad.Gtk where
 
 import Termonad.Prelude
