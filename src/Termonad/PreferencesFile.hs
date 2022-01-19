@@ -27,6 +27,10 @@ import Termonad.Types
   , defaultConfigOptions
   )
 
+-- $setup
+--
+-- >>> import Data.Aeson(object, (.=))
+
 -- | Get the path to the preferences file @~\/.config\/termonad\/termonad.yaml@.
 getPreferencesFile :: IO FilePath
 getPreferencesFile = do
@@ -103,17 +107,17 @@ readFileWithDefaults file = runExceptT $ do
 --
 -- Note that 'Value's in 'Array's are not recursed into:
 --
--- >>> let obj1 = Object $ HashMap.singleton "hello" (Number 2)
--- >>> let obj2 = Object $ HashMap.singleton "hello" (String "bye")
+-- >>> let obj1 = object ["hello" .= Number 2]
+-- >>> let obj2 = object ["hello" .= String "bye"]
 -- >>> mergeObjVals (Array [obj1]) (Array [obj2])
 -- Array [Object (fromList [("hello",Number 2.0)])]
 --
 -- 'Object's are recursed into.  Unique keys from both Maps will be used.
 -- Keys that are in both Maps will be merged according to the rules above:
 --
--- >>> let hash1 = HashMap.fromList [("hello", Number 1), ("bye", Number 100)]
--- >>> let hash2 = HashMap.fromList [("hello", Number 2), ("goat", String "chicken")]
--- >>> mergeObjVals (Object hash1) (Object hash2)
+-- >>> let object1 = object ["hello" .= Number 1, "bye" .= Number 100]
+-- >>> let object2 = object ["hello" .= Number 2, "goat" .= String "chicken"]
+-- >>> mergeObjVals object1 object2
 -- Object (fromList [("bye",Number 100.0),("goat",String "chicken"),("hello",Number 1.0)])
 --
 -- 'Value's of different types will use the second 'Value':
