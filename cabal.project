@@ -1,2 +1,10 @@
 
 packages: termonad.cabal
+
+
+package aeson
+  -- Continue using HashMap for objects, as a collision attack (see
+  -- https://github.com/haskell/aeson/pull/866) is not concerning for a local
+  -- application. This makes it easier to support both aeson-2.x and
+  -- aeson-1.x without needlessly converting between HashMap and Map.
+  flags: -ordered-keymap
