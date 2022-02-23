@@ -10,6 +10,7 @@ packages:
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
   # Not in stackage nightly
+  - heterocephalus-1.0.5.5@sha256:a0f0f5945378915fc6716eaa7e79f3489db420c54dd55c8346c2f9cdc2d0977c,2925
   - xml-html-qq-0.1.0.1@sha256:1e6dc32d764da2b80eed8809cdbee0cb1f57011fa95ad1d8fe5949c4d8bde568,2331
 
 # Override default flag values for local packages and extra-deps
