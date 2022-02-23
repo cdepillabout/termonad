@@ -8,7 +8,9 @@ packages:
     - '.'
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
-extra-deps: []
+extra-deps:
+  # Not in stackage nightly
+  - xml-html-qq-0.1.0.1@sha256:1e6dc32d764da2b80eed8809cdbee0cb1f57011fa95ad1d8fe5949c4d8bde568,2331
 
 # Override default flag values for local packages and extra-deps
 flags: {}
