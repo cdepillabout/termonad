@@ -85,7 +85,7 @@ let
         # then they don't have to be compiled from scratch.
         convenientNativeBuildTools = [
           self.cabal-install
-          self.gnome3.glade
+          self.glade
           self.haskellPackages.ghcid
           self.hlint
         ];
