@@ -58,7 +58,7 @@ let
     #
     # Either this, or termonadKnownWorkingHaskellPkgSet can be changed in an overlay
     # if you want to use a different GHC to build Termonad.
-    termonadCompilerVersion = "ghc8107";
+    termonadCompilerVersion = "ghc902";
 
     # A Haskell package set where we know the GHC version works to compile
     # Termonad.  This is basically just a shortcut so that other Nix files
@@ -85,7 +85,7 @@ let
         # then they don't have to be compiled from scratch.
         convenientNativeBuildTools = [
           self.cabal-install
-          self.gnome3.glade
+          self.glade
           self.haskellPackages.ghcid
           self.hlint
         ];

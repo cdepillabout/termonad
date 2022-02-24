@@ -2,7 +2,14 @@
   description = "A VTE-based terminal emulator configurable in Haskell";
 
   # Nixpkgs / NixOS version to use.
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  #
+  # TODO: Nixpkgs is switching to use GHC-9.0.2 as the default compiler as of
+  # 2022-02-21, but the switch has currently only happened on the
+  # haskell-updates branch.  This temporarily makes Termonad use that branch.
+  # When https://github.com/NixOS/nixpkgs/pull/160733 is merged into master,
+  # switch back to nixos-unstable.
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/haskell-updates";
+  # inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
   outputs = { self, nixpkgs }:
     let

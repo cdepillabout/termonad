@@ -8,9 +8,9 @@ haskell.lib.buildStackProject {
   buildInputs = [
     cairo
     git
-    gnome3.vte
     gobjectIntrospection
     gtk3
+    vte
     zlib
   ];
   ghc = termonadKnownWorkingHaskellPkgSet.ghc;
