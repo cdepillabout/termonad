@@ -1,9 +1,13 @@
-## (next)
+## 4.2.0.1
 
 *   Added an
     [example](https://github.com/cdepillabout/termonad/blob/50b20dc3f5bb2a4a080fd703e818bf721c9c3884/example-config/ExampleDraculaColourExtension.hs)
     of how to setup a Dracula color scheme. Thanks @craigem!
     [#195](https://github.com/cdepillabout/termonad/pull/195)
+
+*   Bump to allow both aeson-1 and aeson-2.
+    Thanks [@gelisam](https://github.com/gelisam)!
+    [#210](https://github.com/cdepillabout/termonad/pull/210)
 
 ## 4.2.0.0
 
