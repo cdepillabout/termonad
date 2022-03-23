@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 -- | This is an example Termonad configuration that shows how to use the
 -- One Dark Pro colour scheme https://binaryify.github.io/OneDark-Pro/
+-- 
+-- See an example in @../img/termonad-One_Dark_Pro.png@.
 
 module Main where
 
