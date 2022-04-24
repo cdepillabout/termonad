@@ -4,6 +4,7 @@ import Termonad.Prelude
 
 import Control.Monad.Fail (MonadFail, fail)
 import Data.GI.Base (ManagedPtr, withManagedPtr)
+import Data.GI.Base.GObject (gtypeFromInstance)
 import GHC.Stack (HasCallStack)
 import GI.Gdk
   ( GObject
@@ -58,3 +59,20 @@ widgetEq a b = do
     withManagedPtr managedPtrA $ \ptrA ->
       withManagedPtr managedPtrB $ \ptrB ->
         pure (ptrA == ptrB)
+
+printWidgetTree :: Gtk.IsWidget a => a -> IO ()
+printWidgetTree widget_ = do
+  widget <- Gtk.toWidget widget_
+  go "" widget
+  where
+    go :: Text -> Gtk.Widget -> IO ()
+    go indent w = do
+      type_ <- gtypeFromInstance w
+      name <- Gtk.gtypeName type_
+      let ptr = Gtk.managedForeignPtr . Gtk.toManagedPtr $ w
+      putStrLn $ indent <> pack name <> "  " <> pack (show ptr)
+      maybeContainer <- Gtk.castTo Gtk.Container w
+      for_ maybeContainer $ \container -> do
+        children <- Gtk.containerGetChildren container
+        for_ children $ \child -> do
+          go ("  " <> indent) child

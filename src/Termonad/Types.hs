@@ -4,6 +4,7 @@ module Termonad.Types where
 
 import Termonad.Prelude
 
+import Control.Monad.Trans.Except (ExceptT, runExceptT, throwE, withExceptT)
 import Control.Monad.Fail (fail)
 import Data.FocusList (FocusList, emptyFL, singletonFL, getFocusItemFL, lengthFL)
 import Data.Unique (Unique, hashUnique, newUnique)
@@ -19,6 +20,7 @@ import GI.Gtk
   , IsWidget
   , Label
   , Notebook
+  , Paned
   , ScrolledWindow
   , Widget
   , notebookGetCurrentPage
@@ -33,10 +35,13 @@ import Text.Show (ShowS, showParen, showString)
 import Termonad.Gtk (widgetEq)
 
 -- | A wrapper around a VTE 'Terminal'.  This also stores the process ID of the
--- process running on this terminal, as well as a 'Unique' that can be used for
--- comparing terminals.
+-- process running on this terminal, the 'Unique' that can be used for
+-- comparing terminals, and the 'ScrolledWindow' which surrounds the
+-- 'Terminal', allowing the user to scroll up to see the history.
 data TMTerm = TMTerm
-  { term :: !Terminal
+  { tmTermScrolledWindow :: !ScrolledWindow
+    -- ^ The 'ScrolledWindow' holding the VTE 'Terminal'.
+  , term :: !Terminal
     -- ^ The actual 'Terminal'.
   , pid :: !Int
     -- ^ The process ID of the process running in 'term'.
@@ -49,6 +54,9 @@ instance Show TMTerm where
   showsPrec d TMTerm{..} =
     showParen (d > 10) $
       showString "TMTerm {" .
+      showString "tmTermScrolledWindow = " .
+      showString "(GI.GTK.ScrolledWindow)" .
+      showString ", " .
       showString "term = " .
       showString "(GI.GTK.Terminal)" .
       showString ", " .
@@ -59,16 +67,21 @@ instance Show TMTerm where
       showsPrec (d + 1) (hashUnique unique) .
       showString "}"
 
--- | A container that holds everything in a given terminal window.  The 'term'
--- in the 'TMTerm' is inside the 'tmNotebookTabTermContainer' 'ScrolledWindow'.
--- The notebook tab 'Label' is also available.
+-- | A container that holds everything in a given notebook tab.  Each tab is
+-- split in two terminals, one on the left and one on the right. The notebook
+-- tab 'Label' is also available.
 data TMNotebookTab = TMNotebookTab
-  { tmNotebookTabTermContainer :: !ScrolledWindow
-    -- ^ The 'ScrolledWindow' holding the VTE 'Terminal'.
-  , tmNotebookTabTerm :: !TMTerm
-    -- ^ The 'Terminal' insidie the 'ScrolledWindow'.
+  { tmNotebookTabPaned :: !Paned
+    -- ^ The 'Paned' holding the two 'TMTerm's.
+  , tmNotebookTabLeftTerm :: !TMTerm
+    -- ^ The left 'TMTerm'.
+  , tmNotebookTabRightTerm :: !TMTerm
+    -- ^ The right 'TMTerm'.
+  , tmNotebookTabFocusIsOnLeft :: !Bool
+    -- ^ Whether it is the left 'TMTerm' which has the focus (if 'True') or the
+    -- right 'TMTerm' (if 'False').
   , tmNotebookTabLabel :: !Label
-    -- ^ The 'Label' holding the title of the 'Terminal' in the 'Notebook' tab.
+    -- ^ The 'Label' holding the title of the left 'Terminal' in the 'Notebook' tab.
   }
 
 instance Show TMNotebookTab where
@@ -76,11 +89,14 @@ instance Show TMNotebookTab where
   showsPrec d TMNotebookTab{..} =
     showParen (d > 10) $
       showString "TMNotebookTab {" .
-      showString "tmNotebookTabTermContainer = " .
-      showString "(GI.GTK.ScrolledWindow)" .
+      showString "tmNotebookTabPaned = " .
+      showString "(GI.GTK.Paned)" .
       showString ", " .
-      showString "tmNotebookTabTerm = " .
-      showsPrec (d + 1) tmNotebookTabTerm .
+      showString "tmNotebookTabLeftTerm = " .
+      showsPrec (d + 1) tmNotebookTabLeftTerm .
+      showString ", " .
+      showString "tmNotebookTabRightTerm = " .
+      showsPrec (d + 1) tmNotebookTabRightTerm .
       showString ", " .
       showString "tmNotebookTabLabel = " .
       showString "(GI.GTK.Label)" .
@@ -144,34 +160,41 @@ instance Eq TMTerm where
 
 instance Eq TMNotebookTab where
   (==) :: TMNotebookTab -> TMNotebookTab -> Bool
-  (==) = (==) `on` tmNotebookTabTerm
+  l == r = ((==) `on` tmNotebookTabLeftTerm) l r
+        && ((==) `on` tmNotebookTabRightTerm) l r
 
-createTMTerm :: Terminal -> Int -> Unique -> TMTerm
-createTMTerm trm pd unq =
+createTMTerm :: ScrolledWindow -> Terminal -> Int -> Unique -> TMTerm
+createTMTerm scrollWin trm pd unq =
   TMTerm
-    { term = trm
+    { tmTermScrolledWindow = scrollWin
+    , term = trm
     , pid = pd
     , unique = unq
     }
 
-newTMTerm :: Terminal -> Int -> IO TMTerm
-newTMTerm trm pd = createTMTerm trm pd <$> newUnique
+newTMTerm :: ScrolledWindow -> Terminal -> Int -> IO TMTerm
+newTMTerm scrollWin trm pd = createTMTerm scrollWin trm pd <$> newUnique
 
 getFocusedTermFromState :: TMState -> IO (Maybe Terminal)
 getFocusedTermFromState mvarTMState =
-  withMVar mvarTMState go
+  withMVar mvarTMState (pure . go)
   where
-    go :: TMState' -> IO (Maybe Terminal)
+    go :: TMState' -> Maybe Terminal
     go tmState = do
-      let maybeNotebookTab =
-            getFocusItemFL $ tmNotebookTabs $ tmStateNotebook tmState
-      pure $ fmap (term . tmNotebookTabTerm) maybeNotebookTab
+      notebookTab <- getFocusItemFL $ tmNotebookTabs $ tmStateNotebook tmState
+      let focusedTMTerm
+             = if tmNotebookTabFocusIsOnLeft notebookTab
+               then tmNotebookTabLeftTerm notebookTab
+               else tmNotebookTabRightTerm notebookTab
+      pure $ term focusedTMTerm
 
-createTMNotebookTab :: Label -> ScrolledWindow -> TMTerm -> TMNotebookTab
-createTMNotebookTab tabLabel scrollWin trm =
+createTMNotebookTab :: Label -> Paned -> TMTerm -> TMTerm -> TMNotebookTab
+createTMNotebookTab tabLabel paned trmL trmR =
   TMNotebookTab
-    { tmNotebookTabTermContainer = scrollWin
-    , tmNotebookTabTerm = trm
+    { tmNotebookTabPaned = paned
+    , tmNotebookTabLeftTerm = trmL
+    , tmNotebookTabRightTerm = trmR
+    , tmNotebookTabFocusIsOnLeft = True
     , tmNotebookTabLabel = tabLabel
     }
 
@@ -217,20 +240,25 @@ newEmptyTMState tmConfig app appWin note fontDesc =
       , tmStateConfig = tmConfig
       }
 
-newTMStateSingleTerm ::
+newTMStateSingleTab ::
      TMConfig
   -> Application
   -> ApplicationWindow
   -> Notebook
   -> Label
+  -> Paned
+  -> ScrolledWindow
+  -> Terminal
+  -> Int
   -> ScrolledWindow
   -> Terminal
   -> Int
   -> FontDescription
   -> IO TMState
-newTMStateSingleTerm tmConfig app appWin note label scrollWin trm pd fontDesc = do
-  tmTerm <- newTMTerm trm pd
-  let tmNoteTab = createTMNotebookTab label scrollWin tmTerm
+newTMStateSingleTab tmConfig app appWin note label paned scrollWinL trmL pdL scrollWinR trmR pdR fontDesc = do
+  tmTermL <- newTMTerm scrollWinL trmL pdL
+  tmTermR <- newTMTerm scrollWinR trmR pdR
+  let tmNoteTab = createTMNotebookTab label paned tmTermL tmTermR
       tabs = singletonFL tmNoteTab
       tmNote = createTMNotebook note tabs
   newTMState tmConfig app appWin tmNote fontDesc
@@ -546,70 +574,63 @@ invariantTMState' tmState =
     runInvariants = fmap catMaybes . sequence
 
     invariantFocusSame :: IO (Maybe TMStateInvariantErr)
-    invariantFocusSame = do
+    invariantFocusSame = execExceptT $ do
       let tmNote = tmNotebook $ tmStateNotebook tmState
       index32 <- notebookGetCurrentPage tmNote
       maybeWidgetFromNote <- notebookGetNthPage tmNote index32
       let focusList = tmNotebookTabs $ tmStateNotebook tmState
-          maybeScrollWinFromFL =
-            tmNotebookTabTermContainer <$> getFocusItemFL focusList
+          maybePanedFromFL =
+            tmNotebookTabPaned <$> getFocusItemFL focusList
           idx = fromIntegral index32
-      case (maybeWidgetFromNote, maybeScrollWinFromFL) of
-        (Nothing, Nothing) -> pure Nothing
+      case (maybeWidgetFromNote, maybePanedFromFL) of
+        (Nothing, Nothing) -> pure ()
         (Just _, Nothing) ->
-          pure $
-            Just $
-              FocusNotSame NotebookTabWidgetExistsButNoFocusListFocus idx
+          throwE $ FocusNotSame NotebookTabWidgetExistsButNoFocusListFocus idx
         (Nothing, Just _) ->
-          pure $
-            Just $
-              FocusNotSame FocusListFocusExistsButNoNotebookTabWidget idx
-        (Just widgetFromNote, Just scrollWinFromFL) -> do
-          isEq <- widgetEq widgetFromNote scrollWinFromFL
-          if isEq
-            then pure Nothing
-            else
-              pure $
-                Just $
-                  FocusNotSame NotebookTabWidgetDiffersFromFocusListFocus idx
+          throwE $ FocusNotSame FocusListFocusExistsButNoNotebookTabWidget idx
+        (Just widgetFromNote, Just panedFromFL) -> do
+          withExceptT (\() -> FocusNotSame NotebookTabWidgetDiffersFromFocusListFocus idx) $ do
+            expectSameWidgets widgetFromNote panedFromFL
 
     invariantTMTabLength :: IO (Maybe TMStateInvariantErr)
-    invariantTMTabLength = do
+    invariantTMTabLength = execExceptT $ do
       let tmNote = tmNotebook $ tmStateNotebook tmState
       noteLength32 <- notebookGetNPages tmNote
       let noteLength = fromIntegral noteLength32
           focusListLength = lengthFL $ tmNotebookTabs $ tmStateNotebook tmState
           lengthEqual = focusListLength == noteLength
-      if lengthEqual
-        then pure Nothing
-        else  pure $
-               Just $
-                TabsDoNotMatch $
-                 TabLengthsDifferent noteLength focusListLength
+      when (not lengthEqual) $ do
+        throwE $ TabsDoNotMatch $ TabLengthsDifferent noteLength focusListLength
 
     -- Turns a FocusList and Notebook into two lists of widgets and compares each widget for equality
     invariantTabsAllMatch :: IO (Maybe TMStateInvariantErr)
-    invariantTabsAllMatch = do
-      let tmNote = tmNotebook $ tmStateNotebook tmState
-          focusList = tmNotebookTabs $ tmStateNotebook tmState
-          flList = tmNotebookTabTermContainer <$> toList focusList
-      noteList <- notebookToList tmNote
-      tabsMatch noteList flList
-      where
-        tabsMatch
-          :: forall a b
-           . (IsWidget a, IsWidget b)
-          => [a]
-          -> [b]
-          -> IO (Maybe TMStateInvariantErr)
-        tabsMatch xs ys = foldr go (pure Nothing) (zip3 xs ys [0..])
-          where
-            go :: (a, b, Int) -> IO (Maybe TMStateInvariantErr) -> IO (Maybe TMStateInvariantErr)
-            go (x, y, i) acc = do
-              isEq <- widgetEq x y
-              if isEq
-                then acc
-                else pure . Just $ TabsDoNotMatch (TabAtIndexDifferent i)
+    invariantTabsAllMatch = execExceptT $ do
+      withExceptT (\i -> TabsDoNotMatch (TabAtIndexDifferent i)) $ do
+        let tmNote = tmNotebook $ tmStateNotebook tmState
+            focusList = tmNotebookTabs $ tmStateNotebook tmState
+            flList = tmNotebookTabPaned <$> toList focusList
+        widgetsFromNote <- liftIO $ notebookToList tmNote
+        for_ (zip3 widgetsFromNote flList [0..]) $ \(scrollWinFromNote, panedFromFL, i) -> do
+          withExceptT (\() -> i) $ do
+            expectSameWidgets scrollWinFromNote panedFromFL
+
+    expectSameWidgets
+      :: forall a b
+       . (IsWidget a, IsWidget b)
+      => a -> b -> ExceptT () IO ()
+    expectSameWidgets x y = do
+      isEq <- widgetEq x y
+      when (not isEq) $ do
+        throwE ()
+
+    execExceptT :: forall e m. Monad m => ExceptT e m () -> m (Maybe e)
+    execExceptT body = do
+      eOrUnit <- runExceptT body
+      case eOrUnit of
+        Left e -> do
+          pure (Just e)
+        Right () -> do
+          pure Nothing
 
 -- | Check the invariants for 'TMState', and call 'fail' if we find that they
 -- have been violated.

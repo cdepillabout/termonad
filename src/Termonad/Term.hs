@@ -36,6 +36,7 @@ import GI.Gtk
   , Label
   , Notebook
   , Orientation(OrientationHorizontal)
+  , Paned
   , PolicyType(PolicyTypeAlways, PolicyTypeAutomatic, PolicyTypeNever)
   , ReliefStyle(ReliefStyleNone)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
@@ -67,6 +68,7 @@ import GI.Gtk
   , notebookSetTabReorderable
   , onButtonClicked
   , onWidgetButtonPressEvent
+  , onWidgetFocusInEvent
   , onWidgetKeyPressEvent
   , scrolledWindowNew
   , scrolledWindowSetPolicy
@@ -80,6 +82,7 @@ import GI.Gtk
   , windowSetFocus
   , windowSetTransientFor
   )
+import qualified GI.Gtk as Gtk
 import GI.Pango (EllipsizeMode(EllipsizeModeMiddle), FontDescription)
 import GI.Vte
   ( PtyFlags(PtyFlagsDefault)
@@ -103,14 +106,17 @@ import Termonad.Lenses
   , lensOptions
   , lensShowScrollbar
   , lensShowTabBar
+  , lensTMNotebookTabFocusedTerm
+  , lensTMNotebookTabFocusIsOnLeft
   , lensTMNotebookTabLabel
-  , lensTMNotebookTabTerm
-  , lensTMNotebookTabTermContainer
+  , lensTMNotebookTabNonFocusedTerm
+  , lensTMNotebookTabPaned
   , lensTMNotebookTabs
   , lensTMStateApp
   , lensTMStateConfig
   , lensTMStateNotebook
   , lensTerm
+  , traversalTMNotebookFocusedTab
   )
 import Termonad.Types
   ( ConfigHooks(createTermHook)
@@ -128,8 +134,7 @@ import Termonad.Types
   , newTMTerm
   , pid
   , tmNotebook
-  , tmNotebookTabTerm
-  , tmNotebookTabTermContainer
+  , tmNotebookTabPaned
   , tmNotebookTabs
   )
 
@@ -140,6 +145,14 @@ focusTerm i mvarTMState = do
 
 altNumSwitchTerm :: Int -> TMState -> IO ()
 altNumSwitchTerm = focusTerm
+
+termTogglePane :: TMState -> IO ()
+termTogglePane mvarTMState = do
+  tabs <- tmNotebookTabs . tmStateNotebook <$> readMVar mvarTMState
+  let maybeFocusedTab = getFocusItemFL tabs
+  for_ maybeFocusedTab $ \focusedTab -> do
+    let newFocus = focusedTab ^. lensTMNotebookTabNonFocusedTerm . lensTerm
+    widgetGrabFocus newFocus
 
 termNextPage :: TMState -> IO ()
 termNextPage mvarTMState = do
@@ -203,7 +216,7 @@ termExit tab mvarTMState = do
           detachTabAction =
             notebookDetachTab
               (tmNotebook notebook)
-              (tmNotebookTabTermContainer tab)
+              (tmNotebookTabPaned tab)
       let newTabs = deleteFL tab (tmNotebookTabs notebook)
       let newTMState =
             set (lensTMStateNotebook . lensTMNotebookTabs) newTabs tmState
@@ -221,9 +234,9 @@ relabelTabs mvarTMState = do
     go :: Notebook -> TMNotebookTab -> IO ()
     go notebook tmNotebookTab = do
       let label = tmNotebookTab ^. lensTMNotebookTabLabel
-          scrolledWin = tmNotebookTab ^. lensTMNotebookTabTermContainer
-          term' = tmNotebookTab ^. lensTMNotebookTabTerm . lensTerm
-      relabelTab notebook label scrolledWin term'
+          paned = tmNotebookTab ^. lensTMNotebookTabPaned
+          term' = tmNotebookTab ^. lensTMNotebookTabFocusedTerm . lensTerm
+      relabelTab notebook label paned term'
 
 -- | Compute the text for a 'Label' for a GTK Notebook tab.
 --
@@ -249,9 +262,9 @@ computeTabLabel pageNum maybeTitle =
 -- | Update the given 'Label' for a GTK Notebook tab.
 --
 -- The new text for the label is determined by the 'computeTabLabel' function.
-relabelTab :: Notebook -> Label -> ScrolledWindow -> Terminal -> IO ()
-relabelTab notebook label scrolledWin term' = do
-  tabNum <- notebookPageNum notebook scrolledWin
+relabelTab :: Notebook -> Label -> Paned -> Terminal -> IO ()
+relabelTab notebook label paned term' = do
+  tabNum <- notebookPageNum notebook paned
   maybeTitle <- terminalGetWindowTitle term'
   let labelText = computeTabLabel (fromIntegral tabNum) maybeTitle
   labelSetLabel label labelText
@@ -348,7 +361,7 @@ getCWDFromFocusedTab currNote = do
   case maybeFocusedTab of
     Nothing -> pure Nothing
     Just focusedNotebookTab -> do
-      let shellPid = pid (tmNotebookTabTerm focusedNotebookTab)
+      let shellPid = pid (focusedNotebookTab ^. lensTMNotebookTabFocusedTerm)
       cwdOfPid shellPid
 
 -- | Create the VTE 'Terminal', set the fonts and options
@@ -410,9 +423,10 @@ addPage mvarTMState notebookTab tabLabelBox = do
       let notebook = tmStateNotebook tmState
           note = tmNotebook notebook
           tabs = tmNotebookTabs notebook
-          scrolledWin = tmNotebookTabTermContainer notebookTab
-      pageIndex <- notebookAppendPage note scrolledWin (Just tabLabelBox)
-      notebookSetTabReorderable note scrolledWin True
+          paned = tmNotebookTabPaned notebookTab
+
+      pageIndex <- notebookAppendPage note paned (Just tabLabelBox)
+      notebookSetTabReorderable note paned True
       setShowTabs (tmState ^. lensTMStateConfig) note
       let newTabs = appendFL tabs notebookTab
           newTMState =
@@ -425,13 +439,14 @@ setFocusOn tmStateAppWin vteTerm = do
   widgetGrabFocus vteTerm
   windowSetFocus tmStateAppWin (Just vteTerm)
 
--- | Create a new 'TMTerm', setting it up and adding it to the GTKNotebook.
-createTerm
+-- | Create two new 'TMTerm's, setting them up and adding them to the
+-- GTKNotebook.
+createTerms
   :: (TMState -> EventKey -> IO Bool)
   -- ^ Funtion for handling key presses on the terminal.
   -> TMState
-  -> IO TMTerm
-createTerm handleKeyPress mvarTMState = do
+  -> IO (TMTerm, TMTerm)
+createTerms handleKeyPress mvarTMState = do
   -- Check preconditions
   assertInvariantTMState mvarTMState
 
@@ -439,50 +454,81 @@ createTerm handleKeyPress mvarTMState = do
   TMState{tmStateAppWin, tmStateFontDesc, tmStateConfig, tmStateNotebook=currNote} <-
     readMVar mvarTMState
 
-  -- Create a new terminal and launch a shell in it
-  vteTerm <- createAndInitVteTerm tmStateFontDesc (options tmStateConfig)
-  maybeCurrDir <- getCWDFromFocusedTab currNote
-  termShellPid <- launchShell vteTerm maybeCurrDir
-  tmTerm <- newTMTerm vteTerm termShellPid
+  -- Launch a shell in a Terminal in a ScrolledWindow
+  let createTerm :: IO (ScrolledWindow, Terminal, TMTerm)
+      createTerm = do
+        scrolledWin <- createScrolledWin mvarTMState
+        vteTerm <- createAndInitVteTerm tmStateFontDesc (options tmStateConfig)
+        maybeCurrDir <- getCWDFromFocusedTab currNote
+        termShellPid <- launchShell vteTerm maybeCurrDir
+        tmTerm <- newTMTerm scrolledWin vteTerm termShellPid
+        containerAdd scrolledWin vteTerm
+        pure (scrolledWin, vteTerm, tmTerm)
 
-  -- Create the container add the VTE term in it
-  scrolledWin <- createScrolledWin mvarTMState
-  containerAdd scrolledWin vteTerm
+  -- Create the left and right terminals
+  (scrolledWinR, vteTermR, tmTermR) <- createTerm
+  (scrolledWinL, vteTermL, tmTermL) <- createTerm
+
+  -- Create the paned window container add the two terminals to it
+  paned <- Gtk.panedNew OrientationHorizontal
+  Gtk.panedSetWideHandle paned True
+  Gtk.panedPack1 paned scrolledWinL True True
+  Gtk.panedPack2 paned scrolledWinR True True
+  Gtk.widgetShowAll paned
 
   -- Create the GTK widget for the Notebook tab
   (tabLabelBox, tabLabel, tabCloseButton) <- createNotebookTabLabel
 
   -- Create notebook state
-  let notebookTab = createTMNotebookTab tabLabel scrolledWin tmTerm
+  let notebookTab = createTMNotebookTab tabLabel paned tmTermL tmTermR
 
   -- Add the new notebooktab to the notebook.
   addPage mvarTMState notebookTab tabLabelBox
 
   -- Setup the initial label for the notebook tab.  This needs to happen
   -- after we add the new page to the notebook, so that the page can get labelled
-  -- appropriately.
-  relabelTab (tmNotebook currNote) tabLabel scrolledWin vteTerm
+  -- appropriately. We use the left terminal's title because it is the left
+  -- terminal which initially has the focus.
+  relabelTab (tmNotebook currNote) tabLabel paned vteTermL
 
   -- Connect callbacks
   void $ onButtonClicked tabCloseButton $ termClose notebookTab mvarTMState
-  void $ onTerminalWindowTitleChanged vteTerm $ do
+  void $ onTerminalWindowTitleChanged vteTermL $ do
+    -- TODO: use the title of the focused pane
     TMState{tmStateNotebook} <- readMVar mvarTMState
     let notebook = tmNotebook tmStateNotebook
-    relabelTab notebook tabLabel scrolledWin vteTerm
-  void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
-  void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
-  void $ onWidgetButtonPressEvent vteTerm $ handleMousePress vteTerm
-  void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState
+    relabelTab notebook tabLabel paned vteTermL
+  for_ @[Terminal] [vteTermL, vteTermR] $ \vteTerm -> do
+    void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
+    void $ onWidgetButtonPressEvent vteTerm $ handleMousePress vteTerm
+    void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState
+  for_ @[ScrolledWindow] [scrolledWinL, scrolledWinR] $ \scrolledWin -> do
+    void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
 
-  -- Put the keyboard focus on the term
-  setFocusOn tmStateAppWin vteTerm
+  void $ onWidgetFocusInEvent vteTermL $ \_ -> do
+    modifyMVar_ mvarTMState $ \tmState -> do
+      pure $ tmState & lensTMStateNotebook
+                     . traversalTMNotebookFocusedTab
+                     . lensTMNotebookTabFocusIsOnLeft .~ True
+    pure False
+  void $ onWidgetFocusInEvent vteTermR $ \_ -> do
+    modifyMVar_ mvarTMState $ \tmState -> do
+      pure $ tmState & lensTMStateNotebook
+                     . traversalTMNotebookFocusedTab
+                     . lensTMNotebookTabFocusIsOnLeft .~ False
+    pure False
+
+  -- Put the keyboard focus on the left term
+  setFocusOn tmStateAppWin vteTermL
 
   -- Make sure the state is still right
   assertInvariantTMState mvarTMState
 
-  -- Run user-defined hooks for modifying the newly-created VTE Terminal.
-  createTermHook (hooks tmStateConfig) mvarTMState vteTerm
-  pure tmTerm
+  -- Run user-defined hooks for modifying the newly-created VTE Terminals.
+  for_ @[Terminal] [vteTermL, vteTermR] $ \vteTerm -> do
+    createTermHook (hooks tmStateConfig) mvarTMState vteTerm
+
+  pure (tmTermL, tmTermR)
 
 -- | Popup the context menu on right click
 handleMousePress :: Terminal -> EventButton -> IO Bool

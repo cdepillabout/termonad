@@ -29,10 +29,10 @@ import GI.Gtk
   , Entry(Entry)
   , FontButton(FontButton)
   , Label(Label)
+  , Paned(Paned)
   , PolicyType(PolicyTypeAutomatic)
   , PositionType(PositionTypeRight)
   , ResponseType(ResponseTypeAccept, ResponseTypeNo, ResponseTypeYes)
-  , ScrolledWindow(ScrolledWindow)
   , SpinButton(SpinButton)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , aboutDialogNew
@@ -138,24 +138,26 @@ import Termonad.Lenses
   , lensShowTabBar
   , lensScrollbackLen
   , lensTMNotebook
-  , lensTMNotebookTabTermContainer
+  , lensTMNotebookTabFocusedTerm
   , lensTMNotebookTabs
-  , lensTMNotebookTabTerm
   , lensTMStateApp
   , lensTMStateAppWin
   , lensTMStateConfig
   , lensTMStateFontDesc
   , lensTMStateNotebook
+  , lensTMTermScrolledWindow
   , lensTerm
   , lensWordCharExceptions
+  , traversalTMNotebookTabTerms
   )
 import Termonad.PreferencesFile (saveToPreferencesFile)
 import Termonad.Term
-  ( createTerm
+  ( createTerms
   , relabelTabs
+  , termExitFocused
   , termNextPage
   , termPrevPage
-  , termExitFocused
+  , termTogglePane
   , setShowTabs
   , showScrollbarToPolicy
   )
@@ -169,11 +171,12 @@ import Termonad.Types
   , TMNotebookTab
   , TMState
   , TMState'(TMState)
+  , TMTerm
   , getFocusedTermFromState
   , modFontSize
   , newEmptyTMState
-  , tmNotebookTabTermContainer
   , tmNotebookTabs
+  , tmNotebookTabPaned
   , tmStateApp
   , tmStateNotebook
   )
@@ -257,7 +260,7 @@ modifyFontSizeForAllTerms modFontSizeFunc mvarTMState = do
           lensTMStateNotebook .
           lensTMNotebookTabs .
           traverse .
-          lensTMNotebookTabTerm .
+          traversalTMNotebookTabTerms .
           lensTerm
   foldMap (\vteTerm -> terminalSetFont vteTerm (Just fontDesc)) terms
 
@@ -277,13 +280,13 @@ fontConfigFromFontDescription fontDescription = do
   maybeFontFamily <- fontDescriptionGetFamily fontDescription
   return $ (`FontConfig` fontSize) <$> maybeFontFamily
 
-compareScrolledWinAndTab :: ScrolledWindow -> TMNotebookTab -> Bool
-compareScrolledWinAndTab scrollWin flTab =
-  let ScrolledWindow managedPtrFLTab = tmNotebookTabTermContainer flTab
+comparePanedAndTab :: Paned -> TMNotebookTab -> Bool
+comparePanedAndTab paned flTab =
+  let Paned managedPtrFLTab = tmNotebookTabPaned flTab
       foreignPtrFLTab = managedForeignPtr managedPtrFLTab
-      ScrolledWindow managedPtrScrollWin = scrollWin
-      foreignPtrScrollWin = managedForeignPtr managedPtrScrollWin
-  in foreignPtrFLTab == foreignPtrScrollWin
+      Paned managedPtrPaned = paned
+      foreignPtrPaned = managedForeignPtr managedPtrPaned
+  in foreignPtrFLTab == foreignPtrPaned
 
 updateFLTabPos :: TMState -> Int -> Int -> IO ()
 updateFLTabPos mvarTMState oldPos newPos =
@@ -382,7 +385,7 @@ setupTermonad tmConfig app win builder = do
   boxPackStart box note True True 0
 
   mvarTMState <- newEmptyTMState tmConfig app win note fontDesc
-  terminal <- createTerm handleKeyPress mvarTMState
+  (terminalL, _terminalR) <- createTerms handleKeyPress mvarTMState
 
   void $ onNotebookPageRemoved note $ \_ _ -> do
     pages <- notebookGetNPages note
@@ -391,57 +394,74 @@ setupTermonad tmConfig app win builder = do
       else setShowTabs tmConfig note
 
   void $ onNotebookSwitchPage note $ \_ pageNum -> do
-    modifyMVar_ mvarTMState $ \tmState -> do
+    followUp <- modifyMVar mvarTMState $ \tmState -> do
       let notebook = tmStateNotebook tmState
           tabs = tmNotebookTabs notebook
           maybeNewTabs = updateFocusFL (fromIntegral pageNum) tabs
       case maybeNewTabs of
-        Nothing -> pure tmState
+        Nothing -> do
+          pure (tmState, pure ())
         Just (tab, newTabs) -> do
-          widgetGrabFocus $ tab ^. lensTMNotebookTabTerm . lensTerm
-          pure $
-            tmState &
-              lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+          let followUp = do
+                let newFocus = tab ^. lensTMNotebookTabFocusedTerm . lensTerm
+                widgetGrabFocus newFocus
+              tmState'
+                = tmState
+                & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+          pure (tmState', followUp)
+    followUp
 
   void $ onNotebookPageReordered note $ \childWidg pageNum -> do
-    maybeScrollWin <- castTo ScrolledWindow childWidg
-    case maybeScrollWin of
+    maybePaned <- castTo Paned childWidg
+    case maybePaned of
       Nothing ->
         fail $
           "In setupTermonad, in callback for onNotebookPageReordered, " <>
-          "child widget is not a ScrolledWindow.\n" <>
+          "child widget is not a Paned.\n" <>
           "Don't know how to continue.\n"
-      Just scrollWin -> do
+      Just paned -> do
         TMState{tmStateNotebook} <- readMVar mvarTMState
         let fl = tmStateNotebook ^. lensTMNotebookTabs
         let maybeOldPosition =
-              findIndexR (compareScrolledWinAndTab scrollWin) (focusList fl)
+              findIndexR (comparePanedAndTab paned) (focusList fl)
         case maybeOldPosition of
           Nothing ->
             fail $
               "In setupTermonad, in callback for onNotebookPageReordered, " <>
-              "the ScrolledWindow is not already in the FocusList.\n" <>
+              "the Paned is not already in the FocusList.\n" <>
               "Don't know how to continue.\n"
           Just oldPos -> do
             updateFLTabPos mvarTMState oldPos (fromIntegral pageNum)
             relabelTabs mvarTMState
 
   newTabAction <- simpleActionNew "newtab" Nothing
-  void $ onSimpleActionActivate newTabAction $ \_ -> void $ createTerm handleKeyPress mvarTMState
+  void $ onSimpleActionActivate newTabAction $ \_ -> void $ createTerms handleKeyPress mvarTMState
   actionMapAddAction app newTabAction
   applicationSetAccelsForAction app "app.newtab" ["<Shift><Ctrl>T"]
+
+  nextPaneAction <- simpleActionNew "nextpane" Nothing
+  void $ onSimpleActionActivate nextPaneAction $ \_ ->
+    termTogglePane mvarTMState
+  actionMapAddAction app nextPaneAction
+  applicationSetAccelsForAction app "app.nextpane" ["<Ctrl>Page_Down"]
+
+  prevPaneAction <- simpleActionNew "prevpane" Nothing
+  void $ onSimpleActionActivate prevPaneAction $ \_ ->
+    termTogglePane mvarTMState
+  actionMapAddAction app prevPaneAction
+  applicationSetAccelsForAction app "app.prevpane" ["<Ctrl>Page_Up"]
 
   nextPageAction <- simpleActionNew "nextpage" Nothing
   void $ onSimpleActionActivate nextPageAction $ \_ ->
     termNextPage mvarTMState
   actionMapAddAction app nextPageAction
-  applicationSetAccelsForAction app "app.nextpage" ["<Ctrl>Page_Down"]
+  applicationSetAccelsForAction app "app.nextpage" ["<Ctrl><Shift>Page_Down"]
 
   prevPageAction <- simpleActionNew "prevpage" Nothing
   void $ onSimpleActionActivate prevPageAction $ \_ ->
     termPrevPage mvarTMState
   actionMapAddAction app prevPageAction
-  applicationSetAccelsForAction app "app.prevpage" ["<Ctrl>Page_Up"]
+  applicationSetAccelsForAction app "app.prevpage" ["<Ctrl><Shift>Page_Up"]
 
   closeTabAction <- simpleActionNew "closetab" Nothing
   void $ onSimpleActionActivate closeTabAction $ \_ ->
@@ -478,13 +498,13 @@ setupTermonad tmConfig app win builder = do
   void $ onSimpleActionActivate enlargeFontAction $ \_ ->
     modifyFontSizeForAllTerms (modFontSize 1) mvarTMState
   actionMapAddAction app enlargeFontAction
-  applicationSetAccelsForAction app "app.enlargefont" ["<Ctrl>plus"]
+  applicationSetAccelsForAction app "app.enlargefont" ["<Ctrl>KP_Add"]
 
   reduceFontAction <- simpleActionNew "reducefont" Nothing
   void $ onSimpleActionActivate reduceFontAction $ \_ ->
     modifyFontSizeForAllTerms (modFontSize (-1)) mvarTMState
   actionMapAddAction app reduceFontAction
-  applicationSetAccelsForAction app "app.reducefont" ["<Ctrl>minus"]
+  applicationSetAccelsForAction app "app.reducefont" ["<Ctrl>KP_Subtract"]
 
   findAction <- simpleActionNew "find" Nothing
   void $ onSimpleActionActivate findAction $ \_ -> doFind mvarTMState
@@ -528,8 +548,9 @@ setupTermonad tmConfig app win builder = do
         ResponseTypeYes -> False
         _ -> True
 
+  -- Focus on the left terminal
   widgetShowAll win
-  widgetGrabFocus $ terminal ^. lensTerm
+  widgetGrabFocus $ terminalL ^. lensTerm
 
 appActivate :: TMConfig -> Application -> IO ()
 appActivate tmConfig app = do
@@ -717,10 +738,15 @@ applyNewPreferences mvarTMState = do
 
 applyNewPreferencesToTab :: TMState -> TMNotebookTab -> IO ()
 applyNewPreferencesToTab mvarTMState tab = do
+  for_ (tab ^.. traversalTMNotebookTabTerms) $ \tmTerm -> do
+    applyNewPreferencesToTerm mvarTMState tmTerm
+
+applyNewPreferencesToTerm :: TMState -> TMTerm -> IO ()
+applyNewPreferencesToTerm mvarTMState tmTerm = do
   tmState <- readMVar mvarTMState
   let fontDesc = tmState ^. lensTMStateFontDesc
-      term = tab ^. lensTMNotebookTabTerm . lensTerm
-      scrolledWin = tab ^. lensTMNotebookTabTermContainer
+      term = tmTerm ^. lensTerm
+      scrolledWin = tmTerm ^. lensTMTermScrolledWindow
       options = tmState ^. lensTMStateConfig . lensOptions
   terminalSetFont term (Just fontDesc)
   terminalSetCursorBlinkMode term (cursorBlinkMode options)
@@ -730,6 +756,7 @@ applyNewPreferencesToTab mvarTMState tab = do
 
   let vScrollbarPolicy = showScrollbarToPolicy (options ^. lensShowScrollbar)
   scrolledWindowSetPolicy scrolledWin PolicyTypeAutomatic vScrollbarPolicy
+
 
 -- | Show the preferences dialog.
 --
