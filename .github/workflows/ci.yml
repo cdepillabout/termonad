@@ -17,9 +17,9 @@ jobs:
           # - macOS-latest
         cabal: ["latest"]
         ghc:
-          - "8.8.4"
           - "8.10.7"
           - "9.0.2"
+          - "9.2.4"
 
     steps:
     - uses: actions/checkout@v2
