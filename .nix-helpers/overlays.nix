@@ -127,8 +127,8 @@ let
       self.stdenv.mkDerivation {
         name = "termonad-with-packages-ghc-${env.version}";
         buildInputs = [
-          self.gdk_pixbuf
-          self.gnome3.adwaita-icon-theme
+          self.gdk-pixbuf
+          self.gnome.adwaita-icon-theme
           self.hicolor-icon-theme
         ];
         nativeBuildInputs = [ self.wrapGAppsHook ];
