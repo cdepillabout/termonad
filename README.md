@@ -118,31 +118,49 @@ $ stack install
 
 ### Nix
 
-If you have `nix` installed, you should be able to use it to build Termonad.
+If you have `nix` installed, you should be able to use it to obtain Termonad.
 This means that it will work on NixOS, or with `nix` on another distro.  There
-are two different ways to use `nix` to build Termonad:
+are three different ways to use `nix` to get Termonad:
 
-The first is using `stack`.  The following commands install `stack` for your
-user, clone this repository, and install the `termonad` binary to `~/.local/bin/`:
+1.  Get Termonad from Nixpkgs.  Termonad is provided as a top-level `termonad`
+    attribute in Nixpkgs.
 
-```sh
-$ nix-env -i stack
-$ git clone https://github.com/cdepillabout/termonad
-$ cd termonad/
-$ stack --nix install
-```
+    For instance, run a `nix-shell` with Termonad:
 
-(_edit_: Building with `stack` using Nix-integration does not currently work.
-See [#99](https://github.com/cdepillabout/termonad/issues/99).)
+    ```console
+    $ nix-shell -p termonad
+    $ termonad   # run termonad within the nix-shell
+    ```
 
-The second is using the normal `nix-build` machinery.  The following commands
-clone this repository and build the `termonad` binary at `./result/bin/`:
+    You can also install `termonad` with tools like `nix-env` or home-manager.
+    If you're using NixOS, you can add `termonad` to your
+    `environment.systemPackages` list.
 
-```sh
-$ git clone https://github.com/cdepillabout/termonad
-$ cd termonad/
-$ nix-build
-```
+    Keep in mind that if you're using an old release of NixOS, you'll likely
+    get an older version of Termonad.
+
+2.  Build Termonad using the code in this repository. The following commands
+    clone this repo and build the `termonad` binary at `./result/bin/`:
+
+    ```sh
+    $ git clone https://github.com/cdepillabout/termonad
+    $ cd termonad/
+    $ nix-build
+    ```
+
+3.  Build Termonad using `stack` with Nix-integration. The following commands
+    install `stack` for your user, clone this repository, and install the
+    `termonad` binary to `~/.local/bin/`:
+
+    ```sh
+    $ nix-env -i stack
+    $ git clone https://github.com/cdepillabout/termonad
+    $ cd termonad/
+    $ stack --nix install
+    ```
+
+    (_edit_: Building with `stack` using Nix-integration does not currently work.
+    See [#99](https://github.com/cdepillabout/termonad/issues/99).)
 
 ### Mac OS X
 
