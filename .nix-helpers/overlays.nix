@@ -88,6 +88,7 @@ let
           self.glade
           self.haskellPackages.ghcid
           self.hlint
+          self.termonadKnownWorkingHaskellPkgSet.haskell-language-server
         ];
       in
 
