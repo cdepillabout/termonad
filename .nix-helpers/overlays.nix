@@ -66,10 +66,10 @@ let
     # not given by the user.
     termonadKnownWorkingHaskellPkgSet = self.haskell.packages.${self.termonadCompilerVersion};
 
-    # See ./nixpkgs.nix for an explanation of that this does.
+    # See ./nixpkgs.nix for an explanation of what this does.
     termonadBuildExamples = false;
 
-    # See ./nixpkgs.nix for an explanation of that this does.
+    # See ./nixpkgs.nix for an explanation of what this does.
     termonadIndexTermonad = false;
 
     # This is a shell environment for hacking on Termonad with cabal.  See the
