@@ -286,10 +286,6 @@ executable termonad-example-colour-extension-solarized
   else
     buildable:         False
 
-source-repository head
-  type:     git
-  location: https://github.com/cdepillabout/termonad/
-
 -- benchmark termonad-bench
 --   type:                exitcode-stdio-1.0
 --   main-is:             Bench.hs
@@ -299,7 +295,6 @@ source-repository head
 --                      , termonad
 --   default-language:    Haskell2010
 --   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
-
 source-repository head
   type:     git
   location: git@github.com:cdepillabout/termonad.git
