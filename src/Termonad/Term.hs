@@ -88,15 +88,13 @@ import GI.Vte
   , onTerminalWindowTitleChanged
   , terminalGetWindowTitle
   , terminalNew
+  , terminalSetBoldIsBright
   , terminalSetCursorBlinkMode
+  , terminalSetEnableSixel
   , terminalSetFont
   , terminalSetScrollbackLines
-  , terminalSpawnSync
   , terminalSetWordCharExceptions
-  , terminalSetBoldIsBright
-  )
-import GI.Vte.Objects.Terminal
-  ( setTerminalEnableSixel
+  , terminalSpawnSync
   )
 import System.Directory (getSymbolicLinkTarget)
 import System.Environment (lookupEnv)
@@ -363,7 +361,7 @@ createAndInitVteTerm tmStateFontDesc curOpts = do
   terminalSetScrollbackLines vteTerm (fromIntegral (scrollbackLen curOpts))
   terminalSetCursorBlinkMode vteTerm (cursorBlinkMode curOpts)
   terminalSetBoldIsBright vteTerm (boldIsBright curOpts)
-  setTerminalEnableSixel vteTerm (enableSixel curOpts)
+  terminalSetEnableSixel vteTerm (enableSixel curOpts)
   widgetShow vteTerm
   pure vteTerm
 

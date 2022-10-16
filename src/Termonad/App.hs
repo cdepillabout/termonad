@@ -117,12 +117,10 @@ import GI.Vte
   , terminalSearchSetWrapAround
   , terminalSetBoldIsBright
   , terminalSetCursorBlinkMode
+  , terminalSetEnableSixel
   , terminalSetFont
   , terminalSetScrollbackLines
   , terminalSetWordCharExceptions
-  )
-import GI.Vte.Objects.Terminal
-  ( setTerminalEnableSixel
   )
 import System.Environment (getExecutablePath)
 import System.FilePath (takeFileName)
@@ -731,7 +729,7 @@ applyNewPreferencesToTab mvarTMState tab = do
   terminalSetWordCharExceptions term (wordCharExceptions options)
   terminalSetScrollbackLines term (fromIntegral (scrollbackLen options))
   terminalSetBoldIsBright term (boldIsBright options)
-  setTerminalEnableSixel term (enableSixel options)
+  terminalSetEnableSixel term (enableSixel options)
 
   let vScrollbarPolicy = showScrollbarToPolicy (options ^. lensShowScrollbar)
   scrolledWindowSetPolicy scrolledWin PolicyTypeAutomatic vScrollbarPolicy
