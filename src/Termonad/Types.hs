@@ -408,6 +408,8 @@ data ConfigOptions = ConfigOptions
     -- If 'False', then bold can be applied separately to colors from both the
     -- 'Termonad.Config.Colour.BasicPalatte' and
     -- 'Termonad.Config.Colour.ExtendedPalatte'.
+  , enableSixel :: !Bool
+    -- ^ Enable sixel to draw graphics in a terminal.
   } deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
 instance FromJSON CursorBlinkMode where
@@ -439,6 +441,7 @@ instance ToJSON CursorBlinkMode where
 --           , showTabBar = ShowTabBarIfNeeded
 --           , cursorBlinkMode = CursorBlinkModeOn
 --           , boldIsBright = False
+--           , enableSixel = True
 --           }
 --   in defaultConfigOptions == defConfOpt
 -- :}
@@ -455,6 +458,7 @@ defaultConfigOptions =
     , showTabBar = ShowTabBarIfNeeded
     , cursorBlinkMode = CursorBlinkModeOn
     , boldIsBright = False
+    , enableSixel = True
     }
 
 -- | The Termonad 'ConfigOptions' along with the 'ConfigHooks'.
