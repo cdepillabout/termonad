@@ -100,12 +100,18 @@ let
                   self.termonadKnownWorkingHaskellPkgSet.ghcWithHoogle (hpkgs: [ hpkgs.termonad ]);
               in
               oldAttrs.nativeBuildInputs ++ convenientNativeBuildTools ++ [ ghcEnvWithTermonad ];
+            # Termonad can't be loaded in `cabal repl` unless GHC knows how to find zlib:
+            # https://discourse.nixos.org/t/shared-libraries-error-with-cabal-repl-in-nix-shell/8921/10
+            LD_LIBRARY_PATH = self.lib.makeLibraryPath [ self.zlib ];
           })
         else
           self.termonadKnownWorkingHaskellPkgSet.shellFor {
             withHoogle = true;
             packages = hpkgs: [ hpkgs.termonad ];
             nativeBuildInputs = termonadEnv.nativeBuildInputs ++ convenientNativeBuildTools;
+            # Termonad can't be loaded in `cabal repl` unless GHC knows how to find zlib:
+            # https://discourse.nixos.org/t/shared-libraries-error-with-cabal-repl-in-nix-shell/8921/10
+            LD_LIBRARY_PATH = self.lib.makeLibraryPath [ self.zlib ];
           };
 
     # Default Haskell packages that you can use in your Termonad configuration.
