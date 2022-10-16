@@ -409,7 +409,10 @@ data ConfigOptions = ConfigOptions
     -- 'Termonad.Config.Colour.BasicPalatte' and
     -- 'Termonad.Config.Colour.ExtendedPalatte'.
   , enableSixel :: !Bool
-    -- ^ Enable sixel to draw graphics in a terminal.
+    -- ^ Enable SIXEL to draw graphics in a terminal.
+    --
+    -- Note that SIXEL may not be fully supported in VTE. Follow
+    -- <https://gitlab.gnome.org/GNOME/vte/-/issues/253> for more information.
   } deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
 instance FromJSON CursorBlinkMode where
@@ -441,7 +444,7 @@ instance ToJSON CursorBlinkMode where
 --           , showTabBar = ShowTabBarIfNeeded
 --           , cursorBlinkMode = CursorBlinkModeOn
 --           , boldIsBright = False
---           , enableSixel = True
+--           , enableSixel = False
 --           }
 --   in defaultConfigOptions == defConfOpt
 -- :}
@@ -458,7 +461,7 @@ defaultConfigOptions =
     , showTabBar = ShowTabBarIfNeeded
     , cursorBlinkMode = CursorBlinkModeOn
     , boldIsBright = False
-    , enableSixel = True
+    , enableSixel = False
     }
 
 -- | The Termonad 'ConfigOptions' along with the 'ConfigHooks'.
