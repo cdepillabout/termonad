@@ -57,8 +57,8 @@ jobs:
         cabal test all --enable-tests
 
   stack:
-    name: stack ${{ matrix.resolver }} / ubuntu-latest
-    runs-on: ubuntu-latest
+    name: stack ${{ matrix.resolver }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         stack: ["latest"]
