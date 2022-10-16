@@ -90,7 +90,6 @@ import GI.Vte
   , terminalNew
   , terminalSetBoldIsBright
   , terminalSetCursorBlinkMode
-  , terminalSetEnableSixel
   , terminalSetFont
   , terminalSetScrollbackLines
   , terminalSetWordCharExceptions
@@ -99,6 +98,7 @@ import GI.Vte
 import System.Directory (getSymbolicLinkTarget)
 import System.Environment (lookupEnv)
 
+import Termonad.Gtk (terminalSetEnableSixelIfExists)
 import Termonad.Lenses
   ( lensConfirmExit
   , lensOptions
@@ -361,7 +361,7 @@ createAndInitVteTerm tmStateFontDesc curOpts = do
   terminalSetScrollbackLines vteTerm (fromIntegral (scrollbackLen curOpts))
   terminalSetCursorBlinkMode vteTerm (cursorBlinkMode curOpts)
   terminalSetBoldIsBright vteTerm (boldIsBright curOpts)
-  terminalSetEnableSixel vteTerm (enableSixel curOpts)
+  terminalSetEnableSixelIfExists vteTerm (enableSixel curOpts)
   widgetShow vteTerm
   pure vteTerm
 

@@ -117,7 +117,6 @@ import GI.Vte
   , terminalSearchSetWrapAround
   , terminalSetBoldIsBright
   , terminalSetCursorBlinkMode
-  , terminalSetEnableSixel
   , terminalSetFont
   , terminalSetScrollbackLines
   , terminalSetWordCharExceptions
@@ -126,7 +125,7 @@ import System.Environment (getExecutablePath)
 import System.FilePath (takeFileName)
 
 import Paths_termonad (getDataFileName)
-import Termonad.Gtk (appNew, objFromBuildUnsafe)
+import Termonad.Gtk (appNew, objFromBuildUnsafe, terminalSetEnableSixelIfExists)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Lenses
   ( lensBoldIsBright
@@ -729,7 +728,7 @@ applyNewPreferencesToTab mvarTMState tab = do
   terminalSetWordCharExceptions term (wordCharExceptions options)
   terminalSetScrollbackLines term (fromIntegral (scrollbackLen options))
   terminalSetBoldIsBright term (boldIsBright options)
-  terminalSetEnableSixel term (enableSixel options)
+  terminalSetEnableSixelIfExists term (enableSixel options)
 
   let vScrollbarPolicy = showScrollbarToPolicy (options ^. lensShowScrollbar)
   scrolledWindowSetPolicy scrolledWin PolicyTypeAutomatic vScrollbarPolicy
