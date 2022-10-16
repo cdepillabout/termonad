@@ -1,10 +1,5 @@
-.PHONY: bench benchmark build build-fast clean dump-th ghci ghcid haddock haddock-server hlint install run run-fast test upload watch watch-test
+.PHONY: build build-fast clean dump-th ghci ghcid haddock haddock-server hlint install run run-fast test upload watch watch-test
 all: build
-
-# Run the benchmark.
-bench: benchmark
-benchmark:
-	stack bench
 
 build: 
 	stack build
