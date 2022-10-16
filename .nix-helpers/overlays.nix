@@ -66,10 +66,10 @@ let
     # not given by the user.
     termonadKnownWorkingHaskellPkgSet = self.haskell.packages.${self.termonadCompilerVersion};
 
-    # See ./nixpkgs.nix for an explanation of that this does.
+    # See ./nixpkgs.nix for an explanation of what this does.
     termonadBuildExamples = false;
 
-    # See ./nixpkgs.nix for an explanation of that this does.
+    # See ./nixpkgs.nix for an explanation of what this does.
     termonadIndexTermonad = false;
 
     # This is a shell environment for hacking on Termonad with cabal.  See the
@@ -88,6 +88,7 @@ let
           self.glade
           self.haskellPackages.ghcid
           self.hlint
+          self.termonadKnownWorkingHaskellPkgSet.haskell-language-server
         ];
       in
 
@@ -100,12 +101,18 @@ let
                   self.termonadKnownWorkingHaskellPkgSet.ghcWithHoogle (hpkgs: [ hpkgs.termonad ]);
               in
               oldAttrs.nativeBuildInputs ++ convenientNativeBuildTools ++ [ ghcEnvWithTermonad ];
+            # Termonad can't be loaded in `cabal repl` unless GHC knows how to find zlib:
+            # https://discourse.nixos.org/t/shared-libraries-error-with-cabal-repl-in-nix-shell/8921/10
+            LD_LIBRARY_PATH = self.lib.makeLibraryPath [ self.zlib ];
           })
         else
           self.termonadKnownWorkingHaskellPkgSet.shellFor {
             withHoogle = true;
             packages = hpkgs: [ hpkgs.termonad ];
             nativeBuildInputs = termonadEnv.nativeBuildInputs ++ convenientNativeBuildTools;
+            # Termonad can't be loaded in `cabal repl` unless GHC knows how to find zlib:
+            # https://discourse.nixos.org/t/shared-libraries-error-with-cabal-repl-in-nix-shell/8921/10
+            LD_LIBRARY_PATH = self.lib.makeLibraryPath [ self.zlib ];
           };
 
     # Default Haskell packages that you can use in your Termonad configuration.

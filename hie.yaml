@@ -1,0 +1,43 @@
+cradle:
+  multi:
+    - path: "./test"
+      config:
+        cradle:
+          none:
+
+    - path: "./"
+      config:
+        cradle:
+          cabal:
+            - path: "src"
+              component: "lib:termonad"
+
+            - path: "app/Main.hs"
+              component: "exe:termonad"
+
+            # - path: "test"
+            #   component: "termonad:test:doctests"
+
+            # - path: "test"
+            #   component: "termonad:test:termonad-test"
+
+            - path: "test/readme/README.lhs"
+              component: "exe:termonad-readme"
+
+            - path: "./example-config/ExampleColourExtension.hs"
+              component: "exe:termonad-example-colour-extension"
+
+            - path: "./example-config/ExampleDraculaColourExtension.hs"
+              component: "exe:termonad-example-colour-extension-dracula"
+
+            - path: "./example-config/ExampleGruvboxColourExtension.hs"
+              component: "exe:termonad-example-colour-extension-gruvbox"
+
+            - path: "./example-config/ExampleOneDarkProColourExtension.hs"
+              component: "exe:termonad-example-colour-extension-oneDarkPro"
+
+            - path: "./example-config/ExamplePaperColourColourExtension.hs"
+              component: "exe:termonad-example-colour-extension-papercolour"
+
+            - path: "./example-config/ExampleSolarizedColourExtension.hs"
+              component: "exe:termonad-example-colour-extension-solarized"
