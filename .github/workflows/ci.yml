@@ -13,7 +13,11 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu-latest
+          # Termonad sometimes requires VTE features that are only in recent releases of VTE.
+          # Older versions of Ubuntu may not have a new enough VTE, so we test on multiple
+          # versions of Ubuntu (and therefore multiple versions of VTE).
+          - ubuntu-22.04
+          - ubuntu-20.04
           # - macOS-latest
         cabal: ["latest"]
         ghc:
