@@ -1,3 +1,18 @@
+{-# LANGUAGE CPP #-}
+
+-- | This module contains two things:
+--
+-- 1. Extension functions to libraries like GTK.  These functions wrap up some
+--    generic GTK functionality.  They are not Termonad-specific.
+--
+-- 2. Wrappers around functionality that is only specific to certain versions
+--    of libraries like GTK or VTE.
+--
+--    For instance, 'terminalSetEnableSixelIfExists' is
+--    a wrapper around 'terminalSetEnableSixel'.  Sixel support is only availble in
+--    vte >= 0.63, so if a user tries to compile Termonad with a version of vte
+--    less than 0.63, this function won't do anything.
+
 module Termonad.Gtk where
 
 import Termonad.Prelude
@@ -12,6 +27,12 @@ import GI.Gdk
 import GI.Gio (ApplicationFlags)
 import GI.Gtk (Application, IsWidget, Widget(Widget), applicationNew, builderGetObject, toWidget)
 import qualified GI.Gtk as Gtk
+import GI.Vte
+  ( IsTerminal
+#ifdef VTE_VERSION_GEQ_0_63
+  , terminalSetEnableSixel
+#endif
+  )
 
 
 objFromBuildUnsafe ::
@@ -58,3 +79,17 @@ widgetEq a b = do
     withManagedPtr managedPtrA $ \ptrA ->
       withManagedPtr managedPtrB $ \ptrB ->
         pure (ptrA == ptrB)
+
+-- | Wrapper around 'terminalSetEnableSixel'.  The 'terminalSetEnableSixel' function
+-- is only available starting with vte-0.63. This function has no effect when
+-- compiling against previous versions of vte.
+terminalSetEnableSixelIfExists
+  :: (HasCallStack, MonadIO m, IsTerminal t)
+  => t -- ^ a Terminal
+  -> Bool -- ^ whether to enable SIXEL images
+  -> m ()
+terminalSetEnableSixelIfExists t b = do
+#ifdef VTE_VERSION_GEQ_0_63
+  terminalSetEnableSixel t b
+#endif
+  pure ()

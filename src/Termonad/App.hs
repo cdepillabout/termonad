@@ -125,10 +125,11 @@ import System.Environment (getExecutablePath)
 import System.FilePath (takeFileName)
 
 import Paths_termonad (getDataFileName)
-import Termonad.Gtk (appNew, objFromBuildUnsafe)
+import Termonad.Gtk (appNew, objFromBuildUnsafe, terminalSetEnableSixelIfExists)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Lenses
   ( lensBoldIsBright
+  , lensEnableSixel
   , lensConfirmExit
   , lensCursorBlinkMode
   , lensFontConfig
@@ -727,6 +728,7 @@ applyNewPreferencesToTab mvarTMState tab = do
   terminalSetWordCharExceptions term (wordCharExceptions options)
   terminalSetScrollbackLines term (fromIntegral (scrollbackLen options))
   terminalSetBoldIsBright term (boldIsBright options)
+  terminalSetEnableSixelIfExists term (enableSixel options)
 
   let vScrollbarPolicy = showScrollbarToPolicy (options ^. lensShowScrollbar)
   scrolledWindowSetPolicy scrolledWin PolicyTypeAutomatic vScrollbarPolicy
@@ -752,6 +754,8 @@ showPreferencesDialog mvarTMState = do
     objFromBuildUnsafe preferencesBuilder "showMenu" CheckButton
   boldIsBrightCheckButton <-
     objFromBuildUnsafe preferencesBuilder "boldIsBright" CheckButton
+  enableSixelCheckButton <-
+    objFromBuildUnsafe preferencesBuilder "enableSixel" CheckButton
   wordCharExceptionsEntryBuffer <-
     objFromBuildUnsafe preferencesBuilder "wordCharExceptions" Entry >>=
       getEntryBuffer
@@ -806,6 +810,7 @@ showPreferencesDialog mvarTMState = do
   toggleButtonSetActive confirmExitCheckButton $ confirmExit options
   toggleButtonSetActive showMenuCheckButton $ showMenu options
   toggleButtonSetActive boldIsBrightCheckButton $ boldIsBright options
+  toggleButtonSetActive enableSixelCheckButton $ enableSixel options
   entryBufferSetText wordCharExceptionsEntryBuffer (wordCharExceptions options) (-1)
 
   -- Run dialog then close
@@ -827,6 +832,7 @@ showPreferencesDialog mvarTMState = do
     confirmExitVal <- toggleButtonGetActive confirmExitCheckButton
     showMenuVal <- toggleButtonGetActive showMenuCheckButton
     boldIsBrightVal <- toggleButtonGetActive boldIsBrightCheckButton
+    enableSixelVal <- toggleButtonGetActive enableSixelCheckButton
     wordCharExceptionsVal <- entryBufferGetText wordCharExceptionsEntryBuffer
 
     -- Apply the changes to mvarTMState
@@ -836,6 +842,7 @@ showPreferencesDialog mvarTMState = do
         ( set lensConfirmExit confirmExitVal
         . set lensShowMenu showMenuVal
         . set lensBoldIsBright boldIsBrightVal
+        . set lensEnableSixel enableSixelVal
         . set lensWordCharExceptions wordCharExceptionsVal
         . over lensFontConfig (`fromMaybe` maybeFontConfig)
         . set lensScrollbackLen scrollbackLenVal

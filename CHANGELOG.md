@@ -1,3 +1,12 @@
+## 4.3.0.0
+
+*   Add SIXEL support.  Note that you will need to set `enableSixel` to `True`
+    in your `ConfigOptions`, as well as using a version of VTE that is >= 0.63
+    for this option to have any affect.  There is also a report that even if you
+    enable SIXEL and have a supported version of VTE, SIXEL doesn't work.  See
+    the linked PR for more information. Thanks [@junjihashimoto](https://github.com/junjihashimoto)!
+    [#219](https://github.com/cdepillabout/termonad/pull/219)
+
 ## 4.2.0.1
 
 *   Added an

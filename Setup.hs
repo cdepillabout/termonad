@@ -104,6 +104,7 @@ createVteVersionCPPOpts
 createVteVersionCPPOpts vers =
   catMaybes
     [ if vers >= mkVersion [0,44] then Just "-DVTE_VERSION_GEQ_0_44" else Nothing
+    , if vers >= mkVersion [0,63] then Just "-DVTE_VERSION_GEQ_0_63" else Nothing
     ]
 
 -- | Based on the version of the GTK3 library as reported by @pkg-config@, return
