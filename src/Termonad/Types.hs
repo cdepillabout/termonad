@@ -411,7 +411,11 @@ data ConfigOptions = ConfigOptions
   , enableSixel :: !Bool
     -- ^ Enable SIXEL to draw graphics in a terminal.
     --
-    -- Note that SIXEL may not be fully supported in VTE. Follow
+    -- In order for this option to do anything, you need to be using a version
+    -- of VTE >= 0.63, and compile VTE with SIXEL support.
+    --
+    -- Note that even if you do the above, there may still be some problems
+    -- with SIXEL support in VTE. Follow
     -- <https://gitlab.gnome.org/GNOME/vte/-/issues/253> for more information.
   } deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
