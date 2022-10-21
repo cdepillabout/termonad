@@ -80,6 +80,9 @@ let
     # See ./nixpkgs.nix for an explanation of what this does.
     termonadIndexTermonad = false;
 
+    # See ./nixpkgs.nix for an explanation of what this does.
+    termonadEnableSixelSupport = false;
+
     # This is a shell environment for hacking on Termonad with cabal.  See the
     # top-level shell.nix for an explanation.
     termonadShell =
