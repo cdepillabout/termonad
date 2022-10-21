@@ -58,7 +58,13 @@ let
     vte =
       if self.termonadEnableSixelSupport then
         super.vte.overrideAttrs (oldAttrs: {
+          # As of 2022-10-20, VTE from Nixpkgs doesn't have sixel enabled by default.
+          # We enable it here.
           mesonFlags = oldAttrs.mesonFlags ++ [ "-Dsixel=true" ];
+          # As of 2022-10-20, the released version of VTE doesn't even include SIXEL
+          # support, because upstream says it still has bugs.  See
+          # https://github.com/cdepillabout/termonad/pull/221#discussion_r997222069
+          # and https://gitlab.gnome.org/GNOME/vte/-/issues/253 for more information.
           src = self.fetchurl {
             url = "https://github.com/GNOME/vte/archive/8ef3f6b2f8043d28cbc82520eb094f09333b26ae.tar.gz";
             sha256 = "sha256-2V3dTTu9EH7sO2NeWWZ7pOurQopV/Ji+muoS6+IMNrA=";
