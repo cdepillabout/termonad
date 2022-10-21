@@ -21,6 +21,7 @@
 , additionalOverlays ? []
 , compiler ? null
 , buildExamples ? false
+, enableSixelSupport ? false
 }@args:
 
 (import .nix-helpers/nixpkgs.nix args).termonad-with-packages

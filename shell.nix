@@ -24,11 +24,12 @@
 # will also index the Termonad libraries, however this will mean the environment
 # will need to be rebuilt every time the termonad source changes.
 
-{ compiler ? null
-, indexTermonad ? false
-, nixpkgs ? null
-, buildExamples ? false
+{ nixpkgs ? null
 , additionalOverlays ? []
+, compiler ? null
+, buildExamples ? false
+, enableSixelSupport ? false
+, indexTermonad ? false
 }@args:
 
 (import .nix-helpers/nixpkgs.nix args).termonadShell

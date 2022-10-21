@@ -34,6 +34,7 @@ let
                     ! any (flip hasPrefix (baseNameOf path)) [ "dist" ".ghc" ];
                 };
 
+
               extraCabal2nixOptions =
                 self.lib.optionalString self.termonadBuildExamples "-fbuildexamples";
 
@@ -54,6 +55,25 @@ let
         };
     };
 
+    vte =
+      if self.termonadEnableSixelSupport then
+        super.vte.overrideAttrs (oldAttrs: {
+          # As of 2022-10-20, VTE from Nixpkgs doesn't have sixel enabled by default.
+          # We enable it here.
+          mesonFlags = oldAttrs.mesonFlags ++ [ "-Dsixel=true" ];
+          # As of 2022-10-20, the released version of VTE doesn't even include SIXEL
+          # support, because upstream says it still has bugs.  See
+          # https://github.com/cdepillabout/termonad/pull/221#discussion_r997222069
+          # and https://gitlab.gnome.org/GNOME/vte/-/issues/253 for more information.
+          src = self.fetchurl {
+            # This is VTE master as of 2022-10-17.
+            url = "https://github.com/GNOME/vte/archive/8ef3f6b2f8043d28cbc82520eb094f09333b26ae.tar.gz";
+            sha256 = "sha256-2V3dTTu9EH7sO2NeWWZ7pOurQopV/Ji+muoS6+IMNrA=";
+          };
+        })
+      else
+        super.vte;
+
     # This defines which compiler version is used to build Termonad.
     #
     # Either this, or termonadKnownWorkingHaskellPkgSet can be changed in an overlay
@@ -71,6 +91,9 @@ let
 
     # See ./nixpkgs.nix for an explanation of what this does.
     termonadIndexTermonad = false;
+
+    # See ./nixpkgs.nix for an explanation of what this does.
+    termonadEnableSixelSupport = false;
 
     # This is a shell environment for hacking on Termonad with cabal.  See the
     # top-level shell.nix for an explanation.
