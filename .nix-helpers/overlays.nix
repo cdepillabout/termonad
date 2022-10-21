@@ -34,13 +34,6 @@ let
                     ! any (flip hasPrefix (baseNameOf path)) [ "dist" ".ghc" ];
                 };
 
-              vteWithSixel = self.vte.overrideAttrs ( vself: vsuper: {
-                mesonFlags = vsuper.mesonFlags ++ [ "-Dsixel=true" ];
-                src = super.pkgs.fetchurl {
-                  url = "https://github.com/GNOME/vte/archive/8ef3f6b2f8043d28cbc82520eb094f09333b26ae.tar.gz";
-                  sha256 = "sha256-2V3dTTu9EH7sO2NeWWZ7pOurQopV/Ji+muoS6+IMNrA=";
-                };
-              });
 
               extraCabal2nixOptions =
                 self.lib.optionalString self.termonadBuildExamples "-fbuildexamples";
@@ -55,12 +48,24 @@ let
                     # makes these system dependencies not able to be resolved
                     # correctly.
                     inherit (self) gtk3 pcre2;
-                    vte_291 = vteWithSixel;
+                    vte_291 = self.vte;
                   };
             in
             termonadDrv;
         };
     };
+
+    vte =
+      if self.termonadEnableSixelSupport then
+        super.vte.overrideAttrs (oldAttrs: {
+          mesonFlags = oldAttrs.mesonFlags ++ [ "-Dsixel=true" ];
+          src = self.fetchurl {
+            url = "https://github.com/GNOME/vte/archive/8ef3f6b2f8043d28cbc82520eb094f09333b26ae.tar.gz";
+            sha256 = "sha256-2V3dTTu9EH7sO2NeWWZ7pOurQopV/Ji+muoS6+IMNrA=";
+          };
+        })
+      else
+        super.vte;
 
     # This defines which compiler version is used to build Termonad.
     #
