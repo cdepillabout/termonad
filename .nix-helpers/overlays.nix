@@ -66,6 +66,7 @@ let
           # https://github.com/cdepillabout/termonad/pull/221#discussion_r997222069
           # and https://gitlab.gnome.org/GNOME/vte/-/issues/253 for more information.
           src = self.fetchurl {
+            # This is VTE master as of 2022-10-17.
             url = "https://github.com/GNOME/vte/archive/8ef3f6b2f8043d28cbc82520eb094f09333b26ae.tar.gz";
             sha256 = "sha256-2V3dTTu9EH7sO2NeWWZ7pOurQopV/Ji+muoS6+IMNrA=";
           };
