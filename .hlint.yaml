@@ -57,6 +57,7 @@
 # - ignore: {name: Use let}
 # - ignore: {name: Use const, within: SpecialModule} # Only within certain modules
 - ignore: {name: Use forM_}
+- ignore: {name: Use join}
 
 
 # Define some custom infix operators
