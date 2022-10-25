@@ -1,3 +1,9 @@
+## 4.4.0.0
+
+*   Add support for opening URLs in a browser by right-clicking on them.
+    URLs will also become underlined if you mouse-over them.
+    [#222](https://github.com/cdepillabout/termonad/pull/222)
+
 ## 4.3.0.0
 
 *   Add SIXEL support.  Note that you will need to set `enableSixel` to `True`
