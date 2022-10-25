@@ -495,6 +495,25 @@ see the documentation in the
 [`.nix-helpers/termonad-with-packages.nix`](./.nix-helpers/termonad-with-packages.nix)
 file.
 
+## Additional Info
+
+This section contains some additional info that may be helpful for using Termonad.
+
+### Opening URLs by right-clicking
+
+It is possible to open a URL in a browser by right-clicking on it, and
+selecting `Open URL in browser`.  In order for this you work, you may
+have to setup your XDG defaults.  You can set the default browser to
+Firefox with a command like the following:
+
+```console
+$ xdg-mime default firefox.desktop x-scheme-handler/http
+$ xdg-mime default firefox.desktop x-scheme-handler/https
+```
+
+This `xdg-mime` executable comes from a package called `xdg-utils` in both
+Nixpkgs and Ubutun/Debian.
+
 ## Goals
 
 Termonad has the following goals:

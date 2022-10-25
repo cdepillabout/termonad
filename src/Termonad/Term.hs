@@ -8,7 +8,8 @@ import Control.Lens ((^.), (.~), set, to)
 import Data.Colour.SRGB (Colour, RGB(RGB), toSRGB)
 import Data.FocusList (appendFL, deleteFL, getFocusItemFL)
 import GI.Gdk
-  ( EventButton
+  ( Event (Event)
+  , EventButton
   , EventKey
   , RGBA
   , getEventButtonButton
@@ -16,12 +17,16 @@ import GI.Gdk
   , setRGBABlue
   , setRGBAGreen
   , setRGBARed
+  , pattern BUTTON_SECONDARY
+  , pattern CURRENT_TIME
   )
-import GI.Gdk.Constants (pattern BUTTON_SECONDARY)
 import GI.Gio
   ( Cancellable
+  , actionMapAddAction
   , menuAppend
   , menuNew
+  , onSimpleActionActivate
+  , simpleActionNew
   )
 import GI.GLib
   ( SpawnFlags(SpawnFlagsDefault)
@@ -40,6 +45,7 @@ import GI.Gtk
   , ReliefStyle(ReliefStyleNone)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
   , ScrolledWindow
+  , Window
   , applicationGetActiveWindow
   , boxNew
   , buttonNewFromIconName
@@ -71,6 +77,7 @@ import GI.Gtk
   , scrolledWindowNew
   , scrolledWindowSetPolicy
   , setWidgetMargin
+  , showUriOnWindow
   , widgetDestroy
   , widgetGrabFocus
   , widgetSetCanFocus
@@ -86,7 +93,11 @@ import GI.Vte
   , Terminal
   , onTerminalChildExited
   , onTerminalWindowTitleChanged
+  , regexNewForMatch
+  , terminalGetAllowHyperlink
   , terminalGetWindowTitle
+  , terminalMatchAddRegex
+  , terminalMatchCheckEvent
   , terminalNew
   , terminalSetBoldIsBright
   , terminalSetCursorBlinkMode
@@ -133,6 +144,9 @@ import Termonad.Types
   , tmNotebookTabTermContainer
   , tmNotebookTabs
   )
+import Data.Coerce (coerce)
+import Data.GI.Base (toManagedPtr)
+import Termonad.Pcre (pcre2Multiline)
 
 focusTerm :: Int -> TMState -> IO ()
 focusTerm i mvarTMState = do
@@ -473,8 +487,25 @@ createTerm handleKeyPress mvarTMState = do
     relabelTab notebook tabLabel scrolledWin vteTerm
   void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
   void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
-  void $ onWidgetButtonPressEvent vteTerm $ handleMousePress vteTerm
+  void $ onWidgetButtonPressEvent vteTerm $ handleMousePress tmStateAppWin vteTerm
   void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState
+
+  -- Underline URLs so that the user can see they are right-clickable.
+  --
+  -- This regex is from https://www.regextester.com/94502
+  --
+  -- TODO: Roxterm and gnome-terminal have a much more in-depth set of regexes
+  -- for URLs and things similar to URLs.  At some point it might make sense to
+  -- switch to something like this:
+  -- https://github.com/realh/roxterm/blob/30f1faf8be4ccac8ba12b59feb5b8f758bc65a7b/src/roxterm-regex.c
+  -- and
+  -- https://github.com/realh/roxterm/blob/30f1faf8be4ccac8ba12b59feb5b8f758bc65a7b/src/terminal-regex.h
+  let regexPat =
+        "(?:http(s)?:\\/\\/)[\\w.-]+(?:\\.[\\w\\.-]+)+[\\w\\-\\._~:/?#[\\]@!\\$&'\\(\\)\\*\\+,;=.]+"
+  -- We must set the pcre2Multiline option, otherwise VTE prints a warning.
+  let pcreFlags = fromIntegral pcre2Multiline
+  regex <- regexNewForMatch regexPat (fromIntegral $ length regexPat) pcreFlags
+  void $ terminalMatchAddRegex vteTerm regex 0
 
   -- Put the keyboard focus on the term
   setFocusOn tmStateAppWin vteTerm
@@ -487,12 +518,31 @@ createTerm handleKeyPress mvarTMState = do
   pure tmTerm
 
 -- | Popup the context menu on right click
-handleMousePress :: Terminal -> EventButton -> IO Bool
-handleMousePress vteTerm event = do
-  button <- getEventButtonButton event
+handleMousePress :: ApplicationWindow -> Terminal -> EventButton -> IO Bool
+handleMousePress win vteTerm eventButton = do
+  x <- terminalGetAllowHyperlink vteTerm
+  print x
+  button <- getEventButtonButton eventButton
   let rightClick = button == fromIntegral BUTTON_SECONDARY
   when rightClick $ do
     menuModel <- menuNew
+
+    -- if the user right-clicked on a URL, add an option to open the URL
+    -- in a browser
+    (maybeUrl, _regexId) <- terminalMatchCheckEvent vteTerm (eventButtonToEvent eventButton)
+    case maybeUrl of
+      Nothing -> pure ()
+      Just url -> do
+        openUrlAction <- simpleActionNew "openurl" Nothing
+        void $ onSimpleActionActivate openUrlAction $ \_ ->
+          showUriOnWindow (Nothing :: Maybe Window) url (fromIntegral CURRENT_TIME)
+        -- This will add the openurl action to the Application Window's action
+        -- map everytime the user right-clicks on a URL.  It is okay to add
+        -- actions multiple times.
+        actionMapAddAction win openUrlAction
+        menuAppend menuModel (Just "Open URL in browser") (Just "win.openurl")
+
+
     menuAppend menuModel (Just "Copy") (Just "app.copy")
     menuAppend menuModel (Just "Paste") (Just "app.paste")
     menuAppend menuModel (Just "Preferences") (Just "app.preferences")
@@ -500,3 +550,11 @@ handleMousePress vteTerm event = do
     menuAttachToWidget menu vteTerm Nothing
     menuPopupAtPointer menu Nothing
   pure rightClick
+
+-- The terminalMatchCheckEvent function takes an Event, while we only
+-- have an EventButton.  It is apparently okay to just cast an EventButton
+-- to an Event, since they are just pointers under the hood, and they
+-- are laid out the same in memory.  See
+-- https://github.com/haskell-gi/haskell-gi/issues/109
+eventButtonToEvent :: EventButton -> Event
+eventButtonToEvent = Event . coerce . toManagedPtr
