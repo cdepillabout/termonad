@@ -59,6 +59,7 @@ $(makeLensesFor
     , ("showTabBar", "lensShowTabBar")
     , ("cursorBlinkMode", "lensCursorBlinkMode")
     , ("boldIsBright", "lensBoldIsBright")
+    , ("allowBold", "lensAllowBold")
     , ("enableSixel", "lensEnableSixel")
     ]
     ''ConfigOptions

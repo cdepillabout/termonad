@@ -417,6 +417,8 @@ data ConfigOptions = ConfigOptions
     -- Note that even if you do the above, there may still be some problems
     -- with SIXEL support in VTE. Follow
     -- <https://gitlab.gnome.org/GNOME/vte/-/issues/253> for more information.
+  , allowBold :: !Bool
+    -- Allow terminal to use bold text.
   } deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
 instance FromJSON CursorBlinkMode where
@@ -449,6 +451,7 @@ instance ToJSON CursorBlinkMode where
 --           , cursorBlinkMode = CursorBlinkModeOn
 --           , boldIsBright = False
 --           , enableSixel = False
+--           , allowBold = True
 --           }
 --   in defaultConfigOptions == defConfOpt
 -- :}
@@ -466,6 +469,7 @@ defaultConfigOptions =
     , cursorBlinkMode = CursorBlinkModeOn
     , boldIsBright = False
     , enableSixel = False
+    , allowBold = True
     }
 
 -- | The Termonad 'ConfigOptions' along with the 'ConfigHooks'.

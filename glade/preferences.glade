@@ -281,6 +281,21 @@ If unselected, then bold can be applied separately to colors from both the stand
               </packing>
             </child>
             <child>
+              <object class="GtkCheckButton" id="allowBold">
+                <property name="label" translatable="yes">Allow bold</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="tooltip-text" translatable="yes">Allow terminal to use bold text.</property>
+                <property name="halign">start</property>
+                <property name="draw-indicator">True</property>
+              </object>
+              <packing>
+                <property name="left-attach">1</property>
+                <property name="top-attach">11</property>
+              </packing>
+            </child>
+            <child>
               <placeholder/>
             </child>
             <child>

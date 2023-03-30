@@ -105,6 +105,7 @@ import GI.Vte
   , terminalSetScrollbackLines
   , terminalSetWordCharExceptions
   , terminalSpawnSync
+  , terminalSetAllowBold
   )
 import System.Directory (getSymbolicLinkTarget)
 import System.Environment (lookupEnv)
@@ -126,7 +127,7 @@ import Termonad.Lenses
   )
 import Termonad.Types
   ( ConfigHooks(createTermHook)
-  , ConfigOptions(scrollbackLen, wordCharExceptions, cursorBlinkMode, boldIsBright, enableSixel)
+  , ConfigOptions(scrollbackLen, wordCharExceptions, cursorBlinkMode, boldIsBright, enableSixel, allowBold)
   , ShowScrollbar(..)
   , ShowTabBar(..)
   , TMConfig(hooks, options)
@@ -376,6 +377,7 @@ createAndInitVteTerm tmStateFontDesc curOpts = do
   terminalSetCursorBlinkMode vteTerm (cursorBlinkMode curOpts)
   terminalSetBoldIsBright vteTerm (boldIsBright curOpts)
   terminalSetEnableSixelIfExists vteTerm (enableSixel curOpts)
+  terminalSetAllowBold vteTerm (allowBold curOpts)
   widgetShow vteTerm
   pure vteTerm
 
