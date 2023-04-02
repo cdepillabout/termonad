@@ -418,7 +418,10 @@ data ConfigOptions = ConfigOptions
     -- with SIXEL support in VTE. Follow
     -- <https://gitlab.gnome.org/GNOME/vte/-/issues/253> for more information.
   , allowBold :: !Bool
-    -- Allow terminal to use bold text.
+    -- ^ Allow terminal to use bold text.
+    --
+    -- You may want to disable this, for instance, if you use a font that
+    -- doesn't look good when bold.
   } deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
 instance FromJSON CursorBlinkMode where
