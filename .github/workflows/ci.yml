@@ -23,20 +23,21 @@ jobs:
         ghc:
           - "8.10.7"
           - "9.0.2"
-          - "9.2.4"
+          - "9.2.7"
+          - "9.4.4"
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       #if: github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.ref == 'refs/heads/master'
 
-    - uses: haskell/actions/setup@v1
+    - uses: haskell/actions/setup@v2
       id: setup-haskell-cabal
       name: Setup Haskell
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
 
-    - uses: actions/cache@v1
+    - uses: actions/cache@v3
       name: Cache cabal-store
       with:
         path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
@@ -74,16 +75,16 @@ jobs:
           # - macOS-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       #if: github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.ref == 'refs/heads/master'
 
-    - uses: haskell/actions/setup@v1
+    - uses: haskell/actions/setup@v2
       name: Setup Haskell Stack
       with:
         stack-version: ${{ matrix.stack }}
         enable-stack: true
 
-    - uses: actions/cache@v1
+    - uses: actions/cache@v3
       name: Cache ~/.stack
       with:
         path: ~/.stack
@@ -106,8 +107,8 @@ jobs:
     name: nix / ubuntu-latest
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: cachix/install-nix-action@v13
+    - uses: actions/checkout@v3
+    - uses: cachix/install-nix-action@v20
       with:
         nix_path: nixpkgs=channel:nixos-unstable
     - run: nix-build
@@ -117,15 +118,8 @@ jobs:
     name: nix flakes / ubuntu-latest
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: cachix/install-nix-action@v13
-      with:
-        # This is taken from https://github.com/ngi-nix/summer-of-nix/blob/master/2021/snippets-and-templates/github-actions.yml
-        install_url: https://github.com/numtide/nix-unstable-installer/releases/download/nix-2.4pre20210604_8e6ee1b/install
-        extra_nix_config: |
-          experimental-features = nix-command flakes
-          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-        nix_path: nixpkgs=channel:nixos-unstable
+    - uses: actions/checkout@v3
+    - uses: cachix/install-nix-action@v20
     - run: nix flake show
     - run: nix build
     - run: nix flake check
