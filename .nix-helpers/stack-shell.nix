@@ -8,7 +8,7 @@ haskell.lib.buildStackProject {
   buildInputs = [
     cairo
     git
-    gobjectIntrospection
+    gobject-introspection
     gtk3
     vte
     zlib
