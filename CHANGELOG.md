@@ -1,3 +1,10 @@
+## 4.5.0.0
+
+*   Add an `allowBold` option (which defaults to `True`).  This can be used if
+    you want disable use of bold text.
+    Thanks [@zanculmarktum](https://github.com/zanculmarktum)!
+    [#225](https://github.com/cdepillabout/termonad/pull/225)
+
 ## 4.4.0.0
 
 *   Add support for opening URLs in a browser by right-clicking on them.

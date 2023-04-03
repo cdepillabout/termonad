@@ -63,31 +63,5 @@
           program = "${self.packages.${system}.termonad}/bin/termonad";
         };
       });
-
-      # Tests run by 'nix flake check' and by Hydra.
-      # checks = forAllSystems
-      #   (system:
-      #     with nixpkgsFor.${system};
-      #     {
-      #       inherit (self.packages.${system}) hello;
-
-      #       # Additional tests, if applicable.
-      #       test = stdenv.mkDerivation {
-      #         name = "hello-test-${version}";
-
-      #         buildInputs = [ hello ];
-
-      #         unpackPhase = "true";
-
-      #         buildPhase = ''
-      #           echo 'running some integration tests'
-      #           [[ $(hello) = 'Hello Nixers!' ]]
-      #         '';
-
-      #         installPhase = "mkdir -p $out";
-      #       };
-      #     }
-      #   );
-
     };
 }
