@@ -36,11 +36,13 @@ extra-source-files:  README.md
                    , shell.nix
 data-files:          img/termonad-lambda.png
 custom-setup
-  setup-depends:     base
                    -- Hackage apparently gives an error if you don't specify an
-                   -- upper bound on Cabal. But I don't want to have to remember
-                   -- to bump the upper bound of Cabal every time I want to make
-                   -- a release of Termonad.
+                   -- upper bound on your setup-depends. But I don't want to
+                   -- have to remember to bump the upper bound of each of these
+                   -- setup depends every time I want to make a release of Termonad,
+                   -- especially send I already have upper bounds on important things
+                   -- like base below.
+  setup-depends:     base <999
                    , Cabal <999
                    , cabal-doctest >=1.0.2 && <1.1
 
