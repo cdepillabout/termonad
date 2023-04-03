@@ -41,7 +41,7 @@ jobs:
       name: Cache cabal-store
       with:
         path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
-        key: ${{ runner.os }}-${{ matrix.ghc }}-cabal
+        key: ${{ matrix.os }}-${{ matrix.ghc }}-cabal
 
     - name: Update apt
       run: sudo apt-get update
@@ -88,7 +88,7 @@ jobs:
       name: Cache ~/.stack
       with:
         path: ~/.stack
-        key: ${{ runner.os }}-stack-${{ matrix.resolver }}
+        key: ${{ matrix.os }}-stack-${{ matrix.resolver }}
 
     - name: Update apt
       run: sudo apt-get update
