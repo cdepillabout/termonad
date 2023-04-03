@@ -120,7 +120,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: cachix/install-nix-action@v20
-    - run: nix flake show
     - run: nix build
     - run: nix flake check
     - run: nix build .#devShell.x86_64-linux
