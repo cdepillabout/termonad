@@ -1,186 +1,194 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Termonad.App where
 
-import Termonad.Prelude
-
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
-import Control.Lens ((.~), (^.), (^..), over, set, view)
+-- import Graphics.UI.Gtk.Gdk.Pixbuf
+
+import Control.Lens (over, set, view, (.~), (^.), (^..))
 import Control.Monad.Fail (fail)
+import Data.FileEmbed (embedFile)
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
 import Data.Sequence (findIndexR)
+import Foreign (mallocBytes, pokeByteOff)
+import Foreign.Marshal.Array (newArray)
 import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
 import GI.Gio
-  ( ApplicationFlags(ApplicationFlagsFlagsNone)
-  , MenuModel(MenuModel)
-  , actionMapAddAction
-  , applicationQuit
-  , applicationRun
-  , onApplicationActivate
-  , onApplicationStartup
-  , onSimpleActionActivate
-  , simpleActionNew
+  ( ApplicationFlags (ApplicationFlagsFlagsNone),
+    MenuModel (MenuModel),
+    actionMapAddAction,
+    applicationQuit,
+    applicationRun,
+    onApplicationActivate,
+    onApplicationStartup,
+    onSimpleActionActivate,
+    simpleActionNew,
   )
 import GI.Gtk
-  ( Application
-  , ApplicationWindow(ApplicationWindow)
-  , Box(Box)
-  , CheckButton(CheckButton)
-  , ComboBoxText(ComboBoxText)
-  , Dialog(Dialog)
-  , Entry(Entry)
-  , FontButton(FontButton)
-  , Label(Label)
-  , PolicyType(PolicyTypeAutomatic)
-  , PositionType(PositionTypeRight)
-  , ResponseType(ResponseTypeAccept, ResponseTypeNo, ResponseTypeYes)
-  , ScrolledWindow(ScrolledWindow)
-  , SpinButton(SpinButton)
-  , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
-  , aboutDialogNew
-  , adjustmentNew
-  , applicationAddWindow
-  , applicationGetActiveWindow
-  , applicationSetAccelsForAction
-  , applicationSetMenubar
-  , applicationWindowSetShowMenubar
-  , boxPackStart
-  , builderNewFromString
-  , builderSetApplication
-  , comboBoxGetActiveId
-  , comboBoxSetActiveId
-  , comboBoxTextAppend
-  , containerAdd
-  , cssProviderLoadFromData
-  , cssProviderNew
-  , dialogAddButton
-  , dialogGetContentArea
-  , dialogNew
-  , dialogResponse
-  , dialogRun
-  , entryBufferGetText
-  , entryBufferSetText
-  , entryGetText
-  , entryNew
-  , fontChooserSetFontDesc
-  , fontChooserGetFontDesc
-  , getEntryBuffer
-  , gridAttachNextTo
-  , gridNew
-  , labelNew
-  , notebookGetNPages
-  , notebookNew
-  , notebookSetShowBorder
-  , onEntryActivate
-  , onNotebookPageRemoved
-  , onNotebookPageReordered
-  , onNotebookSwitchPage
-  , onWidgetDeleteEvent
-  , scrolledWindowSetPolicy
-  , setWidgetMargin
-  , spinButtonGetValueAsInt
-  , spinButtonSetAdjustment
-  , spinButtonSetValue
-  , styleContextAddProviderForScreen
-  , toggleButtonGetActive
-  , toggleButtonSetActive
-  , widgetDestroy
-  , widgetGrabFocus
-  , widgetSetCanFocus
-  , widgetSetVisible
-  , widgetShow
-  , widgetShowAll
-  , windowPresent
-  , windowSetDefaultIconFromFile
-  , windowSetTitle
-  , windowSetTransientFor
+  ( Application,
+    ApplicationWindow (ApplicationWindow),
+    Box (Box),
+    CheckButton (CheckButton),
+    ComboBoxText (ComboBoxText),
+    Dialog (Dialog),
+    Entry (Entry),
+    FontButton (FontButton),
+    Label (Label),
+    PolicyType (PolicyTypeAutomatic),
+    PositionType (PositionTypeRight),
+    ResponseType (ResponseTypeAccept, ResponseTypeNo, ResponseTypeYes),
+    ScrolledWindow (ScrolledWindow),
+    SpinButton (SpinButton),
+    aboutDialogNew,
+    adjustmentNew,
+    applicationAddWindow,
+    applicationGetActiveWindow,
+    applicationSetAccelsForAction,
+    applicationSetMenubar,
+    applicationWindowSetShowMenubar,
+    boxPackStart,
+    builderNewFromString,
+    builderSetApplication,
+    comboBoxGetActiveId,
+    comboBoxSetActiveId,
+    comboBoxTextAppend,
+    containerAdd,
+    cssProviderLoadFromData,
+    cssProviderNew,
+    dialogAddButton,
+    dialogGetContentArea,
+    dialogNew,
+    dialogResponse,
+    dialogRun,
+    entryBufferGetText,
+    entryBufferSetText,
+    entryGetText,
+    entryNew,
+    fontChooserGetFontDesc,
+    fontChooserSetFontDesc,
+    getEntryBuffer,
+    gridAttachNextTo,
+    gridNew,
+    labelNew,
+    notebookGetNPages,
+    notebookNew,
+    notebookSetShowBorder,
+    onEntryActivate,
+    onNotebookPageRemoved,
+    onNotebookPageReordered,
+    onNotebookSwitchPage,
+    onWidgetDeleteEvent,
+    scrolledWindowSetPolicy,
+    setWidgetMargin,
+    spinButtonGetValueAsInt,
+    spinButtonSetAdjustment,
+    spinButtonSetValue,
+    styleContextAddProviderForScreen,
+    toggleButtonGetActive,
+    toggleButtonSetActive,
+    widgetDestroy,
+    widgetGrabFocus,
+    widgetSetCanFocus,
+    widgetSetVisible,
+    widgetShow,
+    widgetShowAll,
+    windowPresent,
+    windowSetDefaultIconFromFile,
+    windowSetTitle,
+    windowSetTransientFor,
+    pattern STYLE_PROVIDER_PRIORITY_APPLICATION,
   )
 import qualified GI.Gtk as Gtk
 import GI.Pango
-  ( FontDescription
-  , pattern SCALE
-  , fontDescriptionGetFamily
-  , fontDescriptionGetSize
-  , fontDescriptionGetSizeIsAbsolute
-  , fontDescriptionNew
-  , fontDescriptionSetFamily
-  , fontDescriptionSetSize
-  , fontDescriptionSetAbsoluteSize
+  ( FontDescription,
+    fontDescriptionGetFamily,
+    fontDescriptionGetSize,
+    fontDescriptionGetSizeIsAbsolute,
+    fontDescriptionNew,
+    fontDescriptionSetAbsoluteSize,
+    fontDescriptionSetFamily,
+    fontDescriptionSetSize,
+    pattern SCALE,
   )
 import GI.Vte
-  ( CursorBlinkMode(..)
-  , catchRegexError
-  , regexNewForSearch
-  , terminalCopyClipboard
-  , terminalPasteClipboard
-  , terminalSearchFindNext
-  , terminalSearchFindPrevious
-  , terminalSearchSetRegex
-  , terminalSearchSetWrapAround
-  , terminalSetBoldIsBright
-  , terminalSetCursorBlinkMode
-  , terminalSetFont
-  , terminalSetScrollbackLines
-  , terminalSetWordCharExceptions
-  , terminalSetAllowBold
+  ( CursorBlinkMode (..),
+    catchRegexError,
+    regexNewForSearch,
+    terminalCopyClipboard,
+    terminalPasteClipboard,
+    terminalSearchFindNext,
+    terminalSearchFindPrevious,
+    terminalSearchSetRegex,
+    terminalSearchSetWrapAround,
+    terminalSetAllowBold,
+    terminalSetBoldIsBright,
+    terminalSetCursorBlinkMode,
+    terminalSetFont,
+    terminalSetScrollbackLines,
+    terminalSetWordCharExceptions,
   )
+import Graphics.UI.Gtk.Gdk.Pixbuf
+import Paths_termonad (getDataFileName)
 import System.Environment (getExecutablePath)
 import System.FilePath (takeFileName)
-
-import Paths_termonad (getDataFileName)
 import Termonad.Gtk (appNew, objFromBuildUnsafe, terminalSetEnableSixelIfExists)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Lenses
-  ( lensBoldIsBright
-  , lensEnableSixel
-  , lensAllowBold
-  , lensConfirmExit
-  , lensCursorBlinkMode
-  , lensFontConfig
-  , lensOptions
-  , lensShowMenu
-  , lensShowScrollbar
-  , lensShowTabBar
-  , lensScrollbackLen
-  , lensTMNotebook
-  , lensTMNotebookTabTermContainer
-  , lensTMNotebookTabs
-  , lensTMNotebookTabTerm
-  , lensTMStateApp
-  , lensTMStateAppWin
-  , lensTMStateConfig
-  , lensTMStateFontDesc
-  , lensTMStateNotebook
-  , lensTerm
-  , lensWordCharExceptions
+  ( lensAllowBold,
+    lensBoldIsBright,
+    lensConfirmExit,
+    lensCursorBlinkMode,
+    lensEnableSixel,
+    lensFontConfig,
+    lensOptions,
+    lensScrollbackLen,
+    lensShowMenu,
+    lensShowScrollbar,
+    lensShowTabBar,
+    lensTMNotebook,
+    lensTMNotebookTabTerm,
+    lensTMNotebookTabTermContainer,
+    lensTMNotebookTabs,
+    lensTMStateApp,
+    lensTMStateAppWin,
+    lensTMStateConfig,
+    lensTMStateFontDesc,
+    lensTMStateNotebook,
+    lensTerm,
+    lensWordCharExceptions,
   )
 import Termonad.PreferencesFile (saveToPreferencesFile)
+import Termonad.Prelude
 import Termonad.Term
-  ( createTerm
-  , relabelTabs
-  , termNextPage
-  , termPrevPage
-  , termExitFocused
-  , setShowTabs
-  , showScrollbarToPolicy
+  ( createTerm,
+    relabelTabs,
+    setShowTabs,
+    showScrollbarToPolicy,
+    termExitFocused,
+    termNextPage,
+    termPrevPage,
   )
 import Termonad.Types
-  ( ConfigOptions(..)
-  , FontConfig(..)
-  , FontSize(FontSizePoints, FontSizeUnits)
-  , ShowScrollbar(..)
-  , ShowTabBar(..)
-  , TMConfig
-  , TMNotebookTab
-  , TMState
-  , TMState'(TMState)
-  , getFocusedTermFromState
-  , modFontSize
-  , newEmptyTMState
-  , tmNotebookTabTermContainer
-  , tmNotebookTabs
-  , tmStateApp
-  , tmStateNotebook
+  ( ConfigOptions (..),
+    FontConfig (..),
+    FontSize (FontSizePoints, FontSizeUnits),
+    ShowScrollbar (..),
+    ShowTabBar (..),
+    TMConfig,
+    TMNotebookTab,
+    TMState,
+    TMState' (TMState),
+    getFocusedTermFromState,
+    modFontSize,
+    newEmptyTMState,
+    tmNotebookTabTermContainer,
+    tmNotebookTabs,
+    tmStateApp,
+    tmStateNotebook,
   )
 import Termonad.XML (interfaceText, menuText, preferencesText)
+import Foreign.C.Types (CUChar(..))
+import GI.Gtk.Objects.Window
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
@@ -190,34 +198,33 @@ setupScreenStyle = do
     Just screen -> do
       cssProvider <- cssProviderNew
       let (textLines :: [Text]) =
-            [
-              "scrollbar {"
-            -- , "  -GtkRange-slider-width: 200px;"
-            -- , "  -GtkRange-stepper-size: 200px;"
-            -- , "  border-width: 200px;"
-            , "  background-color: #aaaaaa;"
-            -- , "  color: #ff0000;"
-            -- , "  min-width: 4px;"
-            , "}"
-            -- , "scrollbar trough {"
-            -- , "  -GtkRange-slider-width: 200px;"
-            -- , "  -GtkRange-stepper-size: 200px;"
-            -- , "  border-width: 200px;"
-            -- , "  background-color: #00ff00;"
-            -- , "  color: #00ff00;"
-            -- , "  min-width: 50px;"
-            -- , "}"
-            -- , "scrollbar slider {"
-            -- , "  -GtkRange-slider-width: 200px;"
-            -- , "  -GtkRange-stepper-size: 200px;"
-            -- , "  border-width: 200px;"
-            -- , "  background-color: #0000ff;"
-            -- , "  color: #0000ff;"
-            -- , "  min-width: 50px;"
-            -- , "}"
-            , "tab {"
-            , "  background-color: transparent;"
-            , "}"
+            [ "scrollbar {",
+              -- , "  -GtkRange-slider-width: 200px;"
+              -- , "  -GtkRange-stepper-size: 200px;"
+              -- , "  border-width: 200px;"
+              "  background-color: #aaaaaa;",
+              -- , "  color: #ff0000;"
+              -- , "  min-width: 4px;"
+              "}",
+              -- , "scrollbar trough {"
+              -- , "  -GtkRange-slider-width: 200px;"
+              -- , "  -GtkRange-stepper-size: 200px;"
+              -- , "  border-width: 200px;"
+              -- , "  background-color: #00ff00;"
+              -- , "  color: #00ff00;"
+              -- , "  min-width: 50px;"
+              -- , "}"
+              -- , "scrollbar slider {"
+              -- , "  -GtkRange-slider-width: 200px;"
+              -- , "  -GtkRange-stepper-size: 200px;"
+              -- , "  border-width: 200px;"
+              -- , "  background-color: #0000ff;"
+              -- , "  color: #0000ff;"
+              -- , "  min-width: 50px;"
+              -- , "}"
+              "tab {",
+              "  background-color: transparent;",
+              "}"
             ]
       let styleData = encodeUtf8 (unlines textLines :: Text)
       cssProviderLoadFromData cssProvider styleData
@@ -256,23 +263,24 @@ modifyFontSizeForAllTerms modFontSizeFunc mvarTMState = do
   let fontDesc = tmState ^. lensTMStateFontDesc
   adjustFontDescSize modFontSizeFunc fontDesc
   let terms =
-        tmState ^..
-          lensTMStateNotebook .
-          lensTMNotebookTabs .
-          traverse .
-          lensTMNotebookTabTerm .
-          lensTerm
+        tmState
+          ^.. lensTMStateNotebook
+            . lensTMNotebookTabs
+            . traverse
+            . lensTMNotebookTabTerm
+            . lensTerm
   foldMap (\vteTerm -> terminalSetFont vteTerm (Just fontDesc)) terms
 
 fontSizeFromFontDescription :: FontDescription -> IO FontSize
 fontSizeFromFontDescription fontDesc = do
   currSize <- fontDescriptionGetSize fontDesc
   currAbsolute <- fontDescriptionGetSizeIsAbsolute fontDesc
-  return $ if currAbsolute
-             then FontSizeUnits $ fromIntegral currSize / fromIntegral SCALE
-             else
-               let fontRatio :: Double = fromIntegral currSize / fromIntegral SCALE
-               in FontSizePoints $ round fontRatio
+  return $
+    if currAbsolute
+      then FontSizeUnits $ fromIntegral currSize / fromIntegral SCALE
+      else
+        let fontRatio :: Double = fromIntegral currSize / fromIntegral SCALE
+         in FontSizePoints $ round fontRatio
 
 fontConfigFromFontDescription :: FontDescription -> IO (Maybe FontConfig)
 fontConfigFromFontDescription fontDescription = do
@@ -286,7 +294,7 @@ compareScrolledWinAndTab scrollWin flTab =
       foreignPtrFLTab = managedForeignPtr managedPtrFLTab
       ScrolledWindow managedPtrScrollWin = scrollWin
       foreignPtrScrollWin = managedForeignPtr managedPtrScrollWin
-  in foreignPtrFLTab == foreignPtrScrollWin
+   in foreignPtrFLTab == foreignPtrScrollWin
 
 updateFLTabPos :: TMState -> Int -> Int -> IO ()
 updateFLTabPos mvarTMState oldPos newPos =
@@ -296,17 +304,26 @@ updateFLTabPos mvarTMState oldPos newPos =
     case maybeNewTabs of
       Nothing -> do
         putStrLn $
-          "in updateFLTabPos, Strange error: couldn't move tabs.\n" <>
-          "old pos: " <> tshow oldPos <> "\n" <>
-          "new pos: " <> tshow newPos <> "\n" <>
-          "tabs: " <> tshow tabs <> "\n" <>
-          "maybeNewTabs: " <> tshow maybeNewTabs <> "\n" <>
-          "tmState: " <> tshow tmState
+          "in updateFLTabPos, Strange error: couldn't move tabs.\n"
+            <> "old pos: "
+            <> tshow oldPos
+            <> "\n"
+            <> "new pos: "
+            <> tshow newPos
+            <> "\n"
+            <> "tabs: "
+            <> tshow tabs
+            <> "\n"
+            <> "maybeNewTabs: "
+            <> tshow maybeNewTabs
+            <> "\n"
+            <> "tmState: "
+            <> tshow tmState
         pure tmState
       Just newTabs ->
         pure $
-          tmState &
-            lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+          tmState
+            & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
 
 -- | Try to figure out whether Termonad should exit.  This also used to figure
 -- out if Termonad should close a given terminal.
@@ -321,6 +338,7 @@ updateFLTabPos mvarTMState oldPos newPos =
 --
 -- If 'confirmExit' is 'False', then this function always returns
 -- 'ResponseTypeYes'.
+
 {- HLINT ignore "Reduce duplication" -}
 askShouldExit :: TMState -> IO ResponseType
 askShouldExit mvarTMState = do
@@ -369,10 +387,24 @@ forceQuit mvarTMState = do
   let app = tmState ^. lensTMStateApp
   applicationQuit app
 
+-- bla =
+--   let myFile = $(embedFile "img/termonad-lambda.png")
+--    in toPixbuf myFile
+
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
-  termonadIconPath <- getDataFileName "img/termonad-lambda.png"
-  windowSetDefaultIconFromFile termonadIconPath
+  let myFile = $(embedFile "img/termonad-lambda.png")
+  let wordsss = unpack myFile
+  -- img_ptr <- mallocBytes (length wordsss)
+  -- forM_ (zip wordsss [0 ..]) $ \(word8, off) ->
+  --   pokeByteOff img_ptr off (CUChar word8)
+  img_ptr <- newArray (map CUChar wordsss)
+  pb <- pixbufNewFromData img_ptr ColorspaceRgb False 8 50 50 (50 * 3)
+  IsPixbuf pb
+  GI.Gtk.Objects.Window.windowSetDefaultIcon pb
+
+  -- termonadIconPath <- getDataFileName "img/termonad-lambda.png"
+  -- windowSetDefaultIconFromFile termonadIconPath
 
   setupScreenStyle
   box <- objFromBuildUnsafe builder "content_box" Box
@@ -403,28 +435,28 @@ setupTermonad tmConfig app win builder = do
         Just (tab, newTabs) -> do
           widgetGrabFocus $ tab ^. lensTMNotebookTabTerm . lensTerm
           pure $
-            tmState &
-              lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+            tmState
+              & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
 
   void $ onNotebookPageReordered note $ \childWidg pageNum -> do
     maybeScrollWin <- castTo ScrolledWindow childWidg
     case maybeScrollWin of
       Nothing ->
         fail $
-          "In setupTermonad, in callback for onNotebookPageReordered, " <>
-          "child widget is not a ScrolledWindow.\n" <>
-          "Don't know how to continue.\n"
+          "In setupTermonad, in callback for onNotebookPageReordered, "
+            <> "child widget is not a ScrolledWindow.\n"
+            <> "Don't know how to continue.\n"
       Just scrollWin -> do
-        TMState{tmStateNotebook} <- readMVar mvarTMState
+        TMState {tmStateNotebook} <- readMVar mvarTMState
         let fl = tmStateNotebook ^. lensTMNotebookTabs
         let maybeOldPosition =
               findIndexR (compareScrolledWinAndTab scrollWin) (focusList fl)
         case maybeOldPosition of
           Nothing ->
             fail $
-              "In setupTermonad, in callback for onNotebookPageReordered, " <>
-              "the ScrolledWindow is not already in the FocusList.\n" <>
-              "Don't know how to continue.\n"
+              "In setupTermonad, in callback for onNotebookPageReordered, "
+                <> "the ScrolledWindow is not already in the FocusList.\n"
+                <> "Don't know how to continue.\n"
           Just oldPos -> do
             updateFLTabPos mvarTMState oldPos (fromIntegral pageNum)
             relabelTabs mvarTMState
@@ -695,8 +727,8 @@ comboBoxSetActive cb item = void $ comboBoxSetActiveId cb (Just $ tshow item)
 -- The list of values to be searched in the combobox must be given as a
 -- parameter. These values are converted to Text then compared to the current
 -- id.
-comboBoxGetActive
-  :: forall a. (Show a, Enum a) => ComboBoxText -> [a] -> IO (Maybe a)
+comboBoxGetActive ::
+  forall a. (Show a, Enum a) => ComboBoxText -> [a] -> IO (Maybe a)
 comboBoxGetActive cb values = findEnumFromMaybeId <$> comboBoxGetActiveId cb
   where
     findEnumFromMaybeId :: Maybe Text -> Maybe a
@@ -712,7 +744,7 @@ applyNewPreferences mvarTMState = do
       config = tmState ^. lensTMStateConfig
       notebook = tmState ^. lensTMStateNotebook . lensTMNotebook
       tabFocusList = tmState ^. lensTMStateNotebook . lensTMNotebookTabs
-      showMenu = config  ^. lensOptions . lensShowMenu
+      showMenu = config ^. lensOptions . lensShowMenu
   applicationWindowSetShowMenubar appWin showMenu
   setShowTabs config notebook
   -- Sets the remaining preferences to each tab
@@ -762,37 +794,37 @@ showPreferencesDialog mvarTMState = do
   allowBoldCheckButton <-
     objFromBuildUnsafe preferencesBuilder "allowBold" CheckButton
   wordCharExceptionsEntryBuffer <-
-    objFromBuildUnsafe preferencesBuilder "wordCharExceptions" Entry >>=
-      getEntryBuffer
+    objFromBuildUnsafe preferencesBuilder "wordCharExceptions" Entry
+      >>= getEntryBuffer
   fontButton <- objFromBuildUnsafe preferencesBuilder "font" FontButton
   showScrollbarComboBoxText <-
     objFromBuildUnsafe preferencesBuilder "showScrollbar" ComboBoxText
   comboBoxFill
     showScrollbarComboBoxText
-    [ (ShowScrollbarNever, "Never")
-    , (ShowScrollbarAlways, "Always")
-    , (ShowScrollbarIfNeeded, "If needed")
+    [ (ShowScrollbarNever, "Never"),
+      (ShowScrollbarAlways, "Always"),
+      (ShowScrollbarIfNeeded, "If needed")
     ]
   showTabBarComboBoxText <-
     objFromBuildUnsafe preferencesBuilder "showTabBar" ComboBoxText
   comboBoxFill
     showTabBarComboBoxText
-    [ (ShowTabBarNever, "Never")
-    , (ShowTabBarAlways, "Always")
-    , (ShowTabBarIfNeeded, "If needed")
+    [ (ShowTabBarNever, "Never"),
+      (ShowTabBarAlways, "Always"),
+      (ShowTabBarIfNeeded, "If needed")
     ]
   cursorBlinkModeComboBoxText <-
     objFromBuildUnsafe preferencesBuilder "cursorBlinkMode" ComboBoxText
   comboBoxFill
     cursorBlinkModeComboBoxText
-    [ (CursorBlinkModeSystem, "System")
-    , (CursorBlinkModeOn, "On")
-    , (CursorBlinkModeOff, "Off")
+    [ (CursorBlinkModeSystem, "System"),
+      (CursorBlinkModeOn, "On"),
+      (CursorBlinkModeOff, "Off")
     ]
   scrollbackLenSpinButton <-
     objFromBuildUnsafe preferencesBuilder "scrollbackLen" SpinButton
-  adjustmentNew 0 0 (fromIntegral (maxBound :: Int)) 1 10 0 >>=
-    spinButtonSetAdjustment scrollbackLenSpinButton
+  adjustmentNew 0 0 (fromIntegral (maxBound :: Int)) 1 10 0
+    >>= spinButtonSetAdjustment scrollbackLenSpinButton
   warningLabel <- objFromBuildUnsafe preferencesBuilder "warning" Label
 
   -- We show the warning label only if the user has launched termonad with a
@@ -843,21 +875,23 @@ showPreferencesDialog mvarTMState = do
     wordCharExceptionsVal <- entryBufferGetText wordCharExceptionsEntryBuffer
 
     -- Apply the changes to mvarTMState
-    modifyMVar_ mvarTMState $ pure
-      . over lensTMStateFontDesc (`fromMaybe` maybeFontDesc)
-      . over (lensTMStateConfig . lensOptions)
-        ( set lensConfirmExit confirmExitVal
-        . set lensShowMenu showMenuVal
-        . set lensBoldIsBright boldIsBrightVal
-        . set lensEnableSixel enableSixelVal
-        . set lensAllowBold allowBoldVal
-        . set lensWordCharExceptions wordCharExceptionsVal
-        . over lensFontConfig (`fromMaybe` maybeFontConfig)
-        . set lensScrollbackLen scrollbackLenVal
-        . over lensShowScrollbar (`fromMaybe` maybeShowScrollbar)
-        . over lensShowTabBar (`fromMaybe` maybeShowTabBar)
-        . over lensCursorBlinkMode (`fromMaybe` maybeCursorBlinkMode)
-        )
+    modifyMVar_ mvarTMState $
+      pure
+        . over lensTMStateFontDesc (`fromMaybe` maybeFontDesc)
+        . over
+          (lensTMStateConfig . lensOptions)
+          ( set lensConfirmExit confirmExitVal
+              . set lensShowMenu showMenuVal
+              . set lensBoldIsBright boldIsBrightVal
+              . set lensEnableSixel enableSixelVal
+              . set lensAllowBold allowBoldVal
+              . set lensWordCharExceptions wordCharExceptionsVal
+              . over lensFontConfig (`fromMaybe` maybeFontConfig)
+              . set lensScrollbackLen scrollbackLenVal
+              . over lensShowScrollbar (`fromMaybe` maybeShowScrollbar)
+              . over lensShowTabBar (`fromMaybe` maybeShowTabBar)
+              . over lensCursorBlinkMode (`fromMaybe` maybeCursorBlinkMode)
+          )
 
     -- Save the changes to the preferences files
     withMVar mvarTMState $ saveToPreferencesFile . view lensTMStateConfig
@@ -943,17 +977,17 @@ defaultMain :: TMConfig -> IO ()
 defaultMain tmConfig = do
   let params =
         defaultParams
-          { projectName = "termonad"
-          , showError = \(cfg, oldErrs) newErr -> (cfg, oldErrs <> "\n" <> newErr)
-          , realMain = \(cfg, errs) -> putStrLn (pack errs) *> start cfg
+          { projectName = "termonad",
+            showError = \(cfg, oldErrs) newErr -> (cfg, oldErrs <> "\n" <> newErr),
+            realMain = \(cfg, errs) -> putStrLn (pack errs) *> start cfg
           }
   eitherRes <- tryIOError $ wrapMain params (tmConfig, "")
   case eitherRes of
     Left ioErr
       | ioeGetErrorType ioErr == doesNotExistErrorType && ioeGetFileName ioErr == Just "ghc" -> do
           putStrLn $
-            "Could not find ghc on your PATH.  Ignoring your termonad.hs " <>
-            "configuration file and running termonad with default settings."
+            "Could not find ghc on your PATH.  Ignoring your termonad.hs "
+              <> "configuration file and running termonad with default settings."
           start tmConfig
       | otherwise -> do
           putStrLn "IO error occurred when trying to run termonad:"
