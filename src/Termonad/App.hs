@@ -5,6 +5,9 @@ module Termonad.App where
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
 -- import Graphics.UI.Gtk.Gdk.Pixbuf
 
+import GI.GdkPixbuf.Objects.Pixbuf
+import GI.GdkPixbuf.Enums
+import GI.GLib.Structs.Bytes
 import Control.Lens (over, set, view, (.~), (^.), (^..))
 import Control.Monad.Fail (fail)
 import Data.FileEmbed (embedFile)
@@ -127,7 +130,7 @@ import GI.Vte
     terminalSetScrollbackLines,
     terminalSetWordCharExceptions,
   )
-import Graphics.UI.Gtk.Gdk.Pixbuf
+-- import Graphics.UI.Gtk.Gdk.Pixbuf
 import Paths_termonad (getDataFileName)
 import System.Environment (getExecutablePath)
 import System.FilePath (takeFileName)
@@ -399,9 +402,10 @@ setupTermonad tmConfig app win builder = do
   -- forM_ (zip wordsss [0 ..]) $ \(word8, off) ->
   --   pokeByteOff img_ptr off (CUChar word8)
   img_ptr <- newArray (map CUChar wordsss)
-  pb <- pixbufNewFromData img_ptr ColorspaceRgb False 8 50 50 (50 * 3)
-  IsPixbuf pb
-  GI.Gtk.Objects.Window.windowSetDefaultIcon pb
+  -- pb <- pixbufNewFromData img_ptr ColorspaceRgb False 8 50 50 (50 * 3)
+  ccc <- GI.GLib.Structs.Bytes.bytesNewTake (Just myFile)
+  pb <- pixbufNewFromBytes ccc ColorspaceRgb False 8 50 50 (50 * 3)
+  GI.Gtk.Objects.Window.windowSetIcon win (Just pb)
 
   -- termonadIconPath <- getDataFileName "img/termonad-lambda.png"
   -- windowSetDefaultIconFromFile termonadIconPath

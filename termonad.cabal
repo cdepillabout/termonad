@@ -90,7 +90,8 @@ library
                      , gi-glib
                      , gi-gtk >= 3.0.24
                      , gi-pango
-                     , gtk3
+                     -- , gtk3
+                     , gi-gdkpixbuf
                      , gi-vte >= 2.91.19
                      , haskell-gi-base >= 0.21.2
                      , inline-c
