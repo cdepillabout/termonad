@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Termonad.App where
 
 import Termonad.Prelude
@@ -8,6 +10,11 @@ import Control.Monad.Fail (fail)
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
 import Data.Sequence (findIndexR)
 import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
+import GI.GdkPixbuf.Objects.Pixbuf
+import GI.GdkPixbuf.Enums
+import Data.FileEmbed (embedFile)
+import GI.GLib.Structs.Bytes
+import GI.Gtk.Objects.Window
 import GI.Gio
   ( ApplicationFlags(ApplicationFlagsFlagsNone)
   , MenuModel(MenuModel)
@@ -371,8 +378,10 @@ forceQuit mvarTMState = do
 
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
-  termonadIconPath <- getDataFileName "img/termonad-lambda.png"
-  windowSetDefaultIconFromFile termonadIconPath
+  let iconByteString = $(embedFile "img/termonad-lambda.png")
+  iconBytes <- bytesNewTake (Just iconByteString)
+  iconPixelbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 16 16 (16 * 3)
+  windowSetIcon win (Just iconPixelbuf)
 
   setupScreenStyle
   box <- objFromBuildUnsafe builder "content_box" Box
