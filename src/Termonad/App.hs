@@ -15,6 +15,11 @@ import GI.GdkPixbuf.Enums
 import Data.FileEmbed (embedFile)
 import GI.GLib.Structs.Bytes
 import GI.Gtk.Objects.Window
+import Codec.Picture
+import Codec.Picture.Png
+import Codec.Picture.Bitmap
+import Data.Either
+import System.Exit
 import GI.Gio
   ( ApplicationFlags(ApplicationFlagsFlagsNone)
   , MenuModel(MenuModel)
@@ -379,9 +384,15 @@ forceQuit mvarTMState = do
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
   let iconByteString = $(embedFile "img/termonad-lambda.png")
-  iconBytes <- bytesNewTake (Just iconByteString)
-  iconPixelbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 16 16 (16 * 3)
-  windowSetIcon win (Just iconPixelbuf)
+  let dynamicImage = decodePng iconByteString
+  case dynamicImage of
+    Left msg ->  die "Error happend while getting the icon."
+    Right image -> do
+      let img = convertRGBA8 image
+      let bitmapByteString = encodeBitmap img
+      iconBytes <- bytesNewTake (Just (toStrict bitmapByteString))
+      iconPixelbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 16 16 (16 * 3)
+      windowSetIcon win (Just iconPixelbuf)
 
   setupScreenStyle
   box <- objFromBuildUnsafe builder "content_box" Box
