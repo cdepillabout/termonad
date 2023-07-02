@@ -391,7 +391,7 @@ setupTermonad tmConfig app win builder = do
       let img = convertRGBA8 image
       let bitmapByteString = encodeBitmap img
       iconBytes <- bytesNewTake (Just (toStrict bitmapByteString))
-      iconPixelbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 16 16 (16 * 3)
+      iconPixelbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 16 16 (16 * 4)
       windowSetIcon win (Just iconPixelbuf)
 
   setupScreenStyle
