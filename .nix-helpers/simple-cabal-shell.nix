@@ -51,8 +51,7 @@
   ghc-version ? null
 }:
 
-# Make sure that at least one of the ghc and ghc-version arguments is null.
-# That is to say, they both can't be null.
+# Make sure that at least one of the ghc and ghc-version arguments is null. That is to say, they both can't be non-null.
 assert ! (builtins.isNull ghc) -> builtins.isNull ghc-version;
 assert ! (builtins.isNull ghc-version) -> builtins.isNull ghc;
 assert ! (builtins.isNull ghc-version) -> builtins.isString ghc-version;
