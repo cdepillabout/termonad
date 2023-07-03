@@ -167,15 +167,8 @@ test-suite termonad-test
   main-is:             Test.hs
   hs-source-dirs:      test
   build-depends:       base
-                     , genvalidity-containers
-                     , genvalidity-hspec
-                     , hedgehog
-                     , lens
-                     , QuickCheck
                      , termonad
                      , tasty
-                     , tasty-hedgehog
-                     , tasty-hspec
   default-language:    Haskell2010
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
   default-extensions:  DataKinds
