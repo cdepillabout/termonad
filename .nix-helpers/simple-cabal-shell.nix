@@ -108,6 +108,7 @@ pkgs.mkShell {
     # Required system libraries
     pkgs.gobject-introspection
     pkgs.libdatrie
+    pkgs.libepoxy
     pkgs.libselinux
     pkgs.libsepol
     pkgs.libthai
@@ -118,5 +119,6 @@ pkgs.mkShell {
     pkgs.vte
     pkgs.xorg.libXdmcp
     pkgs.xorg.libxcb
+    pkgs.xorg.libXtst
   ];
 }
