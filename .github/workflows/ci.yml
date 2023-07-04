@@ -160,6 +160,9 @@ jobs:
       - uses: actions/cache@v3
         name: Cache cabal-store
         with:
+          # TODO: It appears that this path doesn't exist??  Maybe in recent
+          # versions of cabal-install, this has changed to
+          # ~/.config/cabal/store
           path: ~/.cabal/store
           key: nix-simple-cabal-shell
 
