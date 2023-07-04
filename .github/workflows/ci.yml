@@ -108,9 +108,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+
     - uses: cachix/install-nix-action@v22
+
     - uses: DeterminateSystems/magic-nix-cache-action@v2
+
     - run: nix-build
+
     - run: nix-build shell.nix
 
   nix-flakes:
@@ -118,9 +122,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+
     - uses: cachix/install-nix-action@v22
+
     - uses: DeterminateSystems/magic-nix-cache-action@v2
+
     - run: nix build
+
     - run: nix build .#devShell.x86_64-linux
 
   nix-simple-cabal-shell:
@@ -128,11 +136,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+
     - uses: cachix/install-nix-action@v22
+
     - uses: DeterminateSystems/magic-nix-cache-action@v2
+
     - uses: actions/cache@v3
       name: Cache cabal-store
       with:
         path: ~/.cabal/store
         key: nix-simple-cabal-shell
+
     - run: nix-shell ./.nix-helpers/simple-cabal-shell.nix --command 'cabal build all --enable-tests --enable-benchmarks'
