@@ -147,4 +147,8 @@ jobs:
           path: ~/.cabal/store
           key: nix-simple-cabal-shell
 
-      - run: nix-shell ./.nix-helpers/simple-cabal-shell.nix --command 'cabal build all --enable-tests --enable-benchmarks'
+      - name: cabal update
+        run: nix-shell ./.nix-helpers/simple-cabal-shell.nix --command 'cabal update'
+
+      - name: cabal build
+        run: nix-shell ./.nix-helpers/simple-cabal-shell.nix --command 'cabal build all --enable-tests --enable-benchmarks'
