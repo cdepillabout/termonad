@@ -141,6 +141,16 @@ jobs:
 
       - uses: DeterminateSystems/magic-nix-cache-action@v2
 
+      # TODO: This cache actually needs to be keyed on the hash of the
+      # ./nix-helpers/simple-cabal-shell.nix derivation.  If that derivation
+      # changes, then we really, really should not reuse the same
+      # ~/.cabal/store directory.
+      #
+      # It is possible to get the hash of this derivation with a command like:
+      #
+      # $ nix eval --impure --raw --expr 'with (import <nixpkgs> {}).lib; let simpleCabalShell = import ./.nix-helpers/simple-cabal-shell.nix {}; in builtins.elemAt (splitString "-" (removePrefix (builtins.storeDir + "/") simpleCabalShell)) 0'
+      #
+      # Just need to load this into a variable, and throw it in the following key name
       - uses: actions/cache@v3
         name: Cache cabal-store
         with:
