@@ -27,35 +27,35 @@ jobs:
           - "9.4.5"
 
     steps:
-    - uses: actions/checkout@v3
-      #if: github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.ref == 'refs/heads/master'
+      - uses: actions/checkout@v3
+        #if: github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.ref == 'refs/heads/master'
 
-    - uses: haskell/actions/setup@v2
-      id: setup-haskell-cabal
-      name: Setup Haskell
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: ${{ matrix.cabal }}
+      - uses: haskell/actions/setup@v2
+        id: setup-haskell-cabal
+        name: Setup Haskell
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          cabal-version: ${{ matrix.cabal }}
 
-    - uses: actions/cache@v3
-      name: Cache cabal-store
-      with:
-        path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
-        key: ${{ matrix.os }}-${{ matrix.ghc }}-cabal
+      - uses: actions/cache@v3
+        name: Cache cabal-store
+        with:
+          path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
+          key: ${{ matrix.os }}-${{ matrix.ghc }}-cabal
 
-    - name: Update apt
-      run: sudo apt-get update
+      - name: Update apt
+        run: sudo apt-get update
 
-    - name: Install Required System Packages
-      run: sudo apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
+      - name: Install Required System Packages
+        run: sudo apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
 
-    - name: Build
-      run: |
-        cabal update
-        cabal build all --enable-tests --enable-benchmarks --write-ghc-environment-files=always
-    - name: Test
-      run: |
-        cabal test all --enable-tests
+      - name: Build
+        run: |
+          cabal update
+          cabal build all --enable-tests --enable-benchmarks --write-ghc-environment-files=always
+      - name: Test
+        run: |
+          cabal test all --enable-tests
 
   stack:
     name: stack ${{ matrix.resolver }} / ${{ matrix.os }}
@@ -75,76 +75,76 @@ jobs:
           # - macOS-latest
 
     steps:
-    - uses: actions/checkout@v3
-      #if: github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.ref == 'refs/heads/master'
+      - uses: actions/checkout@v3
+        #if: github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.ref == 'refs/heads/master'
 
-    - uses: haskell/actions/setup@v2
-      name: Setup Haskell Stack
-      with:
-        stack-version: ${{ matrix.stack }}
-        enable-stack: true
+      - uses: haskell/actions/setup@v2
+        name: Setup Haskell Stack
+        with:
+          stack-version: ${{ matrix.stack }}
+          enable-stack: true
 
-    - uses: actions/cache@v3
-      name: Cache ~/.stack
-      with:
-        path: ~/.stack
-        key: ${{ matrix.os }}-stack-${{ matrix.resolver }}
+      - uses: actions/cache@v3
+        name: Cache ~/.stack
+        with:
+          path: ~/.stack
+          key: ${{ matrix.os }}-stack-${{ matrix.resolver }}
 
-    - name: Update apt
-      run: sudo apt-get update
+      - name: Update apt
+        run: sudo apt-get update
 
-    - name: Install Required System Packages
-      run: sudo apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
+      - name: Install Required System Packages
+        run: sudo apt-get install gobject-introspection libgirepository1.0-dev libgtk-3-dev libvte-2.91-dev libpcre2-dev
 
-    - name: Build
-      run: |
-        stack ${{ matrix.resolver }} build --test --bench --no-run-tests --no-run-benchmarks --flag termonad:buildexamples
-    - name: Test
-      run: |
-        stack ${{ matrix.resolver }} test --flag termonad:buildexamples
+      - name: Build
+        run: |
+          stack ${{ matrix.resolver }} build --test --bench --no-run-tests --no-run-benchmarks --flag termonad:buildexamples
+      - name: Test
+        run: |
+          stack ${{ matrix.resolver }} test --flag termonad:buildexamples
 
   nix:
     name: nix / ubuntu-latest
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - uses: cachix/install-nix-action@v22
+      - uses: cachix/install-nix-action@v22
 
-    - uses: DeterminateSystems/magic-nix-cache-action@v2
+      - uses: DeterminateSystems/magic-nix-cache-action@v2
 
-    - run: nix-build
+      - run: nix-build
 
-    - run: nix-build shell.nix
+      - run: nix-build shell.nix
 
   nix-flakes:
     name: nix flakes / ubuntu-latest
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - uses: cachix/install-nix-action@v22
+      - uses: cachix/install-nix-action@v22
 
-    - uses: DeterminateSystems/magic-nix-cache-action@v2
+      - uses: DeterminateSystems/magic-nix-cache-action@v2
 
-    - run: nix build
+      - run: nix build
 
-    - run: nix build .#devShell.x86_64-linux
+      - run: nix build .#devShell.x86_64-linux
 
   nix-simple-cabal-shell:
     name: nix simple cabal shell.nix / ubuntu-latest
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - uses: cachix/install-nix-action@v22
+      - uses: cachix/install-nix-action@v22
 
-    - uses: DeterminateSystems/magic-nix-cache-action@v2
+      - uses: DeterminateSystems/magic-nix-cache-action@v2
 
-    - uses: actions/cache@v3
-      name: Cache cabal-store
-      with:
-        path: ~/.cabal/store
-        key: nix-simple-cabal-shell
+      - uses: actions/cache@v3
+        name: Cache cabal-store
+        with:
+          path: ~/.cabal/store
+          key: nix-simple-cabal-shell
 
-    - run: nix-shell ./.nix-helpers/simple-cabal-shell.nix --command 'cabal build all --enable-tests --enable-benchmarks'
+      - run: nix-shell ./.nix-helpers/simple-cabal-shell.nix --command 'cabal build all --enable-tests --enable-benchmarks'
