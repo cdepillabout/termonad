@@ -24,5 +24,4 @@
 , enableSixelSupport ? false
 }@args:
 
-(import .nix-helpers/nixpkgs.nix args).termonad-with-packages
-
+(import .nix-helpers/nixpkgs.nix args).termonad

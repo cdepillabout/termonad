@@ -100,4 +100,4 @@ let
   };
 in
 
-pkgs.termonad-with-packages
+pkgs.termonad
