@@ -44,7 +44,7 @@
         let
           pkgs = nixpkgsFor.${system};
         in {
-          termonad = pkgs.termonad-with-packages;
+          termonad = pkgs.termonad;
         }
       );
 

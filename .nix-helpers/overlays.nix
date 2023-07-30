@@ -146,7 +146,7 @@ let
       lens
     ];
 
-    termonad-with-packages =
+    termonad =
       let
         # GHC environment that has termonad available, as well as the packages
         # specified above in extraHaskellPackages.
@@ -155,7 +155,7 @@ let
             (hpkgs: [ hpkgs.termonad ] ++ self.termonadExtraHaskellPackages hpkgs);
       in
       self.stdenv.mkDerivation {
-        name = "termonad-with-packages-ghc-${env.version}";
+        name = "termonad-${self.termonadKnownWorkingHaskellPkgSet.termonad.version}-ghc-${env.version}";
         buildInputs = [
           self.gdk-pixbuf
           self.gnome.adwaita-icon-theme
@@ -178,6 +178,10 @@ let
         preferLocalBuild = true;
         allowSubstitutes = false;
       };
+
+    # This is just a small compatibility layer for people that used to use
+    # termonad-with-packages instead of just termonad.
+    termonad-with-packages = self.termonad;
   };
 in
 
