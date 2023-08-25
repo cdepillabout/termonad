@@ -396,10 +396,10 @@ setupTermonad tmConfig app win builder = do
   case dynamicImage of
     Left msg -> die "Error happened while getting the icon."
     Right image -> do
-      let img = convertRGBA8 image
+      let img = convertRGB8 image
       let bitmapByteString = encodeBitmap img
       iconBytes <- bytesNewTake (Just (toStrict bitmapByteString))
-      iconPixelbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 256 256 (256 * 4)
+      iconPixelbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 256 256 (256 * 3)
 
       -- The following line is for debug only. It is temporary.
       pixbufSavev iconPixelbuf "bla" "png" Nothing Nothing
