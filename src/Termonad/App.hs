@@ -403,6 +403,7 @@ setupTermonad tmConfig app win builder = do
 
       -- The following line is for debug only. It is temporary.
       pixbufSavev iconPixelbuf "bla" "png" Nothing Nothing
+      _ <- writeDynamicPng "bla2.png" image -- This is good.
 
       windowSetIcon win (Just iconPixelbuf)
 
