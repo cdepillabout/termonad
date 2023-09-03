@@ -401,7 +401,7 @@ setupTermonad tmConfig app win builder = do
       putStrLn "00000000000000000"
       print . show $ l
       putStrLn "00000000000000000"
-      let bla2 = toByteString imm
+      let bla2 = reverse $ toByteString imm
       putStrLn "77777777777777777"
       print . show $ B.length bla2
       putStrLn "77777777777777777"
