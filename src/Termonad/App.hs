@@ -2,14 +2,13 @@
 
 module Termonad.App where
 
-import Codec.Picture
-import Codec.Picture.Bitmap
-import Codec.Picture.Png
+import Codec.Picture.Repa (convertImage, decodeImageRGB, toByteString, toUnboxed, decodeImage)
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
 import Control.Lens (over, set, view, (.~), (^.), (^..))
 import Control.Monad.Fail (fail)
+import qualified Data.ByteString as B
 import Data.Either
-import Data.FileEmbed (embedFile)
+import Data.FileEmbed
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
 import Data.Sequence (findIndexR)
 import GI.GLib.Structs.Bytes
@@ -392,20 +391,49 @@ forceQuit mvarTMState = do
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
   let iconByteString = $(embedFile "img/termonad-lambda.png")
-  let dynamicImage = decodePng iconByteString
-  case dynamicImage of
-    Left msg -> die "Error happened while getting the icon."
-    Right image -> do
-      let img = convertRGB8 image
-      let bitmapByteString = encodeBitmap img
-      iconBytes <- bytesNewTake (Just (toStrict bitmapByteString))
+
+  let repaImg = decodeImageRGB iconByteString
+  case repaImg of
+    Left msg -> die "------------------------sdf---------------------"
+    Right imm -> do
+      let bla = toUnboxed imm
+      let l = length bla
+      putStrLn "00000000000000000"
+      print . show $ l
+      putStrLn "00000000000000000"
+      let bla2 = toByteString imm
+      putStrLn "77777777777777777"
+      print . show $ B.length bla2
+      putStrLn "77777777777777777"
+      iconBytes <- bytesNewTake (Just (bla2))
       iconPixelbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 256 256 (256 * 3)
-
-      -- The following line is for debug only. It is temporary.
-      pixbufSavev iconPixelbuf "bla" "png" Nothing Nothing
-      _ <- writeDynamicPng "bla2.png" image -- This is good.
-
       windowSetIcon win (Just iconPixelbuf)
+      pixbufSavev iconPixelbuf "bla3" "png" Nothing Nothing
+
+  -- putStrLn "11111111111111"
+  -- print . show $ B.length iconByteString
+  -- putStrLn "11111111111111"
+  -- let dynamicImage = decodePng iconByteString
+  -- case dynamicImage of
+  --   Left msg -> die "Error happened while getting the icon."
+  --   Right image -> do
+  --     let img = convertRGB8 image
+  --     let bitmapByteString = encodeBitmap img
+  --     putStrLn "22222222222222"
+  --     print . show $ B.length (toStrict bitmapByteString)
+  --     putStrLn "22222222222222"
+  --     iconBytes <- bytesNewTake (Just (toStrict bitmapByteString))
+  --     putStrLn "3333333333333"
+  --     bla <- bytesGetSize iconBytes
+  --     print $ show bla
+  --     putStrLn "3333333333333"
+  --     iconPixelbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 256 256 (256 * 3)
+  --
+  --     -- The following line is for debug only. It is temporary.
+  --     pixbufSavev iconPixelbuf "bla" "png" Nothing Nothing
+  --     _ <- writeDynamicPng "bla2.png" image -- This is good.
+  --
+  --     windowSetIcon win (Just iconPixelbuf)
 
   setupScreenStyle
   box <- objFromBuildUnsafe builder "content_box" Box
