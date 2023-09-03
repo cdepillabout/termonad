@@ -394,21 +394,15 @@ setupTermonad tmConfig app win builder = do
 
   let repaImg = decodeImageRGB iconByteString
   case repaImg of
-    Left msg -> die "------------------------sdf---------------------"
-    Right imm -> do
-      let bla = toUnboxed imm
-      let l = length bla
-      putStrLn "00000000000000000"
-      print . show $ l
-      putStrLn "00000000000000000"
-      let bla2 = reverse $ toByteString imm
-      putStrLn "77777777777777777"
-      print . show $ B.length bla2
-      putStrLn "77777777777777777"
-      iconBytes <- bytesNewTake (Just (bla2))
+    Left _ -> die "Error occured. Could not decode the main icon."
+    Right repaImage -> do
+      let byteStringImage = reverse $ toByteString repaImage
+      iconBytes <- bytesNewTake (Just byteStringImage)
       iconPixelbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 256 256 (256 * 3)
       windowSetIcon win (Just iconPixelbuf)
-      pixbufSavev iconPixelbuf "bla3" "png" Nothing Nothing
+
+      -- The following line is for debug only. It is temporary.
+      pixbufSavev iconPixelbuf "debug_icon" "png" Nothing Nothing
 
   -- putStrLn "11111111111111"
   -- print . show $ B.length iconByteString
