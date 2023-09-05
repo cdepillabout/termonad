@@ -394,7 +394,7 @@ setupTermonad tmConfig app win builder = do
 
   let repaImg = decodeImageRGB iconByteString
   case repaImg of
-    Left _ -> die "Error occured. Could not decode the main icon."
+    Left _ -> die "Error occurred. Could not decode the main icon."
     Right repaImage -> do
       let byteStringImage = reverse $ toByteString repaImage
       iconBytes <- bytesNewTake (Just byteStringImage)
