@@ -398,11 +398,11 @@ setupTermonad tmConfig app win builder = do
     Right repaImage -> do
       let byteStringImage = reverse $ toByteString repaImage
       iconBytes <- bytesNewTake (Just byteStringImage)
-      iconPixelbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 256 256 (256 * 3)
-      windowSetIcon win (Just iconPixelbuf)
+      iconPixbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 256 256 (256 * 3)
+      windowSetIcon win (Just iconPixbuf)
 
       -- The following line is for debug only. It is temporary.
-      pixbufSavev iconPixelbuf "debug_icon" "png" Nothing Nothing
+      pixbufSavev iconPixbuf "debug_icon" "png" Nothing Nothing
 
   -- putStrLn "11111111111111"
   -- print . show $ B.length iconByteString
