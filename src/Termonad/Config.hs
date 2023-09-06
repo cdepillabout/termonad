@@ -21,10 +21,12 @@
 --
 --  main :: IO ()
 --  main = 'start' $ 'defaultTMConfig'
---    { 'showScrollbar' = 'ShowScrollbarNever'
---    , 'confirmExit' = False
---    , 'showMenu' = False
---    , 'cursorBlinkMode' = 'CursorBlinkModeOff'
+--    { `options` = `defaultConfigOptions`
+--      { 'showScrollbar' = 'ShowScrollbarNever'
+--      , 'confirmExit' = False
+--      , 'showMenu' = False
+--      , 'cursorBlinkMode' = 'CursorBlinkModeOff'
+--      }
 --    }
 -- @
 --
