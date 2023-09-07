@@ -21,7 +21,7 @@
 --
 --  main :: IO ()
 --  main = 'start' $ 'defaultTMConfig'
---    { `options` = `defaultConfigOptions`
+--    { 'options' = 'defaultConfigOptions'
 --      { 'showScrollbar' = 'ShowScrollbarNever'
 --      , 'confirmExit' = False
 --      , 'showMenu' = False
