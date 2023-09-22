@@ -2,7 +2,8 @@
 
 module Termonad.App where
 
-import Codec.Picture.Repa (convertImage, decodeImageRGB, toByteString, toUnboxed, decodeImage)
+import Codec.Picture (encodePng)
+import Codec.Picture.Repa (RGBA, convertImage, decodeImage, decodeImageRGB, toByteString, toUnboxed)
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
 import Control.Lens (over, set, view, (.~), (^.), (^..))
 import Control.Monad.Fail (fail)
@@ -130,6 +131,8 @@ import GI.Vte
     terminalSetScrollbackLines,
     terminalSetWordCharExceptions,
   )
+import Graphics.Image (Image, RGB, Readable, VS, YA)
+import Graphics.Image.IO (JPG (JPG), PNG (PNG), decode, toJPImageRGB8, toJPImageRGBA8)
 import Paths_termonad (getDataFileName)
 import System.Environment (getExecutablePath)
 import System.Exit
@@ -392,17 +395,30 @@ setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> 
 setupTermonad tmConfig app win builder = do
   let iconByteString = $(embedFile "img/termonad-lambda.png")
 
-  let repaImg = decodeImageRGB iconByteString
-  case repaImg of
-    Left _ -> die "Error occurred. Could not decode the main icon."
-    Right repaImage -> do
-      let byteStringImage = reverse $ toByteString repaImage
-      iconBytes <- bytesNewTake (Just byteStringImage)
+  let hipImage = decode PNG iconByteString :: Either String (Image VS RGBA Word8)
+  case hipImage of
+    Left errorMessage -> die errorMessage
+    Right hipImg -> do
+      let jpImage = toJPImageRGBA8 hipImg
+      let byteStringImage = encodePng jpImage
+      iconBytes <- bytesNewTake (Just (toStrict byteStringImage))
       iconPixbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 256 256 (256 * 3)
       windowSetIcon win (Just iconPixbuf)
-
+      
       -- The following line is for debug only. It is temporary.
       pixbufSavev iconPixbuf "debug_icon" "png" Nothing Nothing
+
+  -- let repaImg = decodeImageRGB iconByteString
+  -- case repaImg of
+  --   Left _ -> die "Error occurred. Could not decode the main icon."
+  --   Right repaImage -> do
+  --     let byteStringImage = reverse $ toByteString repaImage
+  --     iconBytes <- bytesNewTake (Just byteStringImage)
+  --     iconPixbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 256 256 (256 * 3)
+  --     windowSetIcon win (Just iconPixbuf)
+  --
+  --     -- The following line is for debug only. It is temporary.
+  --     pixbufSavev iconPixbuf "debug_icon" "png" Nothing Nothing
 
   -- putStrLn "11111111111111"
   -- print . show $ B.length iconByteString

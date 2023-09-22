@@ -108,6 +108,7 @@ library
                      , gi-gdkpixbuf
                      , JuicyPixels
                      , JuicyPixels-repa
+                     , hip
   default-language:    Haskell2010
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
   default-extensions:  DataKinds
