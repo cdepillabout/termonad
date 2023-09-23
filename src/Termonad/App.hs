@@ -131,7 +131,7 @@ import GI.Vte
     terminalSetScrollbackLines,
     terminalSetWordCharExceptions,
   )
-import Graphics.Image (Image, RGB, Readable, VS, YA, Writable (encode))
+import Graphics.Image (Image, RGB, Readable, VS, YA, Writable (encode), flipH)
 import Graphics.Image.IO (JPG (JPG), PNG (PNG), decode, toJPImageRGB8)
 import Paths_termonad (getDataFileName)
 import System.Environment (getExecutablePath)
@@ -402,9 +402,8 @@ setupTermonad tmConfig app win builder = do
   case hipImage of
     Left errorMessage -> do 
       die errorMessage
-      -- JuicyPixel decoding error: Input image is in RGBA8 (Pixel RGBA Word8), cannot convert it to RGB8 (Pixel RGB Word8) colorspace.
     Right hipImg -> do
-      let jpImage = toJPImageRGBA8 hipImg
+      let jpImage = toJPImageRGBA8 $ flipH hipImg
       let repaImage = convertImage jpImage :: Codec.Picture.Repa.Img Codec.Picture.Repa.RGBA
       let byteStringImage = reverse $ toByteString repaImage
       iconBytes <- bytesNewTake (Just byteStringImage)
