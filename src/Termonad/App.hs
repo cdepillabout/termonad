@@ -408,7 +408,7 @@ setupTermonad tmConfig app win builder = do
       let repaImage = convertImage jpImage :: Codec.Picture.Repa.Img Codec.Picture.Repa.RGBA
       let byteStringImage = reverse $ toByteString repaImage
       iconBytes <- bytesNewTake (Just byteStringImage)
-      iconPixbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb True 8 256 256 (256 * 3)
+      iconPixbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb True 8 256 256 (256 * 4)
       windowSetIcon win (Just iconPixbuf)
       
       -- The following line is for debug only. It is temporary.
