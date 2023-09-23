@@ -2,8 +2,8 @@
 
 module Termonad.App where
 
-import Codec.Picture (encodePng)
-import Codec.Picture.Repa (RGBA, convertImage, decodeImage, decodeImageRGB, toByteString, toUnboxed)
+import Codec.Picture (encodePng, PixelRGBA8, PixelRGB8)
+import Codec.Picture.Repa (convertImage, decodeImage, decodeImageRGB, toByteString, toUnboxed, Img, RGBA, RGB)
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
 import Control.Lens (over, set, view, (.~), (^.), (^..))
 import Control.Monad.Fail (fail)
@@ -131,8 +131,8 @@ import GI.Vte
     terminalSetScrollbackLines,
     terminalSetWordCharExceptions,
   )
-import Graphics.Image (Image, RGB, Readable, VS, YA)
-import Graphics.Image.IO (JPG (JPG), PNG (PNG), decode, toJPImageRGB8, toJPImageRGBA8)
+import Graphics.Image (Image, RGB, Readable, VS, YA, Writable (encode))
+import Graphics.Image.IO (JPG (JPG), PNG (PNG), decode, toJPImageRGB8)
 import Paths_termonad (getDataFileName)
 import System.Environment (getExecutablePath)
 import System.Exit
@@ -193,6 +193,9 @@ import Termonad.Types
     tmStateNotebook,
   )
 import Termonad.XML (interfaceText, menuText, preferencesText)
+import Graphics.Image.IO.Formats (toJPImageRGBA8)
+import qualified Codec.Picture.Types
+import Graphics.Image.ColorSpace (RGBA, RGB)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
@@ -395,14 +398,17 @@ setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> 
 setupTermonad tmConfig app win builder = do
   let iconByteString = $(embedFile "img/termonad-lambda.png")
 
-  let hipImage = decode PNG iconByteString :: Either String (Image VS RGBA Word8)
+  let hipImage = decode PNG iconByteString :: Either String (Image VS Graphics.Image.ColorSpace.RGBA Word8)
   case hipImage of
-    Left errorMessage -> die errorMessage
+    Left errorMessage -> do 
+      die errorMessage
+      -- JuicyPixel decoding error: Input image is in RGBA8 (Pixel RGBA Word8), cannot convert it to RGB8 (Pixel RGB Word8) colorspace.
     Right hipImg -> do
       let jpImage = toJPImageRGBA8 hipImg
-      let byteStringImage = encodePng jpImage
-      iconBytes <- bytesNewTake (Just (toStrict byteStringImage))
-      iconPixbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 256 256 (256 * 3)
+      let repaImage = convertImage jpImage :: Codec.Picture.Repa.Img Codec.Picture.Repa.RGBA
+      let byteStringImage = reverse $ toByteString repaImage
+      iconBytes <- bytesNewTake (Just byteStringImage)
+      iconPixbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb True 8 256 256 (256 * 3)
       windowSetIcon win (Just iconPixbuf)
       
       -- The following line is for debug only. It is temporary.
