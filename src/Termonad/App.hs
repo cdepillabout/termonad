@@ -2,8 +2,9 @@
 
 module Termonad.App where
 
-import Codec.Picture (encodePng, PixelRGBA8, PixelRGB8)
-import Codec.Picture.Repa (convertImage, decodeImage, decodeImageRGB, toByteString, toUnboxed, Img, RGBA, RGB)
+import Codec.Picture (PixelRGB8, PixelRGBA8, encodePng)
+import Codec.Picture.Repa (Img, RGB, RGBA, convertImage, decodeImage, decodeImageRGB, toByteString, toUnboxed)
+import qualified Codec.Picture.Types
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
 import Control.Lens (over, set, view, (.~), (^.), (^..))
 import Control.Monad.Fail (fail)
@@ -131,8 +132,10 @@ import GI.Vte
     terminalSetScrollbackLines,
     terminalSetWordCharExceptions,
   )
-import Graphics.Image (Image, RGB, Readable, VS, YA, Writable (encode), flipH)
+import Graphics.Image (Image, RGB, Readable, VS, Writable (encode), YA, flipH)
+import Graphics.Image.ColorSpace (RGB, RGBA)
 import Graphics.Image.IO (JPG (JPG), PNG (PNG), decode, toJPImageRGB8)
+import Graphics.Image.IO.Formats (toJPImageRGBA8)
 import Paths_termonad (getDataFileName)
 import System.Environment (getExecutablePath)
 import System.Exit
@@ -193,9 +196,6 @@ import Termonad.Types
     tmStateNotebook,
   )
 import Termonad.XML (interfaceText, menuText, preferencesText)
-import Graphics.Image.IO.Formats (toJPImageRGBA8)
-import qualified Codec.Picture.Types
-import Graphics.Image.ColorSpace (RGBA, RGB)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
@@ -394,61 +394,30 @@ forceQuit mvarTMState = do
   let app = tmState ^. lensTMStateApp
   applicationQuit app
 
-setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
-setupTermonad tmConfig app win builder = do
+getIconAsPixbuf :: IO Pixbuf
+getIconAsPixbuf = do
   let iconByteString = $(embedFile "img/termonad-lambda.png")
 
   let hipImage = decode PNG iconByteString :: Either String (Image VS Graphics.Image.ColorSpace.RGBA Word8)
   case hipImage of
-    Left errorMessage -> do 
+    Left errorMessage -> do
       die errorMessage
     Right hipImg -> do
       let jpImage = toJPImageRGBA8 $ flipH hipImg
-      let repaImage = convertImage jpImage :: Codec.Picture.Repa.Img Codec.Picture.Repa.RGBA
+      let repaImage = convertImage jpImage :: Img Codec.Picture.Repa.RGBA
       let byteStringImage = reverse $ toByteString repaImage
       iconBytes <- bytesNewTake (Just byteStringImage)
       iconPixbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb True 8 256 256 (256 * 4)
-      windowSetIcon win (Just iconPixbuf)
-      
+
       -- The following line is for debug only. It is temporary.
-      pixbufSavev iconPixbuf "debug_icon" "png" Nothing Nothing
+      pixbufSavev iconPixbuf "debug_icon.png" "png" Nothing Nothing
 
-  -- let repaImg = decodeImageRGB iconByteString
-  -- case repaImg of
-  --   Left _ -> die "Error occurred. Could not decode the main icon."
-  --   Right repaImage -> do
-  --     let byteStringImage = reverse $ toByteString repaImage
-  --     iconBytes <- bytesNewTake (Just byteStringImage)
-  --     iconPixbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 256 256 (256 * 3)
-  --     windowSetIcon win (Just iconPixbuf)
-  --
-  --     -- The following line is for debug only. It is temporary.
-  --     pixbufSavev iconPixbuf "debug_icon" "png" Nothing Nothing
+      return iconPixbuf
 
-  -- putStrLn "11111111111111"
-  -- print . show $ B.length iconByteString
-  -- putStrLn "11111111111111"
-  -- let dynamicImage = decodePng iconByteString
-  -- case dynamicImage of
-  --   Left msg -> die "Error happened while getting the icon."
-  --   Right image -> do
-  --     let img = convertRGB8 image
-  --     let bitmapByteString = encodeBitmap img
-  --     putStrLn "22222222222222"
-  --     print . show $ B.length (toStrict bitmapByteString)
-  --     putStrLn "22222222222222"
-  --     iconBytes <- bytesNewTake (Just (toStrict bitmapByteString))
-  --     putStrLn "3333333333333"
-  --     bla <- bytesGetSize iconBytes
-  --     print $ show bla
-  --     putStrLn "3333333333333"
-  --     iconPixelbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb False 8 256 256 (256 * 3)
-  --
-  --     -- The following line is for debug only. It is temporary.
-  --     pixbufSavev iconPixelbuf "bla" "png" Nothing Nothing
-  --     _ <- writeDynamicPng "bla2.png" image -- This is good.
-  --
-  --     windowSetIcon win (Just iconPixelbuf)
+setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
+setupTermonad tmConfig app win builder = do
+  iconPixbuf <- getIconAsPixbuf
+  windowSetIcon win (Just iconPixbuf)
 
   setupScreenStyle
   box <- objFromBuildUnsafe builder "content_box" Box
