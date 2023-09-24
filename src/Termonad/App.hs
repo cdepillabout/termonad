@@ -2,13 +2,9 @@
 
 module Termonad.App where
 
-import Codec.Picture (PixelRGB8, PixelRGBA8, encodePng)
-import Codec.Picture.Repa (Img, RGB, RGBA, convertImage, decodeImage, decodeImageRGB, toByteString, toUnboxed)
-import qualified Codec.Picture.Types
 import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
 import Control.Lens (over, set, view, (.~), (^.), (^..))
 import Control.Monad.Fail (fail)
-import qualified Data.ByteString as B
 import Data.Either
 import Data.FileEmbed
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
@@ -196,6 +192,7 @@ import Termonad.Types
     tmStateNotebook,
   )
 import Termonad.XML (interfaceText, menuText, preferencesText)
+import Codec.Picture.Repa (Img, RGBA, toByteString, convertImage)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
