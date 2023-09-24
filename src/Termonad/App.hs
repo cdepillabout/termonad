@@ -404,12 +404,7 @@ getIconAsPixbuf = do
       let repaImage = convertImage jpImage :: Img Codec.Picture.Repa.RGBA
       let byteStringImage = reverse $ toByteString repaImage
       iconBytes <- bytesNewTake (Just byteStringImage)
-      iconPixbuf <- pixbufNewFromBytes iconBytes ColorspaceRgb True 8 256 256 (256 * 4)
-
-      -- The following line is for debug only. It is temporary.
-      pixbufSavev iconPixbuf "debug_icon.png" "png" Nothing Nothing
-
-      return iconPixbuf
+      pixbufNewFromBytes iconBytes ColorspaceRgb True 8 256 256 (256 * 4)
 
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
