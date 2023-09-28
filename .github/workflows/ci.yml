@@ -52,7 +52,7 @@ jobs:
     - name: Build
       run: |
         cabal update
-        cabal build all --enable-tests --enable-benchmarks --write-ghc-environment-files=always
+        cabal build all --ghc-options="-fforce-recomp --enable-tests --enable-benchmarks --write-ghc-environment-files=always
     - name: Test
       run: |
         cabal test all --enable-tests
