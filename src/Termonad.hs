@@ -11,9 +11,10 @@
 
 module Termonad
   ( defaultMain
+  , startWithCliArgs
   , start
   , module Config
   ) where
 
-import Termonad.App (defaultMain, start)
+import Termonad.App (defaultMain, start, startWithCliArgs)
 import Termonad.Config as Config

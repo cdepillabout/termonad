@@ -59,6 +59,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Termonad
                      , Termonad.App
+                     , Termonad.Cli
                      , Termonad.Config
                      , Termonad.Config.Colour
                      , Termonad.Gtk
@@ -91,6 +92,7 @@ library
                      , haskell-gi-base >= 0.21.2
                      , inline-c
                      , lens
+                     , optparse-applicative
                      , pretty-simple
                      , text
                      , transformers

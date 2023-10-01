@@ -193,6 +193,7 @@ import Termonad.Types
   )
 import Termonad.XML (interfaceText, menuText, preferencesText)
 import Codec.Picture.Repa (Img, RGBA, toByteString, convertImage)
+import Termonad.Cli (parseCliArgs, applyCliArgs)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
@@ -913,14 +914,23 @@ appStartup _app = pure ()
 --
 -- Do not perform any of the recompilation operations that the 'defaultMain'
 -- function does.
+--
+-- This function _does_ parse command line arguments.
 start :: TMConfig -> IO ()
 start tmConfig = do
+  args <- getArgs
+  putStrLn $ "CLI args from start: " <> tshow args
   -- app <- appNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
   -- Make sure the application is not unique, so we can open multiple copies of it.
   app <- appNew Nothing [ApplicationFlagsFlagsNone]
   void $ onApplicationStartup app (appStartup app)
   void $ onApplicationActivate app (appActivate tmConfig app)
   void $ applicationRun app Nothing
+
+startWithCliArgs :: TMConfig -> IO ()
+startWithCliArgs tmConfig = do
+  cliArgs <- parseCliArgs
+  start (over lensOptions (applyCliArgs cliArgs) tmConfig)
 
 -- | Run Termonad with the given 'TMConfig'.
 --
@@ -943,7 +953,7 @@ start tmConfig = do
 --     on to this new Termonad process.
 --
 --     If GHC fails to recompile the @~\/.config\/termonad\/termonad.hs@ file, then
---     Termonad will just execute 'start' with the 'TMConfig' passed in.
+--     Termonad will just execute 'startWithCliArgs' with the 'TMConfig' passed in.
 --
 --     If the @~\/.cache\/termonad\/termonad-linux-x86_64@ binary has been modified
 --     after the @~\/.config\/termonad\/termonad.hs@ file, then Termonad will
@@ -961,16 +971,16 @@ start tmConfig = do
 --     options will be passed on to this new Termonad process.
 --
 --     If GHC fails to recompile the @~\/.config\/termonad\/termonad.hs@ file, then
---     Termonad will just execute 'start' with the 'TMConfig' passed in.
+--     Termonad will just execute 'startWithCliArgs' with the 'TMConfig' passed in.
 --
 -- - @~\/.config\/termonad\/termonad.hs@ does not exist, @~\/.cache\/termonad\/termonad-linux-x86_64@ exists
 --
 --     Termonad will ignore the @~\/.cache\/termonad\/termonad-linux-x86_64@ binary
---     and just run 'start' with the 'TMConfig' passed to this function.
+--     and just run 'startWithCliArgs' with the 'TMConfig' passed to this function.
 --
 -- - @~\/.config\/termonad\/termonad.hs@ does not exist, @~\/.cache\/termonad\/termonad-linux-x86_64@ does not exist
 --
---     Termonad will run 'start' with the 'TMConfig' passed to this function.
+--     Termonad will run 'startWithCliArgs' with the 'TMConfig' passed to this function.
 --
 -- Other notes:
 --
@@ -979,23 +989,38 @@ start tmConfig = do
 --    system.
 --
 -- 2. In your own @~\/.config\/termonad\/termonad.hs@ file, you can use either
---    'defaultMain' or 'start'.  As long as you always execute the system-wide
+--    'defaultMain' or 'startWithCliArgs'.  As long as you always execute the system-wide
 --    @termonad@ binary (instead of the binary produced as
 --    @~\/.cache\/termonad\/termonad-linux-x86_64@), the effect should be the same.
 --
--- 3. When running the system-wide @termonad@ binary, the initial 'TMConfig'
---    that gets passed into this function comes from
---    'Termonad.PreferencesFile.tmConfigFromPreferencesFile'.
---
--- 4. If you directly run the cached termonad binary (e.g.
+-- 3. If you directly run the cached termonad binary (e.g.
 --    @~\/.cache\/termonad\/termonad-linux-x86_64@) instead of the
 --    system-installed Termonad binary (e.g. @\/usr\/bin\/termonad@), the Termonad
 --    /will/ recompile the the configuration file
 --    @~\/.config\/termonad\/termonad.hs@ according to the above logic (while
 --    possibly overwriting the executable file for the binary you're currently
 --    running), but it /will not/ re-exec into the newly built @termonad@ binary.
+--
+-- 4. When running the system-wide @termonad@ binary, the initial 'TMConfig'
+--    that gets passed into this function comes from
+--    'Termonad.PreferencesFile.tmConfigFromPreferencesFile'.  As stated above,
+--    this initial 'TMConfig' gets ignored if users have a
+--    @~\/.config\/termonad\/termonad.hs@ file that gets recompiled and re-execed.
+--
+--    End users generally call 'defaultMain' in their
+--    @~\/.config\/termonad\/termonad.hs@ file.
+--
+--    'defaultMain' interally calls 'startWithCliArgs', which parses CLI arguments
+--    and combines them with the passed-in 'TMConfig'.  'startWithCliArgs' then
+--    internally calls 'start'.
+--
+--    If you don't want the re-compiling and re-exec functionality, you can directly
+--    use 'startWithCliArgs'.  If you also don't want the CLI argument parsing
+--    functionality, you can directly use 'start'.
 defaultMain :: TMConfig -> IO ()
 defaultMain tmConfig = do
+  args <- getArgs
+  putStrLn $ "CLI args from defaultMain: " <> tshow args
   let params = newParams "termonad" realMainFunc collectErrs
           { projectName = "termonad"
           , showError = \(cfg, oldErrs) newErr -> (cfg, oldErrs <> "\n" <> newErr)
@@ -1007,7 +1032,7 @@ defaultMain tmConfig = do
           putStrLn $
             "Could not find ghc on your PATH.  Ignoring your termonad.hs "
               <> "configuration file and running termonad with default settings."
-          start tmConfig
+          startWithCliArgs tmConfig
       | otherwise -> do
           putStrLn "IO error occurred when trying to run termonad:"
           print ioErr
@@ -1018,11 +1043,11 @@ defaultMain tmConfig = do
     realMainFunc :: (TMConfig, String) -> IO ()
     realMainFunc (cfg, errs) =
       case errs of
-        "" -> start cfg
+        "" -> startWithCliArgs cfg
         _ -> do
           putStrLn $ "Errors from dyre when recompiling Termonad:" <> pack errs
           putStrLn "Continuing with Termonad without re-execing into recompiled binary..."
-          start cfg
+          startWithCliArgs cfg
 
     -- A function that can easily collect errors from dyre
     collectErrs :: (TMConfig, String) -> String -> (TMConfig, String)
