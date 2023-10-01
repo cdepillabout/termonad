@@ -2,7 +2,7 @@
 
 module Termonad.App where
 
-import Config.Dyre (defaultParams, projectName, realMain, showError, wrapMain)
+import Config.Dyre (wrapMain, newParams)
 import Control.Lens (over, set, view, (.~), (^.), (^..))
 import Control.Monad.Fail (fail)
 import Data.Either
@@ -939,7 +939,8 @@ start tmConfig = do
 --     GHC to recompile the @~\/.config\/termonad\/termonad.hs@ file, producing a
 --     new binary at @~\/.cache\/termonad\/termonad-linux-x86_64@.  This new binary
 --     will be re-executed.  The 'TMConfig' passed to this 'defaultMain' will be
---     effectively thrown away.
+--     effectively thrown away, however all command line options will be passed
+--     on to this new Termonad process.
 --
 --     If GHC fails to recompile the @~\/.config\/termonad\/termonad.hs@ file, then
 --     Termonad will just execute 'start' with the 'TMConfig' passed in.
@@ -947,14 +948,17 @@ start tmConfig = do
 --     If the @~\/.cache\/termonad\/termonad-linux-x86_64@ binary has been modified
 --     after the @~\/.config\/termonad\/termonad.hs@ file, then Termonad will
 --     re-exec the @~\/.cache\/termonad\/termonad-linux-x86_64@ binary.  The
---     'TMConfig' passed to this 'defaultMain' will be effectively thrown away.
+--     'TMConfig' passed to this 'defaultMain' will be effectively thrown away,
+--     however all command line options will be passed on to this new Termonad
+--     process.
 --
 -- - @~\/.config\/termonad\/termonad.hs@ exists, @~\/.cache\/termonad\/termonad-linux-x86_64@ does not exist
 --
 --     Termonad will use GHC to recompile the @~\/.config\/termonad\/termonad.hs@
 --     file, producing a new binary at @~\/.cache\/termonad\/termonad-linux-x86_64@.
 --     This new binary will be re-executed.  The 'TMConfig' passed to this
---     'defaultMain' will be effectively thrown away.
+--     'defaultMain' will be effectively thrown away, however all command line
+--     options will be passed on to this new Termonad process.
 --
 --     If GHC fails to recompile the @~\/.config\/termonad\/termonad.hs@ file, then
 --     Termonad will just execute 'start' with the 'TMConfig' passed in.
@@ -978,14 +982,24 @@ start tmConfig = do
 --    'defaultMain' or 'start'.  As long as you always execute the system-wide
 --    @termonad@ binary (instead of the binary produced as
 --    @~\/.cache\/termonad\/termonad-linux-x86_64@), the effect should be the same.
+--
+-- 3. When running the system-wide @termonad@ binary, the initial 'TMConfig'
+--    that gets passed into this function comes from
+--    'Termonad.PreferencesFile.tmConfigFromPreferencesFile'.
+--
+-- 4. If you directly run the cached termonad binary (e.g.
+--    @~\/.cache\/termonad\/termonad-linux-x86_64@) instead of the
+--    system-installed Termonad binary (e.g. @\/usr\/bin\/termonad@), the Termonad
+--    /will/ recompile the the configuration file
+--    @~\/.config\/termonad\/termonad.hs@ according to the above logic (while
+--    possibly overwriting the executable file for the binary you're currently
+--    running), but it /will not/ re-exec into the newly built @termonad@ binary.
 defaultMain :: TMConfig -> IO ()
 defaultMain tmConfig = do
-  let params =
-        defaultParams
-          { projectName = "termonad",
-            showError = \(cfg, oldErrs) newErr -> (cfg, oldErrs <> "\n" <> newErr),
-            realMain = \(cfg, errs) -> putStrLn (pack errs) *> start cfg
-          }
+  let params = newParams "termonad" realMainFunc collectErrs
+          { projectName = "termonad"
+          , showError = \(cfg, oldErrs) newErr -> (cfg, oldErrs <> "\n" <> newErr)
+          , realMain = \(cfg, errs) -> putStrLn (pack errs) *> start cfg
   eitherRes <- tryIOError $ wrapMain params (tmConfig, "")
   case eitherRes of
     Left ioErr
@@ -999,3 +1013,17 @@ defaultMain tmConfig = do
           print ioErr
           putStrLn "Don't know how to recover.  Exiting."
     Right _ -> pure ()
+  where
+    -- The real main function
+    realMainFunc :: (TMConfig, String) -> IO ()
+    realMainFunc (cfg, errs) =
+      case errs of
+        "" -> start cfg
+        _ -> do
+          putStrLn $ "Errors from dyre when recompiling Termonad:" <> pack errs
+          putStrLn "Continuing with Termonad without re-execing into recompiled binary..."
+          start cfg
+
+    -- A function that can easily collect errors from dyre
+    collectErrs :: (TMConfig, String) -> String -> (TMConfig, String)
+    collectErrs (cfg, oldErrs) newErr = (cfg, oldErrs <> "\n" <> newErr)
