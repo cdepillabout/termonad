@@ -235,11 +235,6 @@ newTMStateSingleTerm tmConfig app appWin note label scrollWin trm pd fontDesc = 
       tmNote = createTMNotebook note tabs
   newTMState tmConfig app appWin tmNote fontDesc
 
-traceShowMTMState :: TMState -> IO ()
-traceShowMTMState mvarTMState = do
-  tmState <- readMVar mvarTMState
-  print tmState
-
 ------------
 -- Config --
 ------------
@@ -327,7 +322,8 @@ defaultFontConfig =
 -- supplied by the 'ColourConfig' @ConfigExtension@.  By default,
 -- 'cursorFgColour' and 'cursorBgColour' are both 'Unset'.  However, when
 -- 'cursorBgColour' is 'Set', 'cursorFgColour' defaults to the color of the text
--- underneath.  There is no way to represent this by setting 'cursorFgColour'.
+-- underneath.  There is no way to represent this by explicitly setting
+-- 'cursorFgColour'.
 data Option a = Unset | Set !a
   deriving (Show, Read, Eq, Ord, Functor, Foldable)
 
@@ -650,3 +646,8 @@ pPrintTMState :: TMState -> IO ()
 pPrintTMState mvarTMState = do
   tmState <- readMVar mvarTMState
   pPrint tmState
+
+traceShowMTMState :: TMState -> IO ()
+traceShowMTMState mvarTMState = do
+  tmState <- readMVar mvarTMState
+  print tmState
