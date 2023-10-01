@@ -28,7 +28,7 @@ extra-source-files:  README.md
                    , glade/preferences.glade
                    , glade/README.md
                    , img/termonad.png
-                   , .nix-helpers/nixops.nix
+                   , .nix-helpers/nixos-vm.nix
                    , .nix-helpers/nixpkgs.nix
                    , .nix-helpers/overlays.nix
                    , .nix-helpers/stack-shell.nix
