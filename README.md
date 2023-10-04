@@ -292,35 +292,34 @@ After `stack run`, you should see a new window with your Termonad running.
 
 Termonad is similar to XMonad. The above steps will install a `termonad` binary
 somewhere on your system. If you have installed Termonad using `stack`, the
-`termonad` binary will be in `~/.local/bin/`. This binary is a version of
-Termonad configured with default settings. You can try running it to get an idea
-of what Termonad is like:
+`termonad` binary will be in `~/.local/bin/`. If you have installed Termonad using
+your Linux distro, the `termonad` binary will likely be in `/usr/bin/`. This
+binary is a version of Termonad configured with default settings. You can try
+running it to get an idea of what Termonad is like:
 
 ```sh
-$ ~/.local/bin/termonad
+$ /usr/bin/termonad
 ```
-
-The following section describes the default key bindings.
 
 If you would like to configure Termonad with your own settings, first you will
 need to create a Haskell file called `~/.config/termonad/termonad.hs`. A following
 section gives an example configuration file.
 
-If this configuration file exists, when the `~/.local/bin/termonad` binary
+If this configuration file exists, when the `/usr/bin/termonad` binary
 launches, it will try to use GHC to compile the configuration file. If GHC
 is able to successfully compile the configuration file, a separate binary will
 be created called something like `~/.cache/termonad/termonad-linux-x86_64`.
 This binary file can be thought of as your own personal Termonad, configured
 with all your own settings.
 
-When you run `~/.local/bin/termonad`, it will re-exec
+When you run `/usr/bin/termonad`, it will re-exec
 `~/.cache/termonad/termonad-linux-x86_64` if it exists.
 
 However, there is one difficulty with this setup. In order for the
-`~/.local/bin/termonad` binary to be able to compile your
+`/usr/bin/termonad` binary to be able to compile your
 `~/.config/termonad/termonad.hs` configuration file, Termonad needs to know
 where GHC is, as well as where all your Haskell packages live. This presents
-some difficulties that will be discussed in a following section.
+some difficulties that will be discussed in one of the following sections.
 
 ### Default Key Bindings
 
@@ -341,31 +340,40 @@ Termonad provides the following default key bindings.
 
 ### Configuring Termonad
 
-Termonad has two different ways to be configured.
+Termonad has three different ways to be configured.
 
-The first way is to use the built-in Preferences editor.  You can find this in
-the `Preferences` menu under `Edit` in the menubar.
+1.  Pass arguments on the command line.  For instance, run
+    `termonad --no-show-menu` to never show the `File` menubar.
 
-When opening Termonad for the first time, it will create a preferences file at
-`~/.config/termonad/termonad.yaml`.  When you change a setting in the
-Preferences editor, Termonad will update the setting in the preferences file.
+    Arguments passed on the command line will normally override other
+    configuration methods.
 
-When running Termonad, it will load settings from the preferences file.
-Do not edit the preferences file by hand, because it will be overwritten when
-updating settings in the Preferences editor.
+2.  Use the built-in Preferences editor.  You can find this in
+    the `Preferences` menu under `Edit` in the menubar.
 
-This method is perfect for users who only want to make small changes to the
-Termonad settings, like the default font size.
+    When opening Termonad for the first time, it will create a preferences file
+    at `~/.config/termonad/termonad.yaml`.  When you change a setting in the
+    Preferences editor, Termonad will update the setting in the preferences
+    file.
 
-The second way to configure Termonad is to use a Haskell-based settings file,
-called `~/.config/termonad/termonad.hs` by default.  This method allows you to
-make large, sweeping changes to Termonad.  This method is recommended for power
-users.
+    When running Termonad, it will load settings from the preferences file. Do
+    not edit the preferences file by hand, because it will be overwritten when
+    updating settings in the Preferences editor.
+
+    This method is perfect for users who only want to make small changes to the
+    Termonad settings, like the default font size.
+
+3.  Use a Haskell-based settings file, called `~/.config/termonad/termonad.hs` by default.
+    This method allows you to make large, sweeping changes to Termonad.  This
+    method is recommended for power users.
+
+    The rest of this section explains the `~/.config/termonad/termonad.hs` file.
 
 **WARNING: If you have a `~/.config/termonad/termonad.hs` file, then all
 settings from `~/.config/termonad/termonad.yaml` will be ignored.  If you want
 to set *ANY* settings in `~/.config/termonad/termonad.hs`, then you must
-set *ALL* settings in `~/.config/termonad/termonad.hs`.**
+set *ALL* settings in `~/.config/termonad/termonad.hs`.  However, as stated above,
+CLI arguments will override settings in `~/.config/termonad/termonad.hs` by default.**
 
 The following is an example Termonad configuration file. You should save this to
 `~/.config/termonad/termonad.hs`. You can find more information on the available
@@ -439,9 +447,9 @@ all of the colors for your terminal.
 
 ### Compiling Local Settings
 
-If you launch Termonad by calling `~/.local/bin/termonad`, it will try to
+If you launch Termonad by calling `/usr/bin/termonad`, it will try to
 compile the `~/.config/termonad/termonad.hs` file if it exists.  The problem is
-that `~/.local/bin/termonad` needs to be able to see GHC and the required
+that `/usr/bin/termonad` needs to be able to see GHC and the required
 Haskell libraries to be able to compile `~/.config/termonad/termonad.hs`.
 
 There are a couple solutions to this problem, listed in the sections below.
@@ -452,9 +460,10 @@ how to fix this.)
 
 #### Running with `stack`
 
-If you originally compiled Termonad with `stack`, you can use `stack` to
-execute Termonad.  First, you must change to the directory with the Termonad
-source code.  From there, you can run `stack exec`:
+If you originally compiled Termonad with `stack` and installed it to
+`~/.local/bin/termonad`, you can use `stack` to execute Termonad.  First, you
+must change to the directory with the Termonad source code.  From there, you
+can run `stack exec`:
 
 ```sh
 $ cd termonad/  # change to the termonad source code directory
