@@ -73,7 +73,7 @@ readFileWithDefaults file = runExceptT $ do
   -- Read the configuration file as a JSON object
   optsFromFile :: Value <-
     withExceptT parseExceptionToText . ExceptT $ decodeFileEither file
-  let optsDefault :: Value = toJSON $ defaultConfigOptions
+  let optsDefault :: Value = toJSON defaultConfigOptions
   -- Then merge it with the default options in JSON before converting it to
   -- a 'ConfigOptions'
   resultToExcept . fromJSON $ mergeObjVals optsFromFile optsDefault
@@ -128,7 +128,6 @@ readFileWithDefaults file = runExceptT $ do
 -- Number 2.0
 -- >>> mergeObjVals (Object mempty) (Bool False)
 -- Bool False
---
 mergeObjVals
   :: Value
      -- ^ Value that has been set explicitly in the User's configuration

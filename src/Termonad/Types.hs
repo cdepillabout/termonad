@@ -235,11 +235,6 @@ newTMStateSingleTerm tmConfig app appWin note label scrollWin trm pd fontDesc = 
       tmNote = createTMNotebook note tabs
   newTMState tmConfig app appWin tmNote fontDesc
 
-traceShowMTMState :: TMState -> IO ()
-traceShowMTMState mvarTMState = do
-  tmState <- readMVar mvarTMState
-  print tmState
-
 ------------
 -- Config --
 ------------
@@ -327,7 +322,8 @@ defaultFontConfig =
 -- supplied by the 'ColourConfig' @ConfigExtension@.  By default,
 -- 'cursorFgColour' and 'cursorBgColour' are both 'Unset'.  However, when
 -- 'cursorBgColour' is 'Set', 'cursorFgColour' defaults to the color of the text
--- underneath.  There is no way to represent this by setting 'cursorFgColour'.
+-- underneath.  There is no way to represent this by explicitly setting
+-- 'cursorFgColour'.
 data Option a = Unset | Set !a
   deriving (Show, Read, Eq, Ord, Functor, Foldable)
 
@@ -354,6 +350,19 @@ data ShowScrollbar
                           -- lines on the terminal to show all at once.
   deriving (Enum, Eq, Generic, FromJSON, Show, ToJSON)
 
+showScrollbarToString :: ShowScrollbar -> Text
+showScrollbarToString = \case
+  ShowScrollbarNever -> "never"
+  ShowScrollbarAlways -> "always"
+  ShowScrollbarIfNeeded -> "if-needed"
+
+showScrollbarFromString :: Text -> Maybe ShowScrollbar
+showScrollbarFromString = \case
+  "never" -> Just ShowScrollbarNever
+  "always" -> Just ShowScrollbarAlways
+  "if-needed" -> Just ShowScrollbarIfNeeded
+  _ -> Nothing
+
 -- | Whether or not to show the tab bar for switching tabs.
 data ShowTabBar
   = ShowTabBarNever -- ^ Never show the tab bar, even if there are multiple tabs
@@ -361,6 +370,19 @@ data ShowTabBar
   | ShowTabBarAlways -- ^ Always show the tab bar, even if you only have one tab open.
   | ShowTabBarIfNeeded  -- ^ Only show the tab bar if you have multiple tabs open.
   deriving (Enum, Eq, Generic, FromJSON, Show, ToJSON)
+
+showTabBarToString :: ShowTabBar -> Text
+showTabBarToString = \case
+  ShowTabBarNever -> "never"
+  ShowTabBarAlways -> "always"
+  ShowTabBarIfNeeded -> "if-needed"
+
+showTabBarFromString :: Text -> Maybe ShowTabBar
+showTabBarFromString = \case
+  "never" -> Just ShowTabBarNever
+  "always" -> Just ShowTabBarAlways
+  "if-needed" -> Just ShowTabBarIfNeeded
+  _ -> Nothing
 
 -- | Configuration options for Termonad.
 --
@@ -423,6 +445,20 @@ data ConfigOptions = ConfigOptions
     -- You may want to disable this, for instance, if you use a font that
     -- doesn't look good when bold.
   } deriving (Eq, Generic, FromJSON, Show, ToJSON)
+
+cursorBlinkModeToString :: CursorBlinkMode -> Text
+cursorBlinkModeToString = \case
+  CursorBlinkModeSystem -> "system"
+  CursorBlinkModeOn -> "on"
+  CursorBlinkModeOff -> "off"
+  AnotherCursorBlinkMode _ -> "other"
+
+cursorBlinkModeFromString :: Text -> Maybe CursorBlinkMode
+cursorBlinkModeFromString = \case
+  "system" -> Just CursorBlinkModeSystem
+  "on" -> Just CursorBlinkModeOn
+  "off" -> Just CursorBlinkModeOff
+  _ -> Nothing
 
 instance FromJSON CursorBlinkMode where
   parseJSON = withText "CursorBlinkMode" $ \c -> do
@@ -650,3 +686,8 @@ pPrintTMState :: TMState -> IO ()
 pPrintTMState mvarTMState = do
   tmState <- readMVar mvarTMState
   pPrint tmState
+
+traceShowMTMState :: TMState -> IO ()
+traceShowMTMState mvarTMState = do
+  tmState <- readMVar mvarTMState
+  print tmState
