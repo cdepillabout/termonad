@@ -1,3 +1,15 @@
+-- | Module    : Termonad.Cli
+-- Description : Termonad CLI argument parsing module.
+-- Copyright   : (c) Dennis Gosnell, 2023
+-- License     : BSD3
+-- Stability   : experimental
+-- Portability : POSIX
+--
+-- This module exposes Termonad's CLI argument parsing functionality.
+--
+-- The main function for parsing CLI arguments is 'parseCliArgs'.  The function
+-- that knows how to combine CLI arguments with normal 'ConfigOptions' is
+-- 'applyCliArgs'.
 
 module Termonad.Cli where
 
@@ -8,14 +20,34 @@ import Termonad.Types (ConfigOptions (..), Option (Set, Unset), ShowScrollbar, F
 import GI.Vte (CursorBlinkMode)
 
 
+-- | A data type that contains arguments from the command line.
 data CliArgs = CliArgs
   { cliConfigOptions :: CliConfigOptions
   , extraCliArgs :: ExtraCliArgs
   } deriving (Eq, Show)
 
--- |
+-- | The default 'CliArgs'.  This corresponds to the value 'CliArgs' will
+-- become when no CLI arguments have been passed.
 --
--- See 'ConfigOptions' for what these options mean.
+-- >>> :{
+--   let defCliArgs =
+--         CliArgs
+--           { cliConfigOptions = defaultCliConfigOptions
+--           , extraCliArgs = defaultExtraCliArgs
+--           }
+--   in defaultCliArgs == defCliArgs
+-- :}
+-- True
+defaultCliArgs :: CliArgs
+defaultCliArgs =
+  CliArgs
+    { cliConfigOptions = defaultCliConfigOptions
+    , extraCliArgs = defaultExtraCliArgs
+    }
+
+-- | CLI arguments that correspond to fields in 'ConfigOptions'.
+--
+-- See 'ConfigOptions' for what each of these options mean.
 data CliConfigOptions = CliConfigOptions
   { cliConfFontFamily :: !(Option Text)
   , cliConfFontSize :: !(Option FontSize)
@@ -31,18 +63,89 @@ data CliConfigOptions = CliConfigOptions
   , cliConfAllowBold :: !(Option Bool)
   } deriving (Eq, Show)
 
+-- | The default 'CliConfigOptions'.  All 'Option's are 'Unset', which means
+-- they won't override options from 'ConfigOptions' in 'applyCliArgs'.
+--
+-- >>> :{
+--   let defCliConfOpt =
+--         CliConfigOptions
+--           { cliConfFontFamily = Unset
+--           , cliConfFontSize = Unset
+--           , cliConfShowScrollbar = Unset
+--           , cliConfScrollbackLen = Unset
+--           , cliConfConfirmExit = Unset
+--           , cliConfWordCharExceptions = Unset
+--           , cliConfShowMenu = Unset
+--           , cliConfShowTabBar = Unset
+--           , cliConfCursorBlinkMode = Unset
+--           , cliConfBoldIsBright = Unset
+--           , cliConfEnableSixel = Unset
+--           , cliConfAllowBold = Unset
+--           }
+--   in defaultCliConfigOptions == defCliConfOpt
+-- :}
+-- True
+defaultCliConfigOptions :: CliConfigOptions
+defaultCliConfigOptions =
+  CliConfigOptions
+    { cliConfFontFamily = Unset
+    , cliConfFontSize = Unset
+    , cliConfShowScrollbar = Unset
+    , cliConfScrollbackLen = Unset
+    , cliConfConfirmExit = Unset
+    , cliConfWordCharExceptions = Unset
+    , cliConfShowMenu = Unset
+    , cliConfShowTabBar = Unset
+    , cliConfCursorBlinkMode = Unset
+    , cliConfBoldIsBright = Unset
+    , cliConfEnableSixel = Unset
+    , cliConfAllowBold = Unset
+    }
+
+-- | Extra CLI arguments for values that don't make sense in 'ConfigOptions'.
 data ExtraCliArgs = ExtraCliArgs
   deriving (Eq, Show)
 
+-- | The default 'ExtraCliArgs'.
+--
+-- >>> :{
+--   let defExtraCliArgs =
+--         ExtraCliArgs
+--   in defaultExtraCliArgs == defExtraCliArgs
+-- :}
+-- True
+defaultExtraCliArgs :: ExtraCliArgs
+defaultExtraCliArgs = ExtraCliArgs
+
+-- | Similar to 'Options.Applicative.strOption', but specifically work on a
+-- value that is an 'Option'.
 strOption' :: IsString s => Mod OptionFields (Option s) -> Parser (Option s)
 strOption' mods = option (fmap Set str) (value Unset <> mods)
 
+-- | Similar to 'Options.Applicative.option', but specifically work on a
+-- value that is an 'Option'.
 option' :: ReadM a -> Mod OptionFields (Option a) -> Parser (Option a)
 option' readM mods = option (fmap Set readM) (value Unset <> mods)
 
+-- | Similar to 'Options.Applicative.maybeReader', but work on 'Text' instead
+-- of 'String'.
 maybeTextReader :: (Text -> Maybe a) -> ReadM a
 maybeTextReader f = maybeReader (f . pack)
 
+-- | Helper for making a 'flag' CLI argument that optionally takes a @no-@ prefix.
+--
+-- Example:
+--
+-- > 'optionFlag' 'True' 'False' 'f' 'n' "foo" "Does foo" "Does not do foo" :: Parser (Option Bool)
+--
+-- This creates a 'Parser' that accepts both a @--foo@ and a @--no-foo@ flag.
+-- Passing @--foo@ returns @'Set' 'True'@, while passing @--no-foo@ returns
+-- @'Set' 'False'@.  Passing neither @--foo@ nor @--no-foo@ returns 'Unset'.
+--
+-- TODO: This doesn't quite work.  If the user passes both @--foo@ and
+-- @--no-foo@ flags, this should ideally take the value of the last flag
+-- passed.  However, it appears that if you pass both flags, the second
+-- flag is just not recognized and optparse-applicative raises an error.
 optionFlag
   :: a -- ^ Value when specified /without/ @no-@ prefix.
   -> a -- ^ Value when specified /with/ @no-@ prefix.
@@ -271,9 +374,19 @@ cliArgsParserInfo =
       progDesc "A VTE-based terminal emulator configurable in Haskell"
     )
 
+-- | Parse and return CliArguments.
 parseCliArgs :: IO CliArgs
 parseCliArgs = execParser cliArgsParserInfo
 
+-- | Overwrite the arguments in 'ConfigOptions' that have been 'Set' in
+-- 'CliArgs'.
+--
+-- >>> import Termonad.Types (defaultConfigOptions)
+-- >>> let cliConfOpts = defaultCliConfigOptions { cliConfScrollbackLen = Set 50 }
+-- >>> let cliArgs = defaultCliArgs { cliConfigOptions = cliConfOpts }
+-- >>> let overwrittenConfOpts = defaultConfigOptions { scrollbackLen = 50 }
+-- >>> applyCliArgs cliArgs defaultConfigOptions == overwrittenConfOpts
+-- True
 applyCliArgs :: CliArgs -> ConfigOptions -> ConfigOptions
 applyCliArgs cliArgs confOpts =
   let oldFontConf = fontConfig confOpts
@@ -317,4 +430,3 @@ applyCliArgs cliArgs confOpts =
 
     cliConfOpts :: CliConfigOptions
     cliConfOpts = cliConfigOptions cliArgs
-
