@@ -915,11 +915,9 @@ appStartup _app = pure ()
 -- Do not perform any of the recompilation operations that the 'defaultMain'
 -- function does.
 --
--- This function _does_ parse command line arguments.
+-- This function __does not__ parse command line arguments.
 start :: TMConfig -> IO ()
 start tmConfig = do
-  args <- getArgs
-  putStrLn $ "CLI args from start: " <> tshow args
   -- app <- appNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
   -- Make sure the application is not unique, so we can open multiple copies of it.
   app <- appNew Nothing [ApplicationFlagsFlagsNone]
@@ -927,6 +925,12 @@ start tmConfig = do
   void $ onApplicationActivate app (appActivate tmConfig app)
   void $ applicationRun app Nothing
 
+-- | Run Termonad with the given 'TMConfig'.
+--
+-- Do not perform any of the recompilation operations that the 'defaultMain'
+-- function does.
+--
+-- This function __does__ parse command line arguments, and then calls 'start'.
 startWithCliArgs :: TMConfig -> IO ()
 startWithCliArgs tmConfig = do
   cliArgs <- parseCliArgs
@@ -989,9 +993,10 @@ startWithCliArgs tmConfig = do
 --    system.
 --
 -- 2. In your own @~\/.config\/termonad\/termonad.hs@ file, you can use either
---    'defaultMain' or 'startWithCliArgs'.  As long as you always execute the system-wide
---    @termonad@ binary (instead of the binary produced as
---    @~\/.cache\/termonad\/termonad-linux-x86_64@), the effect should be the same.
+--    'defaultMain' or 'startWithCliArgs'.  As long as you always
+--    execute the system-wide @termonad@ binary (instead of the binary produced
+--    as @~\/.cache\/termonad\/termonad-linux-x86_64@), the effect should be
+--    similar.
 --
 -- 3. If you directly run the cached termonad binary (e.g.
 --    @~\/.cache\/termonad\/termonad-linux-x86_64@) instead of the
@@ -1019,8 +1024,6 @@ startWithCliArgs tmConfig = do
 --    functionality, you can directly use 'start'.
 defaultMain :: TMConfig -> IO ()
 defaultMain tmConfig = do
-  args <- getArgs
-  putStrLn $ "CLI args from defaultMain: " <> tshow args
   let params = newParams "termonad" realMainFunc collectErrs
           { projectName = "termonad"
           , showError = \(cfg, oldErrs) newErr -> (cfg, oldErrs <> "\n" <> newErr)

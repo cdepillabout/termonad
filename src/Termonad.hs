@@ -5,7 +5,7 @@
 -- Stability   : experimental
 -- Portability : POSIX
 --
--- This module exposes termonad's basic configuration options, as well as 'defaultMain'.
+-- This module exposes termonad's basic configuration options, as well as 'defaultMain', 'startWithCliArgs', and 'start'.
 --
 -- If you want to configure Termonad, please take a look at "Termonad.Config".
 
