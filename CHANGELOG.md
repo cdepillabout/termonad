@@ -1,3 +1,18 @@
+## (next)
+
+*   Add support for setting Termonad options with CLI arguments.  Add a whole
+    CLI argument parser based on optparse-applicative.
+    [#234](https://github.com/cdepillabout/termonad/pull/234)
+
+    Check out `termonad --help` to see the options available to be set from the CLI.
+
+    By default, passing CLI options will override options specified in the
+    `termonad.hs` file, as well as options specified in the Preferences dialog.
+
+    In your own `termonad.hs` file, if you want to not use this CLI argument
+    funtionality, you should be able to use the `Termonad.start` function (in
+    place of `Termonad.defaultMain`).
+
 ## 4.5.0.0
 
 *   Add an `allowBold` option (which defaults to `True`).  This can be used if
