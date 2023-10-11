@@ -29,12 +29,17 @@ $(makeLensesFor
  )
 
 $(makeLensesFor
+    [ ("tmWindowAppWin", "lensTMWindowAppWin")
+    , ("tmWindowNotebook", "lensTMWindowNotebook")
+    ]
+    ''TMWindow
+ )
+
+$(makeLensesFor
     [ ("tmStateApp", "lensTMStateApp")
-    , ("tmStateAppWin", "lensTMStateAppWin")
-    , ("tmStateNotebook", "lensTMStateNotebook")
     , ("tmStateFontDesc", "lensTMStateFontDesc")
     , ("tmStateConfig", "lensTMStateConfig")
-    , ("tmStateUserReqExit", "lensTMStateUserReqExit")
+    , ("tmStateWindows", "lensTMStateWindows")
     ]
     ''TMState'
  )

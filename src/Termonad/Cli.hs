@@ -15,9 +15,11 @@ module Termonad.Cli where
 
 import Termonad.Prelude
 
+import Control.Applicative ((<|>), (<**>))
+import Data.Text (pack)
+import GI.Vte (CursorBlinkMode)
 import Options.Applicative (fullDesc, info, helper, progDesc, ParserInfo, execParser, Parser, Mod, OptionFields, option, str, value, short, long, metavar, help, ReadM, maybeReader, auto, flag')
 import Termonad.Types (ConfigOptions (..), Option (Set, Unset), ShowScrollbar, FontSize (..), ShowTabBar, showScrollbarFromString, showTabBarFromString, cursorBlinkModeFromString, FontConfig (..))
-import GI.Vte (CursorBlinkMode)
 
 
 -- | A data type that contains arguments from the command line.

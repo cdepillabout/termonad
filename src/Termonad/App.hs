@@ -5,11 +5,14 @@ module Termonad.App where
 import Termonad.Prelude
 
 import Config.Dyre (wrapMain, newParams)
-import Control.Lens ((.~), (^.), (^..), over, set, view)
+import Control.Lens ((.~), (^.), (^..), over, set, view, ix)
 import Control.Monad.Fail (fail)
 import Data.FileEmbed (embedFile)
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
+import qualified Data.List as List
 import Data.Sequence (findIndexR)
+import qualified Data.Text as Text
+import Data.Text.Encoding (encodeUtf8)
 import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
 import GI.Gio
   ( ApplicationFlags(ApplicationFlagsFlagsNone)
@@ -127,7 +130,7 @@ import GI.Vte
   )
 import System.Environment (getExecutablePath)
 import System.FilePath (takeFileName)
-
+import System.IO.Error (doesNotExistErrorType, ioeGetErrorType, ioeGetFileName, tryIOError)
 import Termonad.Gtk (appNew, imgToPixbuf, objFromBuildUnsafe, terminalSetEnableSixelIfExists)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Lenses
@@ -147,12 +150,10 @@ import Termonad.Lenses
   , lensTMNotebookTabs
   , lensTMNotebookTabTerm
   , lensTMStateApp
-  , lensTMStateAppWin
   , lensTMStateConfig
   , lensTMStateFontDesc
-  , lensTMStateNotebook
   , lensTerm
-  , lensWordCharExceptions
+  , lensWordCharExceptions, lensTMStateWindows, lensTMWindowNotebook
   )
 import Termonad.PreferencesFile (saveToPreferencesFile)
 import Termonad.Term
@@ -179,11 +180,11 @@ import Termonad.Types
   , newEmptyTMState
   , tmNotebookTabTermContainer
   , tmNotebookTabs
-  , tmStateApp
-  , tmStateNotebook
+  , tmStateApp, getTMNotebookFromTMState, TMWindowId, getTMNotebookFromTMState', tmNotebook, getTMWindowFromTMState', tmWindowAppWin, tmWindowNotebook, tmStateWindows
   )
 import Termonad.XML (interfaceText, menuText, preferencesText)
 import Termonad.Cli (parseCliArgs, applyCliArgs)
+import Termonad.IdMap (keysIdMap)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
@@ -222,7 +223,7 @@ setupScreenStyle = do
             , "  background-color: transparent;"
             , "}"
             ]
-      let styleData = encodeUtf8 (unlines textLines :: Text)
+      let styleData = encodeUtf8 (Text.unlines textLines)
       cssProviderLoadFromData cssProvider styleData
       styleContextAddProviderForScreen
         screen
@@ -253,14 +254,16 @@ adjustFontDescSize f fontDesc = do
   let newFontSz = f currFontSz
   setFontDescSize fontDesc newFontSz
 
-modifyFontSizeForAllTerms :: (FontSize -> FontSize) -> TMState -> IO ()
-modifyFontSizeForAllTerms modFontSizeFunc mvarTMState = do
+modifyFontSizeForAllTerms :: (FontSize -> FontSize) -> TMState -> TMWindowId -> IO ()
+modifyFontSizeForAllTerms modFontSizeFunc mvarTMState tmWinId = do
   tmState <- readMVar mvarTMState
   let fontDesc = tmState ^. lensTMStateFontDesc
   adjustFontDescSize modFontSizeFunc fontDesc
   let terms =
         tmState ^..
-          lensTMStateNotebook .
+          lensTMStateWindows .
+          ix tmWinId .
+          lensTMWindowNotebook .
           lensTMNotebookTabs .
           traverse .
           lensTMNotebookTabTerm .
@@ -291,25 +294,28 @@ compareScrolledWinAndTab scrollWin flTab =
       foreignPtrScrollWin = managedForeignPtr managedPtrScrollWin
   in foreignPtrFLTab == foreignPtrScrollWin
 
-updateFLTabPos :: TMState -> Int -> Int -> IO ()
-updateFLTabPos mvarTMState oldPos newPos =
+updateFLTabPos :: TMState -> TMWindowId -> Int -> Int -> IO ()
+updateFLTabPos mvarTMState tmWinId oldPos newPos =
   modifyMVar_ mvarTMState $ \tmState -> do
-    let tabs = tmState ^. lensTMStateNotebook . lensTMNotebookTabs
+    note <- getTMNotebookFromTMState' tmState tmWinId
+    let tabs = tmNotebookTabs note
         maybeNewTabs = moveFromToFL oldPos newPos tabs
     case maybeNewTabs of
       Nothing -> do
         putStrLn $
           "in updateFLTabPos, Strange error: couldn't move tabs.\n" <>
-          "old pos: " <> tshow oldPos <> "\n" <>
-          "new pos: " <> tshow newPos <> "\n" <>
-          "tabs: " <> tshow tabs <> "\n" <>
-          "maybeNewTabs: " <> tshow maybeNewTabs <> "\n" <>
-          "tmState: " <> tshow tmState
+          "old pos: " <> show oldPos <> "\n" <>
+          "new pos: " <> show newPos <> "\n" <>
+          "tabs: " <> show tabs <> "\n" <>
+          "maybeNewTabs: " <> show maybeNewTabs <> "\n" <>
+          "tmState: " <> show tmState
         pure tmState
       Just newTabs ->
         pure $
-          tmState &
-            lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+          set
+            (lensTMStateWindows . ix tmWinId . lensTMWindowNotebook . lensTMNotebookTabs)
+            newTabs
+            tmState
 
 -- | Try to figure out whether Termonad should exit.  This also used to figure
 -- out if Termonad should close a given terminal.
@@ -388,8 +394,8 @@ setupTermonad tmConfig app win builder = do
   notebookSetShowBorder note False
   boxPackStart box note True True 0
 
-  mvarTMState <- newEmptyTMState tmConfig app win note fontDesc
-  terminal <- createTerm handleKeyPress mvarTMState
+  (mvarTMState, tmWinId) <- newEmptyTMState tmConfig app win note fontDesc
+  terminal <- createTerm handleKeyPress mvarTMState tmWinId
 
   void $ onNotebookPageRemoved note $ \_ _ -> do
     pages <- notebookGetNPages note
@@ -399,16 +405,18 @@ setupTermonad tmConfig app win builder = do
 
   void $ onNotebookSwitchPage note $ \_ pageNum -> do
     modifyMVar_ mvarTMState $ \tmState -> do
-      let notebook = tmStateNotebook tmState
-          tabs = tmNotebookTabs notebook
+      tmNote <- getTMNotebookFromTMState' tmState tmWinId
+      let tabs = tmNotebookTabs tmNote
           maybeNewTabs = updateFocusFL (fromIntegral pageNum) tabs
       case maybeNewTabs of
         Nothing -> pure tmState
         Just (tab, newTabs) -> do
           widgetGrabFocus $ tab ^. lensTMNotebookTabTerm . lensTerm
           pure $
-            tmState &
-              lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+            set
+              (lensTMStateWindows . ix tmWinId . lensTMWindowNotebook . lensTMNotebookTabs)
+              newTabs
+              tmState
 
   void $ onNotebookPageReordered note $ \childWidg pageNum -> do
     maybeScrollWin <- castTo ScrolledWindow childWidg
@@ -419,8 +427,8 @@ setupTermonad tmConfig app win builder = do
           "child widget is not a ScrolledWindow.\n" <>
           "Don't know how to continue.\n"
       Just scrollWin -> do
-        TMState{tmStateNotebook} <- readMVar mvarTMState
-        let fl = tmStateNotebook ^. lensTMNotebookTabs
+        tmNote <- getTMNotebookFromTMState mvarTMState tmWinId
+        let fl = view lensTMNotebookTabs tmNote
         let maybeOldPosition =
               findIndexR (compareScrolledWinAndTab scrollWin) (focusList fl)
         case maybeOldPosition of
@@ -430,29 +438,31 @@ setupTermonad tmConfig app win builder = do
               "the ScrolledWindow is not already in the FocusList.\n" <>
               "Don't know how to continue.\n"
           Just oldPos -> do
-            updateFLTabPos mvarTMState oldPos (fromIntegral pageNum)
-            relabelTabs mvarTMState
+            updateFLTabPos mvarTMState tmWinId oldPos (fromIntegral pageNum)
+            tmNote' <- getTMNotebookFromTMState mvarTMState tmWinId
+            relabelTabs tmNote'
 
   newTabAction <- simpleActionNew "newtab" Nothing
-  void $ onSimpleActionActivate newTabAction $ \_ -> void $ createTerm handleKeyPress mvarTMState
+  void $ onSimpleActionActivate newTabAction $ \_ ->
+    void $ createTerm handleKeyPress mvarTMState tmWinId
   actionMapAddAction app newTabAction
-  applicationSetAccelsForAction app "app.newtab" ["<Shift><Ctrl>T"]
+  applicationSetAccelsForAction app "win.newtab" ["<Shift><Ctrl>T"]
 
   nextPageAction <- simpleActionNew "nextpage" Nothing
   void $ onSimpleActionActivate nextPageAction $ \_ ->
-    termNextPage mvarTMState
+    termNextPage mvarTMState tmWinId
   actionMapAddAction app nextPageAction
-  applicationSetAccelsForAction app "app.nextpage" ["<Ctrl>Page_Down"]
+  applicationSetAccelsForAction app "win.nextpage" ["<Ctrl>Page_Down"]
 
   prevPageAction <- simpleActionNew "prevpage" Nothing
   void $ onSimpleActionActivate prevPageAction $ \_ ->
-    termPrevPage mvarTMState
+    termPrevPage mvarTMState tmWinId
   actionMapAddAction app prevPageAction
   applicationSetAccelsForAction app "app.prevpage" ["<Ctrl>Page_Up"]
 
   closeTabAction <- simpleActionNew "closetab" Nothing
   void $ onSimpleActionActivate closeTabAction $ \_ ->
-    termExitFocused mvarTMState
+    termExitFocused mvarTMState tmWinId
   actionMapAddAction app closeTabAction
   applicationSetAccelsForAction app "app.closetab" ["<Shift><Ctrl>W"]
 
@@ -465,14 +475,14 @@ setupTermonad tmConfig app win builder = do
 
   copyAction <- simpleActionNew "copy" Nothing
   void $ onSimpleActionActivate copyAction $ \_ -> do
-    maybeTerm <- getFocusedTermFromState mvarTMState
+    maybeTerm <- getFocusedTermFromState mvarTMState tmWinId
     maybe (pure ()) terminalCopyClipboard maybeTerm
   actionMapAddAction app copyAction
   applicationSetAccelsForAction app "app.copy" ["<Shift><Ctrl>C"]
 
   pasteAction <- simpleActionNew "paste" Nothing
   void $ onSimpleActionActivate pasteAction $ \_ -> do
-    maybeTerm <- getFocusedTermFromState mvarTMState
+    maybeTerm <- getFocusedTermFromState mvarTMState tmWinId
     maybe (pure ()) terminalPasteClipboard maybeTerm
   actionMapAddAction app pasteAction
   applicationSetAccelsForAction app "app.paste" ["<Shift><Ctrl>V"]
@@ -483,28 +493,28 @@ setupTermonad tmConfig app win builder = do
 
   enlargeFontAction <- simpleActionNew "enlargefont" Nothing
   void $ onSimpleActionActivate enlargeFontAction $ \_ ->
-    modifyFontSizeForAllTerms (modFontSize 1) mvarTMState
+    modifyFontSizeForAllTerms (modFontSize 1) mvarTMState tmWinId
   actionMapAddAction app enlargeFontAction
   applicationSetAccelsForAction app "app.enlargefont" ["<Ctrl>plus"]
 
   reduceFontAction <- simpleActionNew "reducefont" Nothing
   void $ onSimpleActionActivate reduceFontAction $ \_ ->
-    modifyFontSizeForAllTerms (modFontSize (-1)) mvarTMState
+    modifyFontSizeForAllTerms (modFontSize (-1)) mvarTMState tmWinId
   actionMapAddAction app reduceFontAction
   applicationSetAccelsForAction app "app.reducefont" ["<Ctrl>minus"]
 
   findAction <- simpleActionNew "find" Nothing
-  void $ onSimpleActionActivate findAction $ \_ -> doFind mvarTMState
+  void $ onSimpleActionActivate findAction $ \_ -> doFind mvarTMState tmWinId
   actionMapAddAction app findAction
   applicationSetAccelsForAction app "app.find" ["<Shift><Ctrl>F"]
 
   findAboveAction <- simpleActionNew "findabove" Nothing
-  void $ onSimpleActionActivate findAboveAction $ \_ -> findAbove mvarTMState
+  void $ onSimpleActionActivate findAboveAction $ \_ -> findAbove mvarTMState tmWinId
   actionMapAddAction app findAboveAction
   applicationSetAccelsForAction app "app.findabove" ["<Shift><Ctrl>P"]
 
   findBelowAction <- simpleActionNew "findbelow" Nothing
-  void $ onSimpleActionActivate findBelowAction $ \_ -> findBelow mvarTMState
+  void $ onSimpleActionActivate findBelowAction $ \_ -> findBelow mvarTMState tmWinId
   actionMapAddAction app findBelowAction
   applicationSetAccelsForAction app "app.findbelow" ["<Shift><Ctrl>I"]
 
@@ -512,7 +522,7 @@ setupTermonad tmConfig app win builder = do
   void $ onSimpleActionActivate aboutAction $ \_ -> showAboutDialog app
   actionMapAddAction app aboutAction
 
-  menuBuilder <- builderNewFromString menuText $ fromIntegral (length menuText)
+  menuBuilder <- builderNewFromString menuText $ fromIntegral (Text.length menuText)
   menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
   applicationSetMenubar app (Just menuModel)
   let showMenu = tmConfig ^. lensOptions . lensShowMenu
@@ -541,7 +551,7 @@ setupTermonad tmConfig app win builder = do
 appActivate :: TMConfig -> Application -> IO ()
 appActivate tmConfig app = do
   uiBuilder <-
-    builderNewFromString interfaceText $ fromIntegral (length interfaceText)
+    builderNewFromString interfaceText $ fromIntegral (Text.length interfaceText)
   builderSetApplication uiBuilder app
   appWin <- objFromBuildUnsafe uiBuilder "appWin" ApplicationWindow
   applicationAddWindow app appWin
@@ -603,13 +613,13 @@ showFindDialog app = do
 
   pure maybeSearchString
 
-doFind :: TMState -> IO ()
-doFind mvarTMState = do
+doFind :: TMState -> TMWindowId -> IO ()
+doFind mvarTMState tmWinId = do
   tmState <- readMVar mvarTMState
   let app = tmStateApp tmState
   maybeSearchString <- showFindDialog app
   -- putStrLn $ "trying to find: " <> tshow maybeSearchString
-  maybeTerminal <- getFocusedTermFromState mvarTMState
+  maybeTerminal <- getFocusedTermFromState mvarTMState tmWinId
   case (maybeSearchString, maybeTerminal) of
     (Just searchString, Just terminal) -> do
       -- TODO: Figure out how to import the correct pcre flags.
@@ -631,7 +641,7 @@ doFind mvarTMState = do
       let newRegex =
             regexNewForSearch
               searchString
-              (fromIntegral $ length searchString)
+              (fromIntegral $ Text.length searchString)
               pcreFlags
       eitherRegex <-
         catchRegexError
@@ -652,9 +662,9 @@ doFind mvarTMState = do
           pure ()
     _ -> pure ()
 
-findAbove :: TMState -> IO ()
-findAbove mvarTMState = do
-  maybeTerminal <- getFocusedTermFromState mvarTMState
+findAbove :: TMState -> TMWindowId -> IO ()
+findAbove mvarTMState tmWinId = do
+  maybeTerminal <- getFocusedTermFromState mvarTMState tmWinId
   case maybeTerminal of
     Nothing -> pure ()
     Just terminal -> do
@@ -662,9 +672,9 @@ findAbove mvarTMState = do
       -- putStrLn $ "was match found: " <> tshow matchFound
       pure ()
 
-findBelow :: TMState -> IO ()
-findBelow mvarTMState = do
-  maybeTerminal <- getFocusedTermFromState mvarTMState
+findBelow :: TMState -> TMWindowId -> IO ()
+findBelow mvarTMState tmWinId = do
+  maybeTerminal <- getFocusedTermFromState mvarTMState tmWinId
   case maybeTerminal of
     Nothing -> pure ()
     Just terminal -> do
@@ -707,20 +717,7 @@ comboBoxGetActive cb values = findEnumFromMaybeId <$> comboBoxGetActiveId cb
     findEnumFromMaybeId maybeId = maybeId >>= findEnumFromId
 
     findEnumFromId :: Text -> Maybe a
-    findEnumFromId label = find (\x -> tshow x == label) values
-
-applyNewPreferences :: TMState -> IO ()
-applyNewPreferences mvarTMState = do
-  tmState <- readMVar mvarTMState
-  let appWin = tmState ^. lensTMStateAppWin
-      config = tmState ^. lensTMStateConfig
-      notebook = tmState ^. lensTMStateNotebook . lensTMNotebook
-      tabFocusList = tmState ^. lensTMStateNotebook . lensTMNotebookTabs
-      showMenu = config  ^. lensOptions . lensShowMenu
-  applicationWindowSetShowMenubar appWin showMenu
-  setShowTabs config notebook
-  -- Sets the remaining preferences to each tab
-  foldMap (applyNewPreferencesToTab mvarTMState) tabFocusList
+    findEnumFromId label = List.find (\x -> tshow x == label) values
 
 applyNewPreferencesToTab :: TMState -> TMNotebookTab -> IO ()
 applyNewPreferencesToTab mvarTMState tab = do
@@ -740,6 +737,26 @@ applyNewPreferencesToTab mvarTMState tab = do
   let vScrollbarPolicy = showScrollbarToPolicy (options ^. lensShowScrollbar)
   scrolledWindowSetPolicy scrolledWin PolicyTypeAutomatic vScrollbarPolicy
 
+applyNewPreferencesToWindow :: TMState -> TMWindowId -> IO ()
+applyNewPreferencesToWindow mvarTMState tmWinId = do
+  tmState <- readMVar mvarTMState
+  tmWin <- getTMWindowFromTMState' tmState tmWinId
+  let appWin = tmWindowAppWin tmWin
+      config = tmState ^. lensTMStateConfig
+      notebook = tmWindowNotebook tmWin
+      tabFocusList = tmNotebookTabs notebook
+      showMenu = config  ^. lensOptions . lensShowMenu
+  applicationWindowSetShowMenubar appWin showMenu
+  setShowTabs config (tmNotebook notebook)
+  -- Sets the remaining preferences to each tab
+  foldMap (applyNewPreferencesToTab mvarTMState) tabFocusList
+
+applyNewPreferences :: TMState -> IO ()
+applyNewPreferences mvarTMState = do
+  tmState <- readMVar mvarTMState
+  let windows = tmStateWindows tmState
+  foldMap (applyNewPreferencesToWindow mvarTMState) (keysIdMap windows)
+
 -- | Show the preferences dialog.
 --
 -- When the user clicks on the Ok button, it copies the new settings to TMState.
@@ -752,7 +769,7 @@ showPreferencesDialog mvarTMState = do
 
   -- Create the preference dialog and get some widgets
   preferencesBuilder <-
-    builderNewFromString preferencesText $ fromIntegral (length preferencesText)
+    builderNewFromString preferencesText $ fromIntegral (Text.length preferencesText)
   preferencesDialog <-
     objFromBuildUnsafe preferencesBuilder "preferences" Dialog
   confirmExitCheckButton <-
@@ -1009,7 +1026,7 @@ defaultMain tmConfig = do
       case errs of
         "" -> startWithCliArgs cfg
         _ -> do
-          putStrLn $ "Errors from dyre when recompiling Termonad:" <> pack errs
+          putStrLn $ "Errors from dyre when recompiling Termonad:" <> errs
           putStrLn "Continuing with Termonad without re-execing into recompiled binary..."
           startWithCliArgs cfg
 

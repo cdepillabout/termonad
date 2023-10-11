@@ -661,6 +661,12 @@ showColourCube matrix =
     showCol :: AlphaColour Double -> String -> String
     showCol col str = sRGB32show col <> str
 
+    -- A version of head that gives a better error message.
+    headEx :: forall b. [b] -> b
+    headEx = \case
+      [] -> error "showColourCube: error in headEx, passed empty list, this is likely a logic error"
+      (h : _) -> h
+
 -- | A List of a grey scale.  Default value for 'FullPalette'.
 --
 -- >>> fmap sRGB32show defaultGreyscale

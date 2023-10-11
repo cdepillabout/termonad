@@ -4,6 +4,10 @@ module Termonad.Keys where
 import Termonad.Prelude
 
 import Control.Lens (imap)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
 import GI.Gdk
   ( EventKey
   , pattern KEY_0
@@ -27,7 +31,7 @@ import GI.Gdk
   )
 
 import Termonad.Term (altNumSwitchTerm)
-import Termonad.Types (TMState)
+import Termonad.Types (TMState, TMWindowId)
 
 
 showKeys :: EventKey -> IO Bool
@@ -41,28 +45,29 @@ showKeys eventKey = do
   keycode <- getEventKeyHardwareKeycode eventKey
 
   putStrLn "key press event:"
-  putStrLn $ "  type = " <> tshow eventType
-  putStrLn $ "  str = " <> tshow maybeString
-  putStrLn $ "  mods = " <> tshow modifiers
-  putStrLn $ "  isMod = " <> tshow isMod
-  putStrLn $ "  len = " <> tshow len
-  putStrLn $ "  keyval = " <> tshow keyval
-  putStrLn $ "  keycode = " <> tshow keycode
+  putStrLn $ "  type = " <> show eventType
+  putStrLn $ "  str = " <> show maybeString
+  putStrLn $ "  mods = " <> show modifiers
+  putStrLn $ "  isMod = " <> show isMod
+  putStrLn $ "  len = " <> show len
+  putStrLn $ "  keyval = " <> show keyval
+  putStrLn $ "  keycode = " <> show keycode
   putStrLn ""
 
   pure True
 
 data Key = Key
-  { keyVal :: Word32
-  , keyMods :: Set ModifierType
+  { keyVal :: !Word32
+  , keyMods :: !(Set ModifierType)
   } deriving (Eq, Ord, Show)
 
 toKey :: Word32 -> Set ModifierType -> Key
 toKey = Key
 
-keyMap :: Map Key (TMState -> IO Bool)
+keyMap :: Map Key (TMState -> TMWindowId -> IO Bool)
 keyMap =
-  let numKeys =
+  let numKeys :: [Word32]
+      numKeys =
         [ KEY_1
         , KEY_2
         , KEY_3
@@ -74,6 +79,7 @@ keyMap =
         , KEY_9
         , KEY_0
         ]
+      altNumKeys :: [(Key, TMState -> TMWindowId -> IO Bool)]
       altNumKeys =
         imap
           (\i k ->
@@ -81,14 +87,15 @@ keyMap =
           )
           numKeys
   in
-  mapFromList altNumKeys
+  Map.fromList altNumKeys
 
-stopProp :: (TMState -> IO a) -> TMState -> IO Bool
-stopProp callback terState = callback terState $> True
+stopProp :: (TMState -> TMWindowId -> IO a) -> TMState -> TMWindowId -> IO Bool
+stopProp callback terState tmWinId = callback terState tmWinId $> True
 
 removeStrangeModifiers :: Key -> Key
 removeStrangeModifiers Key{keyVal, keyMods} =
-  let reservedModifiers =
+  let reservedModifiers :: Set ModifierType
+      reservedModifiers =
         [ ModifierTypeModifierReserved13Mask
         , ModifierTypeModifierReserved14Mask
         , ModifierTypeModifierReserved15Mask
@@ -104,17 +111,17 @@ removeStrangeModifiers Key{keyVal, keyMods} =
         , ModifierTypeModifierReserved25Mask
         , ModifierTypeModifierReserved29Mask
         ]
-  in Key keyVal (difference keyMods reservedModifiers)
+  in Key keyVal (Set.difference keyMods reservedModifiers)
 
 
-handleKeyPress :: TMState -> EventKey -> IO Bool
-handleKeyPress terState eventKey = do
+handleKeyPress :: TMState -> TMWindowId -> EventKey -> IO Bool
+handleKeyPress terState tmWindowId eventKey = do
   -- void $ showKeys eventKey
   keyval <- getEventKeyKeyval eventKey
   modifiers <- getEventKeyState eventKey
-  let oldKey = toKey keyval (setFromList modifiers)
+  let oldKey = toKey keyval (Set.fromList modifiers)
       newKey = removeStrangeModifiers oldKey
-      maybeAction = lookup newKey keyMap
+      maybeAction = Map.lookup newKey keyMap
   case maybeAction of
-    Just action -> action terState
+    Just action -> action terState tmWindowId
     Nothing -> pure False
