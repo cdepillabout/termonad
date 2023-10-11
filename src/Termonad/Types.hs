@@ -109,10 +109,10 @@ instance Show TMNotebook where
 
 data TMState' = TMState
   { tmStateApp :: !Application
+  , tmStateConfig :: !TMConfig
+  , tmStateFontDesc :: !FontDescription
   , tmStateAppWin :: !ApplicationWindow
   , tmStateNotebook :: !TMNotebook
-  , tmStateFontDesc :: !FontDescription
-  , tmStateConfig :: !TMConfig
   }
 
 instance Show TMState' where
@@ -123,17 +123,17 @@ instance Show TMState' where
       showString "tmStateApp = " .
       showString "(GI.GTK.Application)" .
       showString ", " .
+      showString "tmStateConfig = " .
+      showsPrec (d + 1) tmStateConfig .
+      showString ", " .
+      showString "tmStateFontDesc = " .
+      showString "(GI.Pango.FontDescription)" .
+      showString ", " .
       showString "tmStateAppWin = " .
       showString "(GI.GTK.ApplicationWindow)" .
       showString ", " .
       showString "tmStateNotebook = " .
       showsPrec (d + 1) tmStateNotebook .
-      showString ", " .
-      showString "tmStateFontDesc = " .
-      showString "(GI.Pango.FontDescription)" .
-      showString ", " .
-      showString "tmStateConfig = " .
-      showsPrec (d + 1) tmStateConfig .
       showString "}"
 
 type TMState = MVar TMState'
