@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Termonad.App where
 
 import Termonad.Prelude
@@ -8,6 +10,17 @@ import Control.Monad.Fail (fail)
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
 import Data.Sequence (findIndexR)
 import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
+import Data.FileEmbed
+import GI.GdkPixbuf.Enums
+import GI.GdkPixbuf.Objects.Pixbuf
+import Codec.Picture.Repa (Img, RGBA, toByteString, convertImage)
+import Graphics.Image (Image, RGB, Readable, VS, Writable (encode), YA, flipH)
+import Graphics.Image.ColorSpace (RGB, RGBA)
+import Graphics.Image.IO (JPG (JPG), PNG (PNG), decode, toJPImageRGB8)
+import Graphics.Image.IO.Formats (toJPImageRGBA8)
+import System.Exit
+import GI.GLib.Structs.Bytes
+import GI.Gtk.Objects.Window
 import GI.Gio
   ( ApplicationFlags(ApplicationFlagsFlagsNone)
   , MenuModel(MenuModel)
@@ -370,10 +383,25 @@ forceQuit mvarTMState = do
   let app = tmState ^. lensTMStateApp
   applicationQuit app
 
+getIconAsPixbuf :: IO Pixbuf
+getIconAsPixbuf = do
+  let iconByteString = $(embedFile "img/termonad-lambda.png")
+
+  let hipImage = decode PNG iconByteString :: Either String (Image VS Graphics.Image.ColorSpace.RGBA Word8)
+  case hipImage of
+    Left errorMessage -> do
+      die errorMessage
+    Right hipImg -> do
+      let jpImage = toJPImageRGBA8 $ flipH hipImg
+      let repaImage = convertImage jpImage :: Img Codec.Picture.Repa.RGBA
+      let byteStringImage = reverse $ toByteString repaImage
+      iconBytes <- bytesNewTake (Just byteStringImage)
+      pixbufNewFromBytes iconBytes ColorspaceRgb True 8 256 256 (256 * 4)
+
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
-  termonadIconPath <- getDataFileName "img/termonad-lambda.png"
-  windowSetDefaultIconFromFile termonadIconPath
+  iconPixbuf <- getIconAsPixbuf
+  windowSetIcon win (Just iconPixbuf)
 
   setupScreenStyle
   box <- objFromBuildUnsafe builder "content_box" Box

@@ -100,6 +100,10 @@ library
                      , xml-conduit
                      , xml-html-qq
                      , yaml
+                     , gi-gdkpixbuf
+                     , file-embed
+                     , JuicyPixels-repa
+                     , hip
   default-language:    Haskell2010
   ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -Wunused-packages
   default-extensions:  DataKinds
