@@ -1,5 +1,15 @@
 ## (next)
 
+*   Embed the Termonad icon into the Termonad library (instead of having it set
+    as a `data-file` in `termonad.cabal`).
+
+    This fixes a problem some users were seeing when garbaging-collecting their
+    Nix store and losing the required `termonad-lambda.png` file that their
+    Termonad binary was referencing:
+    [#165](https://github.com/cdepillabout/termonad/issues/165)
+
+    Thanks [@refaelsh](https://github.com/refaelsh)! [#236](https://github.com/cdepillabout/termonad/pull/236)
+
 *   Add support for setting Termonad options with CLI arguments.  Add a whole
     CLI argument parser based on optparse-applicative.
     [#234](https://github.com/cdepillabout/termonad/pull/234)
