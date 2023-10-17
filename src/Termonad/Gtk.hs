@@ -24,7 +24,9 @@ import GI.Gdk
   ( GObject
   , castTo
   )
-import GI.Gio (ApplicationFlags)
+import GI.GdkPixbuf (Pixbuf, pixbufNewFromStream)
+import GI.Gio (ApplicationFlags, Cancellable)
+import GI.Gio.Objects.MemoryInputStream (memoryInputStreamNewFromData)
 import GI.Gtk (Application, IsWidget, Widget(Widget), applicationNew, builderGetObject, toWidget)
 import qualified GI.Gtk as Gtk
 import GI.Vte
@@ -33,7 +35,7 @@ import GI.Vte
   , terminalSetEnableSixel
 #endif
   )
-
+import System.Exit (die)
 
 objFromBuildUnsafe ::
      GObject o => Gtk.Builder -> Text -> (ManagedPtr o -> o) -> IO o
@@ -93,3 +95,15 @@ terminalSetEnableSixelIfExists t b = do
   terminalSetEnableSixel t b
 #endif
   pure ()
+
+-- | Load an image in a 'ByteString' into a 'Pixbuf'.
+--
+-- Supports all image types that 'pixbufNewFromStream' supports.
+imgToPixbuf :: ByteString -> IO Pixbuf
+imgToPixbuf imgByteString = do
+  inputStream <- memoryInputStreamNewFromData imgByteString Nothing
+  maybePixbuf <- pixbufNewFromStream inputStream (Nothing :: Maybe Cancellable)
+  case maybePixbuf of
+    Nothing ->
+      die "imgToPixbuf: Unexpected error when trying to convert an image to a Pixbuf"
+    Just pixbuf -> pure pixbuf
