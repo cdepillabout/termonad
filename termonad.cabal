@@ -28,13 +28,13 @@ extra-source-files:  README.md
                    , glade/preferences.glade
                    , glade/README.md
                    , img/termonad.png
+                   , img/termonad-lambda.png
                    , .nix-helpers/nixos-vm.nix
                    , .nix-helpers/nixpkgs.nix
                    , .nix-helpers/overlays.nix
                    , .nix-helpers/stack-shell.nix
                    , .nix-helpers/termonad-with-packages.nix
                    , shell.nix
-data-files:          img/termonad-lambda.png
 custom-setup
                    -- Hackage apparently gives an error if you don't specify an
                    -- upper bound on your setup-depends. But I don't want to
@@ -84,6 +84,7 @@ library
                      , filepath
                      , focuslist
                      , gi-gdk
+                     , gi-gdkpixbuf
                      , gi-gio
                      , gi-glib
                      , gi-gtk >= 3.0.24

@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Termonad.App where
 
 import Termonad.Prelude
@@ -5,6 +7,7 @@ import Termonad.Prelude
 import Config.Dyre (wrapMain, newParams)
 import Control.Lens ((.~), (^.), (^..), over, set, view)
 import Control.Monad.Fail (fail)
+import Data.FileEmbed (embedFile)
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
 import Data.Sequence (findIndexR)
 import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
@@ -89,7 +92,7 @@ import GI.Gtk
   , widgetShow
   , widgetShowAll
   , windowPresent
-  , windowSetDefaultIconFromFile
+  , windowSetIcon
   , windowSetTitle
   , windowSetTransientFor
   )
@@ -125,8 +128,7 @@ import GI.Vte
 import System.Environment (getExecutablePath)
 import System.FilePath (takeFileName)
 
-import Paths_termonad (getDataFileName)
-import Termonad.Gtk (appNew, objFromBuildUnsafe, terminalSetEnableSixelIfExists)
+import Termonad.Gtk (appNew, imgToPixbuf, objFromBuildUnsafe, terminalSetEnableSixelIfExists)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Lenses
   ( lensBoldIsBright
@@ -372,8 +374,9 @@ forceQuit mvarTMState = do
 
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
-  termonadIconPath <- getDataFileName "img/termonad-lambda.png"
-  windowSetDefaultIconFromFile termonadIconPath
+  let img = $(embedFile "img/termonad-lambda.png")
+  iconPixbuf <- imgToPixbuf img
+  windowSetIcon win (Just iconPixbuf)
 
   setupScreenStyle
   box <- objFromBuildUnsafe builder "content_box" Box
