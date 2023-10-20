@@ -552,7 +552,7 @@ cube d i j k =
     coef x = fromIntegral x / 5
 -- | A matrix of a 6 x 6 x 6 color cube. Default value for 'ColourCubePalette'.
 --
--- >>> putStrLn $ pack $ showColourCube defaultColourCube
+-- >>> putStrLn $ showColourCube defaultColourCube
 -- [ [ #000000ff, #00005fff, #000087ff, #0000afff, #0000d7ff, #0000ffff
 --   , #005f00ff, #005f5fff, #005f87ff, #005fafff, #005fd7ff, #005fffff
 --   , #008700ff, #00875fff, #008787ff, #0087afff, #0087d7ff, #0087ffff
