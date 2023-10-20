@@ -63,6 +63,8 @@ library
                      , Termonad.Config
                      , Termonad.Config.Colour
                      , Termonad.Gtk
+                     , Termonad.IdMap
+                     , Termonad.IdMap.Internal
                      , Termonad.Keys
                      , Termonad.Lenses
                      , Termonad.Pcre
@@ -74,7 +76,7 @@ library
   other-modules:       Paths_termonad
   build-depends:       base >= 4.13 && < 5
                      , aeson
-                     , classy-prelude
+                     , bytestring
                      , colour
                      , containers
                      , data-default

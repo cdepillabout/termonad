@@ -4,8 +4,10 @@ module Termonad.Types where
 
 import Termonad.Prelude
 
+import Control.Lens (ifoldMap)
 import Control.Monad.Fail (fail)
-import Data.FocusList (FocusList, emptyFL, singletonFL, getFocusItemFL, lengthFL)
+import Data.FocusList (FocusList, emptyFL, getFocusItemFL, lengthFL)
+import Data.Foldable (toList)
 import Data.Unique (Unique, hashUnique, newUnique)
 import Data.Yaml
   ( FromJSON(parseJSON)
@@ -27,10 +29,10 @@ import GI.Gtk
   )
 import GI.Pango (FontDescription)
 import GI.Vte (Terminal, CursorBlinkMode(..))
+import Termonad.Gtk (widgetEq)
+import Termonad.IdMap (IdMap, IdMapKey, singletonIdMap, lookupIdMap)
 import Text.Pretty.Simple (pPrint)
 import Text.Show (ShowS, showParen, showString)
-
-import Termonad.Gtk (widgetEq)
 
 -- | A wrapper around a VTE 'Terminal'.  This also stores the process ID of the
 -- process running on this terminal, as well as a 'Unique' that can be used for
@@ -107,12 +109,71 @@ instance Show TMNotebook where
       showsPrec (d + 1) tmNotebookTabs .
       showString "}"
 
+getNotebookFromTMState :: TMState -> TMWindowId -> IO Notebook
+getNotebookFromTMState mvarTMState tmWinId = do
+  tmNote <- getTMNotebookFromTMState mvarTMState tmWinId
+  pure $ tmNotebook tmNote
+
+getNotebookFromTMState' :: TMState' -> TMWindowId -> IO Notebook
+getNotebookFromTMState' tmState tmWinId = do
+  tmNote <- getTMNotebookFromTMState' tmState tmWinId
+  pure $ tmNotebook tmNote
+
+getTMNotebookFromTMState :: TMState -> TMWindowId -> IO TMNotebook
+getTMNotebookFromTMState mvarTMState tmWinId = do
+  tmWin <- getTMWindowFromTMState mvarTMState tmWinId
+  pure $ tmWindowNotebook tmWin
+
+getTMNotebookFromTMState' :: TMState' -> TMWindowId -> IO TMNotebook
+getTMNotebookFromTMState' tmState tmWinId = do
+  tmWin <- getTMWindowFromTMState' tmState tmWinId
+  pure $ tmWindowNotebook tmWin
+
+data TMWindow = TMWindow
+  { tmWindowAppWin :: !ApplicationWindow
+  , tmWindowNotebook :: !TMNotebook
+  }
+
+instance Show TMWindow where
+  showsPrec :: Int -> TMWindow -> ShowS
+  showsPrec d TMWindow{..} =
+    showParen (d > 10) $
+      showString "TMWindow {" .
+      showString "tmWindowAppWin = " .
+      showString "(GI.GTK.ApplicationWindow)" .
+      showString ", " .
+      showString "tmWindowNotebook = " .
+      showsPrec (d + 1) tmWindowNotebook .
+      showString "}"
+
+type TMWindowId = IdMapKey
+
+-- | Get a given 'TMWindow' from a set of 'TMWindow's given a 'TMWindowId'.
+--
+-- This throws an error if the 'TMWindowId' can't be found within the 'IdMap'.
+getTMWindowFromWins :: IdMap TMWindow -> TMWindowId -> IO TMWindow
+getTMWindowFromWins tmWins tmWinId =
+  case lookupIdMap tmWinId tmWins of
+    Nothing -> error $ "getTMWindowFromWins: trying to get id " <> show tmWinId <> " from wins, but doesn't exist: " <> show tmWins
+    Just tmWin -> pure tmWin
+
+-- | Get a given 'TMWindow' froma a 'TMState' given a 'TMWindowId'.
+--
+-- This throws an error if the 'TMWindowId' can't be found within the 'TMState'.
+getTMWindowFromTMState :: TMState -> TMWindowId -> IO TMWindow
+getTMWindowFromTMState mvarTMState tmWinId = do
+  TMState{tmStateWindows} <- readMVar mvarTMState
+  getTMWindowFromWins tmStateWindows tmWinId
+
+getTMWindowFromTMState' :: TMState' -> TMWindowId -> IO TMWindow
+getTMWindowFromTMState' tmState tmWinId =
+  getTMWindowFromWins (tmStateWindows tmState) tmWinId
+
 data TMState' = TMState
   { tmStateApp :: !Application
-  , tmStateAppWin :: !ApplicationWindow
-  , tmStateNotebook :: !TMNotebook
-  , tmStateFontDesc :: !FontDescription
   , tmStateConfig :: !TMConfig
+  , tmStateFontDesc :: !FontDescription
+  , tmStateWindows :: !(IdMap TMWindow)
   }
 
 instance Show TMState' where
@@ -123,17 +184,14 @@ instance Show TMState' where
       showString "tmStateApp = " .
       showString "(GI.GTK.Application)" .
       showString ", " .
-      showString "tmStateAppWin = " .
-      showString "(GI.GTK.ApplicationWindow)" .
-      showString ", " .
-      showString "tmStateNotebook = " .
-      showsPrec (d + 1) tmStateNotebook .
+      showString "tmStateConfig = " .
+      showsPrec (d + 1) tmStateConfig .
       showString ", " .
       showString "tmStateFontDesc = " .
       showString "(GI.Pango.FontDescription)" .
       showString ", " .
-      showString "tmStateConfig = " .
-      showsPrec (d + 1) tmStateConfig .
+      showString "tmStateWindows = " .
+      showsPrec (d + 1) tmStateWindows .
       showString "}"
 
 type TMState = MVar TMState'
@@ -157,14 +215,14 @@ createTMTerm trm pd unq =
 newTMTerm :: Terminal -> Int -> IO TMTerm
 newTMTerm trm pd = createTMTerm trm pd <$> newUnique
 
-getFocusedTermFromState :: TMState -> IO (Maybe Terminal)
-getFocusedTermFromState mvarTMState =
+getFocusedTermFromState :: TMState -> TMWindowId -> IO (Maybe Terminal)
+getFocusedTermFromState mvarTMState tmWinId =
   withMVar mvarTMState go
   where
     go :: TMState' -> IO (Maybe Terminal)
     go tmState = do
-      let maybeNotebookTab =
-            getFocusItemFL $ tmNotebookTabs $ tmStateNotebook tmState
+      tmNote <- getTMNotebookFromTMState' tmState tmWinId
+      let maybeNotebookTab = getFocusItemFL $ tmNotebookTabs tmNote
       pure $ fmap (term . tmNotebookTabTerm) maybeNotebookTab
 
 createTMNotebookTab :: Label -> ScrolledWindow -> TMTerm -> TMNotebookTab
@@ -195,45 +253,27 @@ notebookToList notebook =
             Nothing -> pure acc
             Just notePage' -> unfoldHelper (index32 + 1) (acc ++ [notePage'])
 
-newTMState :: TMConfig -> Application -> ApplicationWindow -> TMNotebook -> FontDescription -> IO TMState
-newTMState tmConfig app appWin note fontDesc =
-  newMVar $
-    TMState
-      { tmStateApp = app
-      , tmStateAppWin = appWin
-      , tmStateNotebook = note
-      , tmStateFontDesc = fontDesc
-      , tmStateConfig = tmConfig
-      }
+createTMWindow :: ApplicationWindow -> TMNotebook -> TMWindow
+createTMWindow appwin notebook =
+  TMWindow
+    { tmWindowAppWin = appwin
+    , tmWindowNotebook = notebook
+    }
 
-newEmptyTMState :: TMConfig -> Application -> ApplicationWindow -> Notebook -> FontDescription -> IO TMState
-newEmptyTMState tmConfig app appWin note fontDesc =
-  newMVar $
-    TMState
-      { tmStateApp = app
-      , tmStateAppWin = appWin
-      , tmStateNotebook = createEmptyTMNotebook note
-      , tmStateFontDesc = fontDesc
-      , tmStateConfig = tmConfig
-      }
-
-newTMStateSingleTerm ::
-     TMConfig
-  -> Application
-  -> ApplicationWindow
-  -> Notebook
-  -> Label
-  -> ScrolledWindow
-  -> Terminal
-  -> Int
-  -> FontDescription
-  -> IO TMState
-newTMStateSingleTerm tmConfig app appWin note label scrollWin trm pd fontDesc = do
-  tmTerm <- newTMTerm trm pd
-  let tmNoteTab = createTMNotebookTab label scrollWin tmTerm
-      tabs = singletonFL tmNoteTab
-      tmNote = createTMNotebook note tabs
-  newTMState tmConfig app appWin tmNote fontDesc
+newEmptyTMState :: TMConfig -> Application -> ApplicationWindow -> Notebook -> FontDescription -> IO (TMState, TMWindowId)
+newEmptyTMState tmConfig app appWin note fontDesc = do
+  let tmnote = createEmptyTMNotebook note
+      tmwin = createTMWindow appWin tmnote
+      (tmwinId, tmwins) = singletonIdMap tmwin
+  tmState <-
+    newMVar $
+      TMState
+        { tmStateApp = app
+        , tmStateConfig = tmConfig
+        , tmStateFontDesc = fontDesc
+        , tmStateWindows = tmwins
+        }
+  pure (tmState, tmwinId)
 
 ------------
 -- Config --
@@ -579,32 +619,36 @@ data TabsDoNotMatch
                                 -- the actual GTK 'Notebook' and the 'FocusList'.
   deriving (Show)
 
-data TMStateInvariantErr
+-- | An invariant error on a given 'TMWindow'.
+data TMWinInvariantErr
   = FocusNotSame FocusNotSameErr Int
   | TabsDoNotMatch TabsDoNotMatch
   deriving Show
 
--- | Gather up the invariants for 'TMState' and return them as a list.
---
--- If no invariants have been violated, then this function should return an
--- empty list.
-invariantTMState' :: TMState' -> IO [TMStateInvariantErr]
-invariantTMState' tmState =
+-- | An invariant error on a whole 'TMState'.
+data TMStateInvariantErr
+  = TMWinInvariantErr Int TMWinInvariantErr
+    -- ^ An invariant error with a given 'TMWindow'.  The 'Int' indicates
+    -- which window it is as an index into 'tmStateWindows'.
+  deriving Show
+
+invariantTMWindow :: TMWindow -> IO [TMWinInvariantErr]
+invariantTMWindow tmWin =
   runInvariants
     [ invariantFocusSame
     , invariantTMTabLength
     , invariantTabsAllMatch
     ]
   where
-    runInvariants :: [IO (Maybe TMStateInvariantErr)] -> IO [TMStateInvariantErr]
+    runInvariants :: [IO (Maybe TMWinInvariantErr)] -> IO [TMWinInvariantErr]
     runInvariants = fmap catMaybes . sequence
 
-    invariantFocusSame :: IO (Maybe TMStateInvariantErr)
+    invariantFocusSame :: IO (Maybe TMWinInvariantErr)
     invariantFocusSame = do
-      let tmNote = tmNotebook $ tmStateNotebook tmState
+      let tmNote = tmNotebook $ tmWindowNotebook tmWin
       index32 <- notebookGetCurrentPage tmNote
       maybeWidgetFromNote <- notebookGetNthPage tmNote index32
-      let focusList = tmNotebookTabs $ tmStateNotebook tmState
+      let focusList = tmNotebookTabs $ tmWindowNotebook tmWin
           maybeScrollWinFromFL =
             tmNotebookTabTermContainer <$> getFocusItemFL focusList
           idx = fromIntegral index32
@@ -627,12 +671,12 @@ invariantTMState' tmState =
                 Just $
                   FocusNotSame NotebookTabWidgetDiffersFromFocusListFocus idx
 
-    invariantTMTabLength :: IO (Maybe TMStateInvariantErr)
+    invariantTMTabLength :: IO (Maybe TMWinInvariantErr)
     invariantTMTabLength = do
-      let tmNote = tmNotebook $ tmStateNotebook tmState
+      let tmNote = tmNotebook $ tmWindowNotebook tmWin
       noteLength32 <- notebookGetNPages tmNote
       let noteLength = fromIntegral noteLength32
-          focusListLength = lengthFL $ tmNotebookTabs $ tmStateNotebook tmState
+          focusListLength = lengthFL $ tmNotebookTabs $ tmWindowNotebook tmWin
           lengthEqual = focusListLength == noteLength
       if lengthEqual
         then pure Nothing
@@ -642,10 +686,10 @@ invariantTMState' tmState =
                  TabLengthsDifferent noteLength focusListLength
 
     -- Turns a FocusList and Notebook into two lists of widgets and compares each widget for equality
-    invariantTabsAllMatch :: IO (Maybe TMStateInvariantErr)
+    invariantTabsAllMatch :: IO (Maybe TMWinInvariantErr)
     invariantTabsAllMatch = do
-      let tmNote = tmNotebook $ tmStateNotebook tmState
-          focusList = tmNotebookTabs $ tmStateNotebook tmState
+      let tmNote = tmNotebook $ tmWindowNotebook tmWin
+          focusList = tmNotebookTabs $ tmWindowNotebook tmWin
           flList = tmNotebookTabTermContainer <$> toList focusList
       noteList <- notebookToList tmNote
       tabsMatch noteList flList
@@ -655,15 +699,29 @@ invariantTMState' tmState =
            . (IsWidget a, IsWidget b)
           => [a]
           -> [b]
-          -> IO (Maybe TMStateInvariantErr)
+          -> IO (Maybe TMWinInvariantErr)
         tabsMatch xs ys = foldr go (pure Nothing) (zip3 xs ys [0..])
           where
-            go :: (a, b, Int) -> IO (Maybe TMStateInvariantErr) -> IO (Maybe TMStateInvariantErr)
+            go :: (a, b, Int) -> IO (Maybe TMWinInvariantErr) -> IO (Maybe TMWinInvariantErr)
             go (x, y, i) acc = do
               isEq <- widgetEq x y
               if isEq
                 then acc
                 else pure . Just $ TabsDoNotMatch (TabAtIndexDifferent i)
+
+-- | Gather up the invariants for 'TMState' and return them as a list.
+--
+-- If no invariants have been violated, then this function should return an
+-- empty list.
+invariantTMState' :: TMState' -> IO [TMStateInvariantErr]
+invariantTMState' tmState = do
+  let tmWindows = tmStateWindows tmState
+  ifoldMap go tmWindows
+  where
+    go :: Int -> TMWindow -> IO [TMStateInvariantErr]
+    go idx tmWin = do
+      tmWinErrs <- invariantTMWindow tmWin
+      pure $ fmap (TMWinInvariantErr idx) tmWinErrs
 
 -- | Check the invariants for 'TMState', and call 'fail' if we find that they
 -- have been violated.

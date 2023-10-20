@@ -4,9 +4,13 @@ module Termonad.Term where
 
 import Termonad.Prelude
 
-import Control.Lens ((^.), (.~), set, to)
+import Control.Lens ((^.), ix, set)
+import Data.Coerce (coerce)
 import Data.Colour.SRGB (Colour, RGB(RGB), toSRGB)
 import Data.FocusList (appendFL, deleteFL, getFocusItemFL)
+import Data.GI.Base (toManagedPtr)
+import Data.Text (pack)
+import qualified Data.Text as Text
 import GI.Gdk
   ( Event (Event)
   , EventButton
@@ -109,7 +113,7 @@ import GI.Vte
   )
 import System.Directory (getSymbolicLinkTarget)
 import System.Environment (lookupEnv)
-
+import System.FilePath ((</>))
 import Termonad.Gtk (terminalSetEnableSixelIfExists)
 import Termonad.Lenses
   ( lensConfirmExit
@@ -122,9 +126,9 @@ import Termonad.Lenses
   , lensTMNotebookTabs
   , lensTMStateApp
   , lensTMStateConfig
-  , lensTMStateNotebook
-  , lensTerm
+  , lensTerm, lensTMStateWindows, lensTMWindowNotebook
   )
+import Termonad.Pcre (pcre2Multiline)
 import Termonad.Types
   ( ConfigHooks(createTermHook)
   , ConfigOptions(scrollbackLen, wordCharExceptions, cursorBlinkMode, boldIsBright, enableSixel, allowBold)
@@ -134,8 +138,9 @@ import Termonad.Types
   , TMNotebook
   , TMNotebookTab
   , TMState
-  , TMState'(TMState, tmStateAppWin, tmStateConfig, tmStateFontDesc, tmStateNotebook)
+  , TMState'(TMState, tmStateConfig, tmStateFontDesc)
   , TMTerm
+  , TMWindow
   , assertInvariantTMState
   , createTMNotebookTab
   , newTMTerm
@@ -143,48 +148,46 @@ import Termonad.Types
   , tmNotebook
   , tmNotebookTabTerm
   , tmNotebookTabTermContainer
-  , tmNotebookTabs
+  , tmNotebookTabs, TMWindowId, tmStateWindows, getTMWindowFromWins, tmWindowNotebook, getTMWindowFromTMState, getNotebookFromTMState, getTMNotebookFromTMState, getTMNotebookFromTMState', tmWindowAppWin
   )
-import Data.Coerce (coerce)
-import Data.GI.Base (toManagedPtr)
-import Termonad.Pcre (pcre2Multiline)
 
-focusTerm :: Int -> TMState -> IO ()
-focusTerm i mvarTMState = do
-  note <- tmNotebook . tmStateNotebook <$> readMVar mvarTMState
+focusTerm :: Int -> TMState -> TMWindowId -> IO ()
+focusTerm i mvarTMState tmWinId = do
+  note <- getNotebookFromTMState mvarTMState tmWinId
   notebookSetCurrentPage note (fromIntegral i)
 
-altNumSwitchTerm :: Int -> TMState -> IO ()
+altNumSwitchTerm :: Int -> TMState -> TMWindowId -> IO ()
 altNumSwitchTerm = focusTerm
 
-termNextPage :: TMState -> IO ()
-termNextPage mvarTMState = do
-  note <- tmNotebook . tmStateNotebook <$> readMVar mvarTMState
+-- | Change focus to the next tab.
+termNextPage :: TMState -> TMWindowId -> IO ()
+termNextPage mvarTMState tmWinId = do
+  note <- getNotebookFromTMState mvarTMState tmWinId
   notebookNextPage note
 
-termPrevPage :: TMState -> IO ()
-termPrevPage mvarTMState = do
-  note <- tmNotebook . tmStateNotebook <$> readMVar mvarTMState
+-- | Change focus to the previous tab.
+termPrevPage :: TMState -> TMWindowId -> IO ()
+termPrevPage mvarTMState tmWinId = do
+  note <- getNotebookFromTMState mvarTMState tmWinId
   notebookPrevPage note
 
-termExitFocused :: TMState -> IO ()
-termExitFocused mvarTMState = do
-  tmState <- readMVar mvarTMState
-  let maybeTab =
-        tmState ^. lensTMStateNotebook . lensTMNotebookTabs . to getFocusItemFL
+termExitFocused :: TMState -> TMWindowId -> IO ()
+termExitFocused mvarTMState tmWinId = do
+  note <- getTMNotebookFromTMState mvarTMState tmWinId
+  let maybeTab = getFocusItemFL $ tmNotebookTabs note
   case maybeTab of
     Nothing -> pure ()
-    Just tab -> termClose tab mvarTMState
+    Just tab -> termClose tab mvarTMState tmWinId
 
-termClose :: TMNotebookTab -> TMState -> IO ()
-termClose tab mvarTMState = do
+termClose :: TMNotebookTab -> TMState -> TMWindowId -> IO ()
+termClose tab mvarTMState tmWindowId = do
   tmState <- readMVar mvarTMState
   let confirm = tmState ^. lensTMStateConfig . lensOptions . lensConfirmExit
       close = if confirm then termExitWithConfirmation else termExit
-  close tab mvarTMState
+  close tab mvarTMState tmWindowId
 
-termExitWithConfirmation :: TMNotebookTab -> TMState -> IO ()
-termExitWithConfirmation tab mvarTMState = do
+termExitWithConfirmation :: TMNotebookTab -> TMState -> TMWindowId -> IO ()
+termExitWithConfirmation tab mvarTMState tmWinId = do
   tmState <- readMVar mvarTMState
   let app = tmState ^. lensTMStateApp
   win <- applicationGetActiveWindow app
@@ -208,30 +211,34 @@ termExitWithConfirmation tab mvarTMState = do
   res <- dialogRun dialog
   widgetDestroy dialog
   case toEnum (fromIntegral res) of
-    ResponseTypeYes -> termExit tab mvarTMState
+    ResponseTypeYes -> termExit tab mvarTMState tmWinId
     _ -> pure ()
 
-termExit :: TMNotebookTab -> TMState -> IO ()
-termExit tab mvarTMState = do
+termExit :: TMNotebookTab -> TMState -> TMWindowId -> IO ()
+termExit tab mvarTMState tmWinId = do
   detachTabAction <-
     modifyMVar mvarTMState $ \tmState -> do
-      let notebook = tmStateNotebook tmState
+      tmNote <- getTMNotebookFromTMState' tmState tmWinId
+      let detachTabAction :: IO ()
           detachTabAction =
             notebookDetachTab
-              (tmNotebook notebook)
+              (tmNotebook tmNote)
               (tmNotebookTabTermContainer tab)
-      let newTabs = deleteFL tab (tmNotebookTabs notebook)
-      let newTMState =
-            set (lensTMStateNotebook . lensTMNotebookTabs) newTabs tmState
+          newTabs = deleteFL tab (tmNotebookTabs tmNote)
+          newTMState =
+            set
+              (lensTMStateWindows . ix tmWinId . lensTMWindowNotebook . lensTMNotebookTabs)
+              newTabs
+              tmState
       pure (newTMState, detachTabAction)
   detachTabAction
-  relabelTabs mvarTMState
+  tmWin <- getTMWindowFromTMState mvarTMState tmWinId
+  relabelTabs (tmWindowNotebook tmWin)
 
-relabelTabs :: TMState -> IO ()
-relabelTabs mvarTMState = do
-  TMState{tmStateNotebook} <- readMVar mvarTMState
-  let notebook = tmNotebook tmStateNotebook
-      tabFocusList = tmNotebookTabs tmStateNotebook
+relabelTabs :: TMNotebook -> IO ()
+relabelTabs tmNote = do
+  let notebook = tmNotebook tmNote
+      tabFocusList = tmNotebookTabs tmNote
   foldMap (go notebook) tabFocusList
   where
     go :: Notebook -> TMNotebookTab -> IO ()
@@ -411,12 +418,13 @@ launchShell vteTerm maybeCurrDir = do
 -- | Add a page to the notebook and switch to it.
 addPage
   :: TMState
+  -> TMWindowId
   -> TMNotebookTab
   -> Box
   -- ^ The GTK Object holding the label we want to show for the tab of the
   -- newly created page of the notebook.
   -> IO ()
-addPage mvarTMState notebookTab tabLabelBox = do
+addPage mvarTMState tmWinId notebookTab tabLabelBox = do
   -- Append a new notebook page and update the TMState to reflect this.
   (note, pageIndex) <- modifyMVar mvarTMState appendNotebookPage
 
@@ -425,8 +433,8 @@ addPage mvarTMState notebookTab tabLabelBox = do
   where
     appendNotebookPage :: TMState' -> IO (TMState', (Notebook, Int32))
     appendNotebookPage tmState = do
-      let notebook = tmStateNotebook tmState
-          note = tmNotebook notebook
+      notebook <- getTMNotebookFromTMState' tmState tmWinId
+      let note = tmNotebook notebook
           tabs = tmNotebookTabs notebook
           scrolledWin = tmNotebookTabTermContainer notebookTab
       pageIndex <- notebookAppendPage note scrolledWin (Just tabLabelBox)
@@ -434,7 +442,10 @@ addPage mvarTMState notebookTab tabLabelBox = do
       setShowTabs (tmState ^. lensTMStateConfig) note
       let newTabs = appendFL tabs notebookTab
           newTMState =
-            tmState & lensTMStateNotebook . lensTMNotebookTabs .~ newTabs
+            set
+              (lensTMStateWindows . ix tmWinId . lensTMWindowNotebook . lensTMNotebookTabs)
+              newTabs
+              tmState
       pure (newTMState, (note, pageIndex))
 
 -- | Set the keyboard focus on a vte terminal
@@ -445,17 +456,23 @@ setFocusOn tmStateAppWin vteTerm = do
 
 -- | Create a new 'TMTerm', setting it up and adding it to the GTKNotebook.
 createTerm
-  :: (TMState -> EventKey -> IO Bool)
+  :: (TMState -> TMWindowId -> EventKey -> IO Bool)
   -- ^ Funtion for handling key presses on the terminal.
   -> TMState
+  -> TMWindowId
   -> IO TMTerm
-createTerm handleKeyPress mvarTMState = do
+createTerm handleKeyPress mvarTMState tmWinId = do
   -- Check preconditions
   assertInvariantTMState mvarTMState
 
   -- Read needed data in TMVar
-  TMState{tmStateAppWin, tmStateFontDesc, tmStateConfig, tmStateNotebook=currNote} <-
+  -- TMState{tmStateAppWin, tmStateFontDesc, tmStateConfig, tmStateNotebook=currNote} <-
+  --   readMVar mvarTMState
+  TMState{tmStateFontDesc, tmStateConfig, tmStateWindows} <-
     readMVar mvarTMState
+  tmWin <- getTMWindowFromWins tmStateWindows tmWinId
+  let appWin = tmWindowAppWin tmWin
+      currNote = tmWindowNotebook tmWin
 
   -- Create a new terminal and launch a shell in it
   vteTerm <- createAndInitVteTerm tmStateFontDesc (options tmStateConfig)
@@ -474,7 +491,7 @@ createTerm handleKeyPress mvarTMState = do
   let notebookTab = createTMNotebookTab tabLabel scrolledWin tmTerm
 
   -- Add the new notebooktab to the notebook.
-  addPage mvarTMState notebookTab tabLabelBox
+  addPage mvarTMState tmWinId notebookTab tabLabelBox
 
   -- Setup the initial label for the notebook tab.  This needs to happen
   -- after we add the new page to the notebook, so that the page can get labelled
@@ -482,15 +499,13 @@ createTerm handleKeyPress mvarTMState = do
   relabelTab (tmNotebook currNote) tabLabel scrolledWin vteTerm
 
   -- Connect callbacks
-  void $ onButtonClicked tabCloseButton $ termClose notebookTab mvarTMState
+  void $ onButtonClicked tabCloseButton $ termClose notebookTab mvarTMState tmWinId
   void $ onTerminalWindowTitleChanged vteTerm $ do
-    TMState{tmStateNotebook} <- readMVar mvarTMState
-    let notebook = tmNotebook tmStateNotebook
-    relabelTab notebook tabLabel scrolledWin vteTerm
-  void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState
-  void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState
-  void $ onWidgetButtonPressEvent vteTerm $ handleMousePress tmStateAppWin vteTerm
-  void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState
+    relabelTab (tmNotebook currNote) tabLabel scrolledWin vteTerm
+  void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState tmWinId
+  void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState tmWinId
+  void $ onWidgetButtonPressEvent vteTerm $ handleMousePress appWin vteTerm
+  void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState tmWinId
 
   -- Underline URLs so that the user can see they are right-clickable.
   --
@@ -506,11 +521,11 @@ createTerm handleKeyPress mvarTMState = do
         "(?:http(s)?:\\/\\/)[\\w.-]+(?:\\.[\\w\\.-]+)+[\\w\\-\\._~:/?#[\\]@!\\$&'\\(\\)\\*\\+,;=.]+"
   -- We must set the pcre2Multiline option, otherwise VTE prints a warning.
   let pcreFlags = fromIntegral pcre2Multiline
-  regex <- regexNewForMatch regexPat (fromIntegral $ length regexPat) pcreFlags
+  regex <- regexNewForMatch regexPat (fromIntegral $ Text.length regexPat) pcreFlags
   void $ terminalMatchAddRegex vteTerm regex 0
 
   -- Put the keyboard focus on the term
-  setFocusOn tmStateAppWin vteTerm
+  setFocusOn appWin vteTerm
 
   -- Make sure the state is still right
   assertInvariantTMState mvarTMState

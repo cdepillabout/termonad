@@ -56,8 +56,17 @@
 # Ignore some builtin hints
 # - ignore: {name: Use let}
 # - ignore: {name: Use const, within: SpecialModule} # Only within certain modules
-- ignore: {name: Use forM_}
-- ignore: {name: Use join}
+- ignore: {name: "Eta reduce"}
+- ignore: {name: "Redundant pure"}
+- ignore: {name: "Replace case with maybe"}
+- ignore: {name: "Use <$>"}
+- ignore: {name: "Use <$>"}
+- ignore: {name: "Use forM_"}
+- ignore: {name: "Use foldr"}
+- ignore: {name: "Use infix"}
+- ignore: {name: "Use join"}
+- ignore: {name: "Use uncurry"}
+
 
 
 # Define some custom infix operators

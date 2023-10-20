@@ -9,17 +9,18 @@ import Data.Aeson (Result(..), fromJSON)
 #if MIN_VERSION_aeson(2, 0, 0)
 import qualified Data.Aeson.KeyMap as KeyMap
 #endif
+import qualified Data.ByteString as ByteString
 import qualified Data.HashMap.Strict as HashMap
+import Data.Text (pack)
 import Data.Yaml (ParseException, ToJSON (toJSON), decodeFileEither, encode, prettyPrintParseException)
 import Data.Yaml.Aeson (Value(..))
-
 import System.Directory
   ( XdgDirectory(XdgConfig)
   , createDirectoryIfMissing
   , doesFileExist
   , getXdgDirectory
   )
-
+import System.FilePath ((</>))
 import Termonad.Types
   ( ConfigOptions
   , TMConfig(TMConfig, hooks, options)
@@ -184,7 +185,7 @@ writePreferencesFile confFile options = do
         "# The settings in this file will be ignored if you have a\n" <>
         "# termonad.hs file in this same directory.\n\n" <>
         yaml
-  writeFile confFile yamlWithComment
+  ByteString.writeFile confFile yamlWithComment
 
 -- | Save the configuration to the preferences file
 -- @~\/.config\/termonad\/termonad.yaml@

@@ -7,6 +7,8 @@ import Termonad.Prelude
 
 import Data.Default (def)
 import Data.FileEmbed (embedFile)
+import Data.Text.Encoding (decodeUtf8)
+import qualified Data.Text.Lazy as LText
 import Text.XML (renderText)
 import Text.XML.QQ (Document, xmlRaw)
 
@@ -23,7 +25,7 @@ interfaceDoc =
     <interface>
       <!-- interface-requires gtk+ 3.8 -->
       <object id="appWin" class="GtkApplicationWindow">
-        <property name="title" translatable="yes">Example Application</property>
+        <property name="title" translatable="yes">Termonad</property>
         <property name="default-width">600</property>
         <property name="default-height">400</property>
         <child>
@@ -42,7 +44,7 @@ interfaceDoc =
    |]
 
 interfaceText :: Text
-interfaceText = toStrict $ renderText def interfaceDoc
+interfaceText = LText.toStrict $ renderText def interfaceDoc
 
 menuDoc :: Document
 menuDoc =
@@ -56,13 +58,13 @@ menuDoc =
           <section>
             <item>
               <attribute name="label" translatable="yes">New _Tab</attribute>
-              <attribute name="action">app.newtab</attribute>
+              <attribute name="action">win.newtab</attribute>
             </item>
           </section>
           <section>
             <item>
               <attribute name="label" translatable="yes">_Close Tab</attribute>
-              <attribute name="action">app.closetab</attribute>
+              <attribute name="action">win.closetab</attribute>
             </item>
             <item>
               <attribute name="label" translatable="yes">_Quit</attribute>
@@ -74,11 +76,11 @@ menuDoc =
           <attribute name="label" translatable="yes">Edit</attribute>
           <item>
             <attribute name="label" translatable="yes">_Copy</attribute>
-            <attribute name="action">app.copy</attribute>
+            <attribute name="action">win.copy</attribute>
           </item>
           <item>
             <attribute name="label" translatable="yes">_Paste</attribute>
-            <attribute name="action">app.paste</attribute>
+            <attribute name="action">win.paste</attribute>
           </item>
           <item>
             <attribute name="label" translatable="yes">_Preferences</attribute>
@@ -100,15 +102,15 @@ menuDoc =
           <attribute name="label" translatable="yes">Search</attribute>
           <item>
             <attribute name="label" translatable="yes">_Find...</attribute>
-            <attribute name="action">app.find</attribute>
+            <attribute name="action">win.find</attribute>
           </item>
           <item>
             <attribute name="label" translatable="yes">Find Above</attribute>
-            <attribute name="action">app.findabove</attribute>
+            <attribute name="action">win.findabove</attribute>
           </item>
           <item>
             <attribute name="label" translatable="yes">Find Below</attribute>
-            <attribute name="action">app.findbelow</attribute>
+            <attribute name="action">win.findbelow</attribute>
           </item>
         </submenu>
         <submenu>
@@ -123,7 +125,7 @@ menuDoc =
    |]
 
 menuText :: Text
-menuText = toStrict $ renderText def menuDoc
+menuText = LText.toStrict $ renderText def menuDoc
 
 aboutDoc :: Document
 aboutDoc =
@@ -201,7 +203,7 @@ aboutDoc =
    |]
 
 aboutText :: Text
-aboutText = toStrict $ renderText def aboutDoc
+aboutText = LText.toStrict $ renderText def aboutDoc
 
 closeTabDoc :: Document
 closeTabDoc =
@@ -258,7 +260,7 @@ closeTabDoc =
    |]
 
 closeTabText :: Text
-closeTabText = toStrict $ renderText def closeTabDoc
+closeTabText = LText.toStrict $ renderText def closeTabDoc
 
 preferencesText :: Text
 preferencesText = decodeUtf8 $(embedFile "glade/preferences.glade")

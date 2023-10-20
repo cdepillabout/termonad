@@ -19,6 +19,7 @@ import Termonad.Prelude
 
 import Control.Monad.Fail (MonadFail, fail)
 import Data.GI.Base (ManagedPtr, withManagedPtr)
+import Data.Text (unpack)
 import GHC.Stack (HasCallStack)
 import GI.Gdk
   ( GObject
@@ -42,15 +43,11 @@ objFromBuildUnsafe ::
 objFromBuildUnsafe builder name constructor = do
   maybePlainObj <- builderGetObject builder name
   case maybePlainObj of
-    Nothing -> error $ "Couldn't get " <> unpack name <> " from builder!"
+    Nothing -> error $ unpack $ "Couldn't get " <> name <> " from builder!"
     Just plainObj -> do
       maybeNewObj <- castTo constructor plainObj
       case maybeNewObj of
-        Nothing ->
-          error $
-            "Got " <>
-            unpack name <>
-            " from builder, but couldn't convert to object!"
+        Nothing -> error $ unpack $ "Got " <> name <> " from builder, but couldn't convert to object!"
         Just obj -> pure obj
 
 -- | Unsafely creates a new 'Application'.  This calls 'fail' if it cannot
