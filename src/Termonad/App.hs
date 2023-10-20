@@ -5,7 +5,7 @@ module Termonad.App where
 import Termonad.Prelude
 
 import Config.Dyre (wrapMain, newParams)
-import Control.Lens ((.~), (^.), (^..), over, set, view, ix)
+import Control.Lens ((^.), (^..), over, set, view, ix)
 import Control.Monad.Fail (fail)
 import Data.FileEmbed (embedFile)
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
@@ -95,7 +95,7 @@ import GI.Gtk
   , widgetShow
   , widgetShowAll
   , windowPresent
-  , windowSetIcon
+  , windowSetDefaultIcon
   , windowSetTitle
   , windowSetTransientFor
   )
@@ -145,7 +145,6 @@ import Termonad.Lenses
   , lensShowScrollbar
   , lensShowTabBar
   , lensScrollbackLen
-  , lensTMNotebook
   , lensTMNotebookTabTermContainer
   , lensTMNotebookTabs
   , lensTMNotebookTabTerm
@@ -174,13 +173,21 @@ import Termonad.Types
   , TMConfig
   , TMNotebookTab
   , TMState
-  , TMState'(TMState)
+  , TMState'
+  , TMWindowId
   , getFocusedTermFromState
+  , getTMNotebookFromTMState
+  , getTMNotebookFromTMState'
+  , getTMWindowFromTMState'
   , modFontSize
   , newEmptyTMState
+  , tmNotebook
   , tmNotebookTabTermContainer
   , tmNotebookTabs
-  , tmStateApp, getTMNotebookFromTMState, TMWindowId, getTMNotebookFromTMState', tmNotebook, getTMWindowFromTMState', tmWindowAppWin, tmWindowNotebook, tmStateWindows
+  , tmStateApp
+  , tmStateWindows
+  , tmWindowAppWin
+  , tmWindowNotebook
   )
 import Termonad.XML (interfaceText, menuText, preferencesText)
 import Termonad.Cli (parseCliArgs, applyCliArgs)
@@ -380,10 +387,6 @@ forceQuit mvarTMState = do
 
 setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
 setupTermonad tmConfig app win builder = do
-  let img = $(embedFile "img/termonad-lambda.png")
-  iconPixbuf <- imgToPixbuf img
-  windowSetIcon win (Just iconPixbuf)
-
   setupScreenStyle
   box <- objFromBuildUnsafe builder "content_box" Box
   fontDesc <- createFontDescFromConfig tmConfig
@@ -550,6 +553,9 @@ setupTermonad tmConfig app win builder = do
 
 appActivate :: TMConfig -> Application -> IO ()
 appActivate tmConfig app = do
+  let img = $(embedFile "img/termonad-lambda.png")
+  iconPixbuf <- imgToPixbuf img
+  windowSetDefaultIcon iconPixbuf
   uiBuilder <-
     builderNewFromString interfaceText $ fromIntegral (Text.length interfaceText)
   builderSetApplication uiBuilder app
