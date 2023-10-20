@@ -68,7 +68,7 @@ menuDoc =
             </item>
             <item>
               <attribute name="label" translatable="yes">_Quit</attribute>
-              <attribute name="action">win.quit</attribute>
+              <attribute name="action">app.quit</attribute>
             </item>
           </section>
         </submenu>

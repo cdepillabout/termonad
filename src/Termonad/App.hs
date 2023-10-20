@@ -445,26 +445,26 @@ setupTermonad tmConfig app win builder = do
   newTabAction <- simpleActionNew "newtab" Nothing
   void $ onSimpleActionActivate newTabAction $ \_ ->
     void $ createTerm handleKeyPress mvarTMState tmWinId
-  actionMapAddAction app newTabAction
+  actionMapAddAction win newTabAction
   applicationSetAccelsForAction app "win.newtab" ["<Shift><Ctrl>T"]
 
   nextPageAction <- simpleActionNew "nextpage" Nothing
   void $ onSimpleActionActivate nextPageAction $ \_ ->
     termNextPage mvarTMState tmWinId
-  actionMapAddAction app nextPageAction
+  actionMapAddAction win nextPageAction
   applicationSetAccelsForAction app "win.nextpage" ["<Ctrl>Page_Down"]
 
   prevPageAction <- simpleActionNew "prevpage" Nothing
   void $ onSimpleActionActivate prevPageAction $ \_ ->
     termPrevPage mvarTMState tmWinId
-  actionMapAddAction app prevPageAction
-  applicationSetAccelsForAction app "app.prevpage" ["<Ctrl>Page_Up"]
+  actionMapAddAction win prevPageAction
+  applicationSetAccelsForAction app "win.prevpage" ["<Ctrl>Page_Up"]
 
   closeTabAction <- simpleActionNew "closetab" Nothing
   void $ onSimpleActionActivate closeTabAction $ \_ ->
     termExitFocused mvarTMState tmWinId
-  actionMapAddAction app closeTabAction
-  applicationSetAccelsForAction app "app.closetab" ["<Shift><Ctrl>W"]
+  actionMapAddAction win closeTabAction
+  applicationSetAccelsForAction app "win.closetab" ["<Shift><Ctrl>W"]
 
   quitAction <- simpleActionNew "quit" Nothing
   void $ onSimpleActionActivate quitAction $ \_ -> do
@@ -477,15 +477,15 @@ setupTermonad tmConfig app win builder = do
   void $ onSimpleActionActivate copyAction $ \_ -> do
     maybeTerm <- getFocusedTermFromState mvarTMState tmWinId
     maybe (pure ()) terminalCopyClipboard maybeTerm
-  actionMapAddAction app copyAction
-  applicationSetAccelsForAction app "app.copy" ["<Shift><Ctrl>C"]
+  actionMapAddAction win copyAction
+  applicationSetAccelsForAction app "win.copy" ["<Shift><Ctrl>C"]
 
   pasteAction <- simpleActionNew "paste" Nothing
   void $ onSimpleActionActivate pasteAction $ \_ -> do
     maybeTerm <- getFocusedTermFromState mvarTMState tmWinId
     maybe (pure ()) terminalPasteClipboard maybeTerm
-  actionMapAddAction app pasteAction
-  applicationSetAccelsForAction app "app.paste" ["<Shift><Ctrl>V"]
+  actionMapAddAction win pasteAction
+  applicationSetAccelsForAction app "win.paste" ["<Shift><Ctrl>V"]
 
   preferencesAction <- simpleActionNew "preferences" Nothing
   void $ onSimpleActionActivate preferencesAction (const $ showPreferencesDialog mvarTMState)
@@ -505,18 +505,18 @@ setupTermonad tmConfig app win builder = do
 
   findAction <- simpleActionNew "find" Nothing
   void $ onSimpleActionActivate findAction $ \_ -> doFind mvarTMState tmWinId
-  actionMapAddAction app findAction
-  applicationSetAccelsForAction app "app.find" ["<Shift><Ctrl>F"]
+  actionMapAddAction win findAction
+  applicationSetAccelsForAction app "win.find" ["<Shift><Ctrl>F"]
 
   findAboveAction <- simpleActionNew "findabove" Nothing
   void $ onSimpleActionActivate findAboveAction $ \_ -> findAbove mvarTMState tmWinId
-  actionMapAddAction app findAboveAction
-  applicationSetAccelsForAction app "app.findabove" ["<Shift><Ctrl>P"]
+  actionMapAddAction win findAboveAction
+  applicationSetAccelsForAction app "win.findabove" ["<Shift><Ctrl>P"]
 
   findBelowAction <- simpleActionNew "findbelow" Nothing
   void $ onSimpleActionActivate findBelowAction $ \_ -> findBelow mvarTMState tmWinId
-  actionMapAddAction app findBelowAction
-  applicationSetAccelsForAction app "app.findbelow" ["<Shift><Ctrl>I"]
+  actionMapAddAction win findBelowAction
+  applicationSetAccelsForAction app "win.findbelow" ["<Shift><Ctrl>I"]
 
   aboutAction <- simpleActionNew "about" Nothing
   void $ onSimpleActionActivate aboutAction $ \_ -> showAboutDialog app

@@ -159,11 +159,13 @@ focusTerm i mvarTMState tmWinId = do
 altNumSwitchTerm :: Int -> TMState -> TMWindowId -> IO ()
 altNumSwitchTerm = focusTerm
 
+-- | Change focus to the next tab.
 termNextPage :: TMState -> TMWindowId -> IO ()
 termNextPage mvarTMState tmWinId = do
   note <- getNotebookFromTMState mvarTMState tmWinId
   notebookNextPage note
 
+-- | Change focus to the previous tab.
 termPrevPage :: TMState -> TMWindowId -> IO ()
 termPrevPage mvarTMState tmWinId = do
   note <- getNotebookFromTMState mvarTMState tmWinId
