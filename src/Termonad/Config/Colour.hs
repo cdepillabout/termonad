@@ -87,7 +87,7 @@ module Termonad.Config.Colour
     -- $setup
   ) where
 
-import Termonad.Prelude hiding ((\\), index)
+import Termonad.Prelude
 
 import Control.Lens ((%~), makeLensesFor)
 import Data.Colour
@@ -124,9 +124,6 @@ import GI.Vte
   , terminalSetColorHighlight
   , terminalSetColorHighlightForeground
   )
-import Text.Printf (printf)
-import Text.Show (showString)
-
 import Termonad.Lenses (lensCreateTermHook, lensHooks)
 import Termonad.Types
   ( Option(Unset)
@@ -134,6 +131,7 @@ import Termonad.Types
   , TMState
   , whenSet
   )
+import Text.Printf (printf)
 
 -- $setup
 -- >>> import Data.Colour.Names (green, red)
