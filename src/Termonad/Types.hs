@@ -31,7 +31,6 @@ import GI.Vte (Terminal, CursorBlinkMode(..))
 import Termonad.Gtk (widgetEq)
 import Termonad.IdMap (IdMap, IdMapKey, singletonIdMap, lookupIdMap)
 import Text.Pretty.Simple (pPrint)
-import Text.Show (ShowS, showParen, showString)
 
 -- | A wrapper around a VTE 'Terminal'.  This also stores the process ID of the
 -- process running on this terminal, as well as a 'Unique' that can be used for
