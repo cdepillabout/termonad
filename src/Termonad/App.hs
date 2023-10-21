@@ -444,6 +444,13 @@ setupTermonad tmConfig app win builder = do
             tmNote' <- getTMNotebookFromTMState mvarTMState tmWinId
             relabelTabs tmNote'
 
+  newWindowAction <- simpleActionNew "newwin" Nothing
+  void $ onSimpleActionActivate newWindowAction $ \_ ->
+    pure ()
+    -- void $ createTerm handleKeyPress mvarTMState tmWinId
+  actionMapAddAction app newWindowAction
+  applicationSetAccelsForAction app "app.newwin" ["<Shift><Ctrl>N"]
+
   newTabAction <- simpleActionNew "newtab" Nothing
   void $ onSimpleActionActivate newTabAction $ \_ ->
     void $ createTerm handleKeyPress mvarTMState tmWinId

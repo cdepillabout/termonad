@@ -57,6 +57,10 @@ menuDoc =
           <attribute name="label" translatable="yes">File</attribute>
           <section>
             <item>
+              <attribute name="label" translatable="yes">_New Window</attribute>
+              <attribute name="action">app.newwin</attribute>
+            </item>
+            <item>
               <attribute name="label" translatable="yes">New _Tab</attribute>
               <attribute name="action">win.newtab</attribute>
             </item>
