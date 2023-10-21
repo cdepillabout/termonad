@@ -17,7 +17,6 @@ module Termonad.Gtk where
 
 import Termonad.Prelude
 
-import Control.Monad.Fail (MonadFail, fail)
 import Data.GI.Base (ManagedPtr, withManagedPtr)
 import Data.Text (unpack)
 import GHC.Stack (HasCallStack)

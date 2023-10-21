@@ -5,7 +5,6 @@ module Termonad.Types where
 import Termonad.Prelude
 
 import Control.Lens (ifoldMap)
-import Control.Monad.Fail (fail)
 import Data.FocusList (FocusList, emptyFL, getFocusItemFL, lengthFL)
 import Data.Foldable (toList)
 import Data.Unique (Unique, hashUnique, newUnique)
