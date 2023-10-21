@@ -120,5 +120,6 @@ pkgs.mkShell {
     pkgs.xorg.libXdmcp
     pkgs.xorg.libxcb
     pkgs.xorg.libXtst
+    pkgs.zlib
   ];
 }
