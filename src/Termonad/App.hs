@@ -153,7 +153,7 @@ import Termonad.Lenses
   , lensTerm
   , lensWordCharExceptions, lensTMStateWindows, lensTMWindowNotebook
   )
-import Termonad.PreferencesFile (saveToPreferencesFile)
+import Termonad.Preferences (saveToPreferencesFile)
 import Termonad.Term
   ( createTerm
   , relabelTabs

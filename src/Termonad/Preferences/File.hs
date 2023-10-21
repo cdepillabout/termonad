@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 
-module Termonad.PreferencesFile where
+module Termonad.Preferences.File where
 
 import Termonad.Prelude
 
@@ -193,3 +193,4 @@ saveToPreferencesFile :: TMConfig -> IO ()
 saveToPreferencesFile TMConfig { options = options } = do
   confFile <- getPreferencesFile
   writePreferencesFile confFile options
+
