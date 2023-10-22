@@ -6,7 +6,6 @@ import Termonad.Prelude
 
 import Config.Dyre (wrapMain, newParams)
 import Control.Lens ((^.), (^..), over, set, view, ix)
-import Control.Monad.Fail (fail)
 import Data.FileEmbed (embedFile)
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
 import qualified Data.List as List

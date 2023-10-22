@@ -147,10 +147,12 @@ jobs:
 
       - uses: DeterminateSystems/magic-nix-cache-action@v2
 
-      # TODO: This cache actually needs to be keyed on the hash of the
+      # TODO: These caches actually needs to be keyed on the hash of the
       # ./nix-helpers/simple-cabal-shell.nix derivation.  If that derivation
       # changes, then we really, really should not reuse the same
-      # ~/.cabal/store directory.
+      # ~/.cabal/store directory (since there is the possibility of getting
+      # into a cabal hell, where Haskell libraries in the Cabal store are linked to
+      # different, incompatible system libraries).
       #
       # It is possible to get the hash of this derivation with a command like:
       #
@@ -158,9 +160,12 @@ jobs:
       #
       # Just need to load this into a variable, and throw it in the following key name
       - uses: actions/cache@v3
-        name: Cache cabal-store
+        name: Cache cabal store
         with:
-          path: ~/.config/cabal/store
+          path: |
+            ~/.cabal/store
+            ~/.config/cabal/store
+            ~/.local/state/cabal/store
           key: nix-simple-cabal-shell
 
       - name: cabal update

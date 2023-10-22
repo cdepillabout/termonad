@@ -140,15 +140,23 @@ import Termonad.Types
   , TMState
   , TMState'(TMState, tmStateConfig, tmStateFontDesc)
   , TMTerm
-  , TMWindow
+  , TMWindowId
   , assertInvariantTMState
   , createTMNotebookTab
+  , getNotebookFromTMState
+  , getTMNotebookFromTMState
+  , getTMNotebookFromTMState'
+  , getTMWindowFromTMState
+  , getTMWindowFromWins
   , newTMTerm
   , pid
   , tmNotebook
   , tmNotebookTabTerm
   , tmNotebookTabTermContainer
-  , tmNotebookTabs, TMWindowId, tmStateWindows, getTMWindowFromWins, tmWindowNotebook, getTMWindowFromTMState, getNotebookFromTMState, getTMNotebookFromTMState, getTMNotebookFromTMState', tmWindowAppWin
+  , tmNotebookTabs
+  , tmStateWindows
+  , tmWindowAppWin
+  , tmWindowNotebook
   )
 
 focusTerm :: Int -> TMState -> TMWindowId -> IO ()
