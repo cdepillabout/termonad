@@ -26,7 +26,7 @@ import GI.Gtk
   , notebookGetNthPage
   , notebookGetNPages
   )
-import GI.Pango (FontDescription)
+import GI.Pango (FontDescription, fontDescriptionGetSize, fontDescriptionGetSizeIsAbsolute, pattern SCALE, fontDescriptionGetFamily)
 import GI.Vte (Terminal, CursorBlinkMode(..))
 import Termonad.Gtk (widgetEq)
 import Termonad.IdMap (IdMap, IdMapKey, singletonIdMap, lookupIdMap)
@@ -332,6 +332,17 @@ modFontSize i (FontSizeUnits oldUnits) =
   let newUnits = oldUnits + fromIntegral i
   in FontSizeUnits $ if newUnits < 1 then oldUnits else newUnits
 
+fontSizeFromFontDescription :: FontDescription -> IO FontSize
+fontSizeFromFontDescription fontDesc = do
+  currSize <- fontDescriptionGetSize fontDesc
+  currAbsolute <- fontDescriptionGetSizeIsAbsolute fontDesc
+  pure $
+    if currAbsolute
+    then FontSizeUnits $ fromIntegral currSize / fromIntegral SCALE
+    else
+      let fontRatio :: Double = fromIntegral currSize / fromIntegral SCALE
+      in FontSizePoints $ round fontRatio
+
 -- | Settings for the font to be used in Termonad.
 data FontConfig = FontConfig
   { fontFamily :: !Text
@@ -350,6 +361,12 @@ defaultFontConfig =
     { fontFamily = "Monospace"
     , fontSize = defaultFontSize
     }
+
+fontConfigFromFontDescription :: FontDescription -> IO (Maybe FontConfig)
+fontConfigFromFontDescription fontDescription = do
+  fontSize <- fontSizeFromFontDescription fontDescription
+  maybeFontFamily <- fontDescriptionGetFamily fontDescription
+  return $ (`FontConfig` fontSize) <$> maybeFontFamily
 
 -- | This data type represents an option that can either be 'Set' or 'Unset'.
 --
