@@ -1,5 +1,16 @@
 {-# LANGUAGE CPP #-}
 
+-- | Description : Controls the Preferences dialog and setting app preferences
+-- Copyright     : (c) Dennis Gosnell, 2023
+-- License       : BSD3
+-- Stability     : experimental
+-- Portability   : POSIX
+--
+-- This module controls the Preferences dialog, which lets you set Termonad
+-- preferences at run-time.
+--
+-- It also exports helpful functions from "Termonad.Preferences.File".
+
 module Termonad.Preferences
   ( module Termonad.Preferences.File
   , showPreferencesDialog
@@ -160,6 +171,12 @@ applyNewPreferencesToWindow mvarTMState tmWinId = do
   -- Sets the remaining preferences to each tab
   foldMap (applyNewPreferencesToTab mvarTMState) tabFocusList
 
+-- | Takes a 'TMState', and looks at the 'TMConfig' within.
+-- Take all the configuration options from the 'TMConfig' and apply them to the
+-- current 'Application', 'Window's, and 'Term's.
+--
+-- This function is meant to be used after a big update to the 'TMConfig' within a
+-- 'TMState'.
 applyNewPreferences :: TMState -> IO ()
 applyNewPreferences mvarTMState = do
   tmState <- readMVar mvarTMState
@@ -296,4 +313,3 @@ showPreferencesDialog mvarTMState = do
     applyNewPreferences mvarTMState
 
   widgetDestroy preferencesDialog
-
