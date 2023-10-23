@@ -23,6 +23,15 @@
     funtionality, you should be able to use the `Termonad.start` function (in
     place of `Termonad.defaultMain`).
 
+*   Rename the `Termonad.PreferencesFile` module to `Termonad.Preferences.File`.
+
+    Also, add a `Termonad.Preferences` module that re-exports everything helpful
+    from the `Termonad.Preferences.File` module.  Also, some of the
+    preferences-related functionality from `Termonad.App` has been moved into
+    `Termonad.Preferences`.
+    [#238](https://github.com/cdepillabout/termonad/pull/238)
+
+
 ## 4.5.0.0
 
 *   Add an `allowBold` option (which defaults to `True`).  This can be used if

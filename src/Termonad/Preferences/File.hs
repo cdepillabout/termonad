@@ -1,6 +1,19 @@
 {-# LANGUAGE CPP #-}
 
-module Termonad.PreferencesFile where
+-- | Description : Read and write to the Preferences file
+-- Copyright     : (c) Dennis Gosnell, 2023
+-- License       : BSD3
+-- Stability     : experimental
+-- Portability   : POSIX
+--
+-- This module contains functions for reading and writing to the preferences file.
+--
+-- The preferences file is generally stored in
+-- @~/.config/termonad/termonad.yaml@.  It stores run-time preferences that
+-- have been set through the Preferences dialog.  Preferences are loaded on
+-- app startup, but only if the @termonad.hs@ configuration file doesn't exist.
+
+module Termonad.Preferences.File where
 
 import Termonad.Prelude
 
@@ -193,3 +206,4 @@ saveToPreferencesFile :: TMConfig -> IO ()
 saveToPreferencesFile TMConfig { options = options } = do
   confFile <- getPreferencesFile
   writePreferencesFile confFile options
+
