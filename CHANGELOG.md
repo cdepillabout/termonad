@@ -31,6 +31,11 @@
     `Termonad.Preferences`.
     [#238](https://github.com/cdepillabout/termonad/pull/238)
 
+*   Move the `defaultMain` function from `Termonad.App` to `Termonad.Startup`.
+    (It is also exported from the top-level `Termonad` module, so most users
+    will likely want to get it from there.)
+    [#239](https://github.com/cdepillabout/termonad/pull/239)
+
 
 ## 4.5.0.0
 

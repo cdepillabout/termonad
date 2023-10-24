@@ -386,11 +386,11 @@ module.
 
 module Main where
 
-import Termonad.App (defaultMain)
-import Termonad.Config
+import Termonad
   ( FontConfig, FontSize(FontSizePoints), Option(Set)
   , ShowScrollbar(ShowScrollbarAlways), defaultConfigOptions, defaultFontConfig
-  , defaultTMConfig, fontConfig, fontFamily, fontSize, options, showScrollbar
+  , defaultMain, defaultTMConfig, fontConfig, fontFamily, fontSize, options
+  , showScrollbar
   )
 import Termonad.Config.Colour
   ( AlphaColour, ColourConfig, addColourExtension, createColour
