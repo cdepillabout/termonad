@@ -71,6 +71,7 @@ library
                      , Termonad.Preferences
                      , Termonad.Preferences.File
                      , Termonad.Prelude
+                     , Termonad.Startup
                      , Termonad.Term
                      , Termonad.Types
                      , Termonad.XML
