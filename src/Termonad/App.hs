@@ -622,13 +622,6 @@ findBelow mvarTMState tmWinId = do
       -- putStrLn $ "was match found: " <> tshow matchFound
       pure ()
 
-setShowMenuBar :: Application -> Bool -> IO ()
-setShowMenuBar app visible = do
-  void $ runMaybeT $ do
-    win <- MaybeT $ applicationGetActiveWindow app
-    appWin <- MaybeT $ castTo ApplicationWindow win
-    lift $ applicationWindowSetShowMenubar appWin visible
-
 appStartup :: Application -> IO ()
 appStartup _app = pure ()
 
