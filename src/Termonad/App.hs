@@ -29,7 +29,6 @@ import GI.Gtk
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
   , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
-  , aboutDialogNew
   , applicationAddWindow
   , applicationGetActiveWindow
   , applicationSetAccelsForAction
@@ -121,7 +120,7 @@ import Termonad.Types
   , tmNotebookTabs
   )
 import Termonad.XML (interfaceText, menuText)
-import Termonad.Window (doFind, findAbove, findBelow)
+import Termonad.Window (doFind, findAbove, findBelow, showAboutDialog)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
@@ -443,7 +442,7 @@ setupTermonad tmConfig app win builder = do
   applicationSetAccelsForAction app "win.findbelow" ["<Shift><Ctrl>I"]
 
   aboutAction <- simpleActionNew "about" Nothing
-  void $ onSimpleActionActivate aboutAction $ \_ -> showAboutDialog app
+  void $ onSimpleActionActivate aboutAction $ \_ -> showAboutDialog win
   actionMapAddAction app aboutAction
 
   menuBuilder <- builderNewFromString menuText $ fromIntegral (Text.length menuText)
@@ -484,14 +483,6 @@ appActivate tmConfig app = do
   applicationAddWindow app appWin
   setupTermonad tmConfig app appWin uiBuilder
   windowPresent appWin
-
-showAboutDialog :: Application -> IO ()
-showAboutDialog app = do
-  win <- applicationGetActiveWindow app
-  aboutDialog <- aboutDialogNew
-  windowSetTransientFor aboutDialog win
-  void $ dialogRun aboutDialog
-  widgetDestroy aboutDialog
 
 appStartup :: Application -> IO ()
 appStartup _app = pure ()

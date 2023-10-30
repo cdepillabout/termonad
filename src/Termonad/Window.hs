@@ -135,6 +135,13 @@ import Termonad.Types
   )
 import Termonad.XML (interfaceText, menuText)
 
+showAboutDialog :: ApplicationWindow -> IO ()
+showAboutDialog win = do
+  aboutDialog <- aboutDialogNew
+  windowSetTransientFor aboutDialog (Just win)
+  void $ dialogRun aboutDialog
+  widgetDestroy aboutDialog
+
 showFindDialog :: ApplicationWindow -> IO (Maybe Text)
 showFindDialog win = do
   dialog <- dialogNew
