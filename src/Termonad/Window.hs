@@ -135,6 +135,44 @@ import Termonad.Types
   )
 import Termonad.XML (interfaceText, menuText)
 
+-- | Move a 'TMNotebookTab' from one position to another.
+--
+-- If the current position index is out of bounds, or the new index is out of
+-- bounds, then nothing will be done.
+--
+-- Note that this function doesn't change anything about the 'tmNotebook'.
+-- This function is meant to be used as a call-back for when a 'Notebook's
+-- tab-order has been changed.
+updateFLTabPos
+  :: TMState
+  -> TMWindowId
+  -> Int
+  -- ^ Current position index.
+  -> Int
+  -- ^ New position index.
+  -> IO ()
+updateFLTabPos mvarTMState tmWinId oldPos newPos =
+  modifyMVar_ mvarTMState $ \tmState -> do
+    note <- getTMNotebookFromTMState' tmState tmWinId
+    let tabs = tmNotebookTabs note
+        maybeNewTabs = moveFromToFL oldPos newPos tabs
+    case maybeNewTabs of
+      Nothing -> do
+        putStrLn $
+          "in updateFLTabPos, Strange error: couldn't move tabs.\n" <>
+          "old pos: " <> show oldPos <> "\n" <>
+          "new pos: " <> show newPos <> "\n" <>
+          "tabs: " <> show tabs <> "\n" <>
+          "maybeNewTabs: " <> show maybeNewTabs <> "\n" <>
+          "tmState: " <> show tmState
+        pure tmState
+      Just newTabs ->
+        pure $
+          set
+            (lensTMStateWindows . ix tmWinId . lensTMWindowNotebook . lensTMNotebookTabs)
+            newTabs
+            tmState
+
 showAboutDialog :: ApplicationWindow -> IO ()
 showAboutDialog win = do
   aboutDialog <- aboutDialogNew

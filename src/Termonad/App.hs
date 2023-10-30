@@ -6,7 +6,7 @@ import Termonad.Prelude
 
 import Control.Lens ((^.), (^..), set, view, ix)
 import Data.FileEmbed (embedFile)
-import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
+import Data.FocusList (focusList, updateFocusFL)
 import Data.Sequence (findIndexR)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
@@ -120,7 +120,7 @@ import Termonad.Types
   , tmNotebookTabs
   )
 import Termonad.XML (interfaceText, menuText)
-import Termonad.Window (doFind, findAbove, findBelow, showAboutDialog)
+import Termonad.Window (doFind, findAbove, findBelow, showAboutDialog, updateFLTabPos)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
@@ -213,29 +213,6 @@ compareScrolledWinAndTab scrollWin flTab =
       ScrolledWindow managedPtrScrollWin = scrollWin
       foreignPtrScrollWin = managedForeignPtr managedPtrScrollWin
   in foreignPtrFLTab == foreignPtrScrollWin
-
-updateFLTabPos :: TMState -> TMWindowId -> Int -> Int -> IO ()
-updateFLTabPos mvarTMState tmWinId oldPos newPos =
-  modifyMVar_ mvarTMState $ \tmState -> do
-    note <- getTMNotebookFromTMState' tmState tmWinId
-    let tabs = tmNotebookTabs note
-        maybeNewTabs = moveFromToFL oldPos newPos tabs
-    case maybeNewTabs of
-      Nothing -> do
-        putStrLn $
-          "in updateFLTabPos, Strange error: couldn't move tabs.\n" <>
-          "old pos: " <> show oldPos <> "\n" <>
-          "new pos: " <> show newPos <> "\n" <>
-          "tabs: " <> show tabs <> "\n" <>
-          "maybeNewTabs: " <> show maybeNewTabs <> "\n" <>
-          "tmState: " <> show tmState
-        pure tmState
-      Just newTabs ->
-        pure $
-          set
-            (lensTMStateWindows . ix tmWinId . lensTMWindowNotebook . lensTMNotebookTabs)
-            newTabs
-            tmState
 
 -- | Try to figure out whether Termonad should exit.  This also used to figure
 -- out if Termonad should close a given terminal.
