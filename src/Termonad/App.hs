@@ -26,7 +26,6 @@ import GI.Gtk
   ( Application
   , ApplicationWindow(ApplicationWindow)
   , Box(Box)
-  , PositionType(PositionTypeRight)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
   , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
@@ -45,17 +44,11 @@ import GI.Gtk
   , dialogAddButton
   , dialogGetContentArea
   , dialogNew
-  , dialogResponse
   , dialogRun
-  , entryGetText
-  , entryNew
-  , gridAttachNextTo
-  , gridNew
   , labelNew
   , notebookGetNPages
   , notebookNew
   , notebookSetShowBorder
-  , onEntryActivate
   , onNotebookPageRemoved
   , onNotebookPageReordered
   , onNotebookSwitchPage
@@ -82,14 +75,8 @@ import GI.Pango
   , fontDescriptionSetAbsoluteSize
   )
 import GI.Vte
-  ( catchRegexError
-  , regexNewForSearch
-  , terminalCopyClipboard
+  ( terminalCopyClipboard
   , terminalPasteClipboard
-  , terminalSearchFindNext
-  , terminalSearchFindPrevious
-  , terminalSearchSetRegex
-  , terminalSearchSetWrapAround
   , terminalSetFont
   )
 import Termonad.Gtk (appNew, imgToPixbuf, objFromBuildUnsafe)
@@ -132,9 +119,9 @@ import Termonad.Types
   , newEmptyTMState
   , tmNotebookTabTermContainer
   , tmNotebookTabs
-  , tmStateApp
   )
 import Termonad.XML (interfaceText, menuText)
+import Termonad.Window (doFind, findAbove, findBelow)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
@@ -505,122 +492,6 @@ showAboutDialog app = do
   windowSetTransientFor aboutDialog win
   void $ dialogRun aboutDialog
   widgetDestroy aboutDialog
-
-showFindDialog :: Application -> IO (Maybe Text)
-showFindDialog app = do
-  win <- applicationGetActiveWindow app
-  dialog <- dialogNew
-  box <- dialogGetContentArea dialog
-  grid <- gridNew
-
-  searchForLabel <- labelNew (Just "Search for regex:")
-  containerAdd grid searchForLabel
-  widgetShow searchForLabel
-  setWidgetMargin searchForLabel 10
-
-  searchEntry <- entryNew
-  gridAttachNextTo grid searchEntry (Just searchForLabel) PositionTypeRight 1 1
-  widgetShow searchEntry
-  setWidgetMargin searchEntry 10
-  -- setWidgetMarginBottom searchEntry 20
-  void $
-    onEntryActivate searchEntry $
-      dialogResponse dialog (fromIntegral (fromEnum ResponseTypeYes))
-
-  void $
-    dialogAddButton
-      dialog
-      "Close"
-      (fromIntegral (fromEnum ResponseTypeNo))
-  void $
-    dialogAddButton
-      dialog
-      "Find"
-      (fromIntegral (fromEnum ResponseTypeYes))
-
-  containerAdd box grid
-  widgetShow grid
-  windowSetTransientFor dialog win
-  res <- dialogRun dialog
-
-  searchString <- entryGetText searchEntry
-  let maybeSearchString =
-        case toEnum (fromIntegral res) of
-          ResponseTypeYes -> Just searchString
-          _ -> Nothing
-
-  widgetDestroy dialog
-
-  pure maybeSearchString
-
-doFind :: TMState -> TMWindowId -> IO ()
-doFind mvarTMState tmWinId = do
-  tmState <- readMVar mvarTMState
-  let app = tmStateApp tmState
-  maybeSearchString <- showFindDialog app
-  -- putStrLn $ "trying to find: " <> tshow maybeSearchString
-  maybeTerminal <- getFocusedTermFromState mvarTMState tmWinId
-  case (maybeSearchString, maybeTerminal) of
-    (Just searchString, Just terminal) -> do
-      -- TODO: Figure out how to import the correct pcre flags.
-      --
-      -- If you don't pass the pcre2Multiline flag, VTE gives
-      -- the following warning:
-      --
-      -- (termonad-linux-x86_64:18792): Vte-WARNING **:
-      -- 21:56:31.193: (vtegtk.cc:2269):void
-      -- vte_terminal_search_set_regex(VteTerminal*,
-      -- VteRegex*, guint32): runtime check failed:
-      -- (regex == nullptr ||
-      -- _vte_regex_get_compile_flags(regex) & PCRE2_MULTILINE)
-      --
-      -- However, if you do add the pcre2Multiline flag,
-      -- the terminalSearchSetRegex appears to just completely
-      -- not work.
-      let pcreFlags = 0
-      let newRegex =
-            regexNewForSearch
-              searchString
-              (fromIntegral $ Text.length searchString)
-              pcreFlags
-      eitherRegex <-
-        catchRegexError
-          (fmap Right newRegex)
-          (\_ errMsg -> pure (Left errMsg))
-      case eitherRegex of
-        Left errMsg -> do
-          let msg = "error when creating regex: " <> errMsg
-          hPutStrLn stderr msg
-        Right regex -> do
-          terminalSearchSetRegex terminal (Just regex) pcreFlags
-          terminalSearchSetWrapAround terminal True
-          _matchFound <- terminalSearchFindPrevious terminal
-          -- TODO: Setup an actual logging framework to show these
-          -- kinds of log messages.  Also make a similar change in
-          -- findAbove and findBelow.
-          -- putStrLn $ "was match found: " <> tshow matchFound
-          pure ()
-    _ -> pure ()
-
-findAbove :: TMState -> TMWindowId -> IO ()
-findAbove mvarTMState tmWinId = do
-  maybeTerminal <- getFocusedTermFromState mvarTMState tmWinId
-  case maybeTerminal of
-    Nothing -> pure ()
-    Just terminal -> do
-      _matchFound <- terminalSearchFindPrevious terminal
-      -- putStrLn $ "was match found: " <> tshow matchFound
-      pure ()
-
-findBelow :: TMState -> TMWindowId -> IO ()
-findBelow mvarTMState tmWinId = do
-  maybeTerminal <- getFocusedTermFromState mvarTMState tmWinId
-  case maybeTerminal of
-    Nothing -> pure ()
-    Just terminal -> do
-      _matchFound <- terminalSearchFindNext terminal
-      -- putStrLn $ "was match found: " <> tshow matchFound
-      pure ()
 
 appStartup :: Application -> IO ()
 appStartup _app = pure ()
