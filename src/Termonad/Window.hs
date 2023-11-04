@@ -131,9 +131,31 @@ import Termonad.Types
   , newEmptyTMState
   , tmNotebookTabTermContainer
   , tmNotebookTabs
-  , tmStateApp, getTMWindowFromTMState, tmWindowAppWin
+  , tmStateApp, getTMWindowFromTMState, tmWindowAppWin, setFontDescSize
   )
 import Termonad.XML (interfaceText, menuText)
+
+modifyFontSizeForAllTerms :: (FontSize -> FontSize) -> TMState -> TMWindowId -> IO ()
+modifyFontSizeForAllTerms modFontSizeFunc mvarTMState tmWinId = do
+  tmState <- readMVar mvarTMState
+  let fontDesc = tmState ^. lensTMStateFontDesc
+  adjustFontDescSize modFontSizeFunc fontDesc
+  let terms =
+        tmState ^..
+          lensTMStateWindows .
+          ix tmWinId .
+          lensTMWindowNotebook .
+          lensTMNotebookTabs .
+          traverse .
+          lensTMNotebookTabTerm .
+          lensTerm
+  foldMap (\vteTerm -> terminalSetFont vteTerm (Just fontDesc)) terms
+  where
+    adjustFontDescSize :: (FontSize -> FontSize) -> FontDescription -> IO ()
+    adjustFontDescSize f fontDesc = do
+      currFontSz <- fontSizeFromFontDescription fontDesc
+      let newFontSz = f currFontSz
+      setFontDescSize fontDesc newFontSz
 
 -- | This is the callback for when a page in a 'Notebook' has been reordered
 -- (normally caused by a drag-and-drop event).

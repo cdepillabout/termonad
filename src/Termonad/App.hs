@@ -117,10 +117,10 @@ import Termonad.Types
   , modFontSize
   , newEmptyTMState
   , tmNotebookTabTermContainer
-  , tmNotebookTabs
+  , tmNotebookTabs, createFontDescFromConfig
   )
 import Termonad.XML (interfaceText, menuText)
-import Termonad.Window (doFind, findAbove, findBelow, showAboutDialog, updateFLTabPos, notebookPageReorderedCallback)
+import Termonad.Window (doFind, findAbove, findBelow, showAboutDialog, updateFLTabPos, notebookPageReorderedCallback, modifyFontSizeForAllTerms)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
@@ -165,46 +165,6 @@ setupScreenStyle = do
         screen
         cssProvider
         (fromIntegral STYLE_PROVIDER_PRIORITY_APPLICATION)
-
-createFontDescFromConfig :: TMConfig -> IO FontDescription
-createFontDescFromConfig tmConfig = do
-  let fontConf = tmConfig ^. lensOptions . lensFontConfig
-  createFontDesc (fontSize fontConf) (fontFamily fontConf)
-
-createFontDesc :: FontSize -> Text -> IO FontDescription
-createFontDesc fontSz fontFam = do
-  fontDesc <- fontDescriptionNew
-  fontDescriptionSetFamily fontDesc fontFam
-  setFontDescSize fontDesc fontSz
-  pure fontDesc
-
-setFontDescSize :: FontDescription -> FontSize -> IO ()
-setFontDescSize fontDesc (FontSizePoints points) =
-  fontDescriptionSetSize fontDesc $ fromIntegral (points * fromIntegral SCALE)
-setFontDescSize fontDesc (FontSizeUnits units) =
-  fontDescriptionSetAbsoluteSize fontDesc $ units * fromIntegral SCALE
-
-adjustFontDescSize :: (FontSize -> FontSize) -> FontDescription -> IO ()
-adjustFontDescSize f fontDesc = do
-  currFontSz <- fontSizeFromFontDescription fontDesc
-  let newFontSz = f currFontSz
-  setFontDescSize fontDesc newFontSz
-
-modifyFontSizeForAllTerms :: (FontSize -> FontSize) -> TMState -> TMWindowId -> IO ()
-modifyFontSizeForAllTerms modFontSizeFunc mvarTMState tmWinId = do
-  tmState <- readMVar mvarTMState
-  let fontDesc = tmState ^. lensTMStateFontDesc
-  adjustFontDescSize modFontSizeFunc fontDesc
-  let terms =
-        tmState ^..
-          lensTMStateWindows .
-          ix tmWinId .
-          lensTMWindowNotebook .
-          lensTMNotebookTabs .
-          traverse .
-          lensTMNotebookTabTerm .
-          lensTerm
-  foldMap (\vteTerm -> terminalSetFont vteTerm (Just fontDesc)) terms
 
 -- | Try to figure out whether Termonad should exit.  This also used to figure
 -- out if Termonad should close a given terminal.
