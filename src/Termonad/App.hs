@@ -120,7 +120,7 @@ import Termonad.Types
   , tmNotebookTabs
   )
 import Termonad.XML (interfaceText, menuText)
-import Termonad.Window (doFind, findAbove, findBelow, showAboutDialog, updateFLTabPos)
+import Termonad.Window (doFind, findAbove, findBelow, showAboutDialog, updateFLTabPos, notebookPageReorderedCallback)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
@@ -205,14 +205,6 @@ modifyFontSizeForAllTerms modFontSizeFunc mvarTMState tmWinId = do
           lensTMNotebookTabTerm .
           lensTerm
   foldMap (\vteTerm -> terminalSetFont vteTerm (Just fontDesc)) terms
-
-compareScrolledWinAndTab :: ScrolledWindow -> TMNotebookTab -> Bool
-compareScrolledWinAndTab scrollWin flTab =
-  let ScrolledWindow managedPtrFLTab = tmNotebookTabTermContainer flTab
-      foreignPtrFLTab = managedForeignPtr managedPtrFLTab
-      ScrolledWindow managedPtrScrollWin = scrollWin
-      foreignPtrScrollWin = managedForeignPtr managedPtrScrollWin
-  in foreignPtrFLTab == foreignPtrScrollWin
 
 -- | Try to figure out whether Termonad should exit.  This also used to figure
 -- out if Termonad should close a given terminal.
@@ -311,29 +303,8 @@ setupTermonad tmConfig app win builder = do
               newTabs
               tmState
 
-  void $ onNotebookPageReordered note $ \childWidg pageNum -> do
-    maybeScrollWin <- castTo ScrolledWindow childWidg
-    case maybeScrollWin of
-      Nothing ->
-        fail $
-          "In setupTermonad, in callback for onNotebookPageReordered, " <>
-          "child widget is not a ScrolledWindow.\n" <>
-          "Don't know how to continue.\n"
-      Just scrollWin -> do
-        tmNote <- getTMNotebookFromTMState mvarTMState tmWinId
-        let fl = view lensTMNotebookTabs tmNote
-        let maybeOldPosition =
-              findIndexR (compareScrolledWinAndTab scrollWin) (focusList fl)
-        case maybeOldPosition of
-          Nothing ->
-            fail $
-              "In setupTermonad, in callback for onNotebookPageReordered, " <>
-              "the ScrolledWindow is not already in the FocusList.\n" <>
-              "Don't know how to continue.\n"
-          Just oldPos -> do
-            updateFLTabPos mvarTMState tmWinId oldPos (fromIntegral pageNum)
-            tmNote' <- getTMNotebookFromTMState mvarTMState tmWinId
-            relabelTabs tmNote'
+  void $ onNotebookPageReordered note $ \childWidg pageNum ->
+    notebookPageReorderedCallback mvarTMState tmWinId childWidg pageNum
 
   newWindowAction <- simpleActionNew "newwin" Nothing
   void $ onSimpleActionActivate newWindowAction $ \_ ->

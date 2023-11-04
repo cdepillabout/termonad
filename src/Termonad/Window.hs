@@ -69,7 +69,7 @@ import GI.Gtk
   , windowPresent
   , windowSetDefaultIcon
   , windowSetTitle
-  , windowSetTransientFor
+  , windowSetTransientFor, Widget
   )
 import qualified GI.Gtk as Gtk
 import GI.Pango
@@ -134,6 +134,39 @@ import Termonad.Types
   , tmStateApp, getTMWindowFromTMState, tmWindowAppWin
   )
 import Termonad.XML (interfaceText, menuText)
+
+notebookPageReorderedCallback :: TMState -> TMWindowId -> Widget -> Word32 -> IO ()
+notebookPageReorderedCallback mvarTMState tmWinId childWidg pageNum = do
+  maybeScrollWin <- castTo ScrolledWindow childWidg
+  case maybeScrollWin of
+    Nothing ->
+      fail $
+        "In setupTermonad, in callback for onNotebookPageReordered, " <>
+        "child widget is not a ScrolledWindow.\n" <>
+        "Don't know how to continue.\n"
+    Just scrollWin -> do
+      tmNote <- getTMNotebookFromTMState mvarTMState tmWinId
+      let fl = view lensTMNotebookTabs tmNote
+      let maybeOldPosition =
+            findIndexR (compareScrolledWinAndTab scrollWin) (focusList fl)
+      case maybeOldPosition of
+        Nothing ->
+          fail $
+            "In setupTermonad, in callback for onNotebookPageReordered, " <>
+            "the ScrolledWindow is not already in the FocusList.\n" <>
+            "Don't know how to continue.\n"
+        Just oldPos -> do
+          updateFLTabPos mvarTMState tmWinId oldPos (fromIntegral pageNum)
+          tmNote' <- getTMNotebookFromTMState mvarTMState tmWinId
+          relabelTabs tmNote'
+  where
+    compareScrolledWinAndTab :: ScrolledWindow -> TMNotebookTab -> Bool
+    compareScrolledWinAndTab scrollWin flTab =
+      let ScrolledWindow managedPtrFLTab = tmNotebookTabTermContainer flTab
+          foreignPtrFLTab = managedForeignPtr managedPtrFLTab
+          ScrolledWindow managedPtrScrollWin = scrollWin
+          foreignPtrScrollWin = managedForeignPtr managedPtrScrollWin
+      in foreignPtrFLTab == foreignPtrScrollWin
 
 -- | Move a 'TMNotebookTab' from one position to another.
 --
