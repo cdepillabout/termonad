@@ -135,7 +135,16 @@ import Termonad.Types
   )
 import Termonad.XML (interfaceText, menuText)
 
-notebookPageReorderedCallback :: TMState -> TMWindowId -> Widget -> Word32 -> IO ()
+-- | This is the callback for when a page in a 'Notebook' has been reordered
+-- (normally caused by a drag-and-drop event).
+notebookPageReorderedCallback
+  :: TMState
+  -> TMWindowId
+  -> Widget
+  -- ^ The child widget that is in the Notebook page.
+  -> Word32
+  -- ^ The new index of the Notebook page.
+  -> IO ()
 notebookPageReorderedCallback mvarTMState tmWinId childWidg pageNum = do
   maybeScrollWin <- castTo ScrolledWindow childWidg
   case maybeScrollWin of
