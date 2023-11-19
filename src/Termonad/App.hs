@@ -4,13 +4,12 @@ module Termonad.App where
 
 import Termonad.Prelude
 
-import Control.Lens ((^.), (^..), set, view, ix)
+import Control.Lens ((^.), set, ix)
 import Data.FileEmbed (embedFile)
-import Data.FocusList (focusList, updateFocusFL)
-import Data.Sequence (findIndexR)
+import Data.FocusList (updateFocusFL)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
-import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
+import GI.Gdk (screenGetDefault)
 import GI.Gio
   ( ApplicationFlags(ApplicationFlagsFlagsNone)
   , MenuModel(MenuModel)
@@ -27,7 +26,6 @@ import GI.Gtk
   , ApplicationWindow(ApplicationWindow)
   , Box(Box)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
-  , ScrolledWindow(ScrolledWindow)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , applicationAddWindow
   , applicationGetActiveWindow
@@ -65,62 +63,44 @@ import GI.Gtk
   , windowSetTransientFor
   )
 import qualified GI.Gtk as Gtk
-import GI.Pango
-  ( FontDescription
-  , pattern SCALE
-  , fontDescriptionNew
-  , fontDescriptionSetFamily
-  , fontDescriptionSetSize
-  , fontDescriptionSetAbsoluteSize
-  )
 import GI.Vte
   ( terminalCopyClipboard
   , terminalPasteClipboard
-  , terminalSetFont
   )
 import Termonad.Gtk (appNew, imgToPixbuf, objFromBuildUnsafe)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Lenses
   ( lensConfirmExit
-  , lensFontConfig
   , lensOptions
   , lensShowMenu
   , lensTMNotebookTabs
   , lensTMNotebookTabTerm
   , lensTMStateApp
   , lensTMStateConfig
-  , lensTMStateFontDesc
   , lensTerm
   , lensTMStateWindows, lensTMWindowNotebook
   )
 import Termonad.Preferences (showPreferencesDialog)
 import Termonad.Term
   ( createTerm
-  , relabelTabs
   , termNextPage
   , termPrevPage
   , termExitFocused
   , setShowTabs
   )
 import Termonad.Types
-  ( FontConfig(..)
-  , FontSize(FontSizePoints, FontSizeUnits)
-  , TMConfig
-  , TMNotebookTab
+  ( TMConfig
   , TMState
   , TMState'
-  , TMWindowId
-  , fontSizeFromFontDescription
+  , createFontDescFromConfig
   , getFocusedTermFromState
-  , getTMNotebookFromTMState
   , getTMNotebookFromTMState'
   , modFontSize
   , newEmptyTMState
-  , tmNotebookTabTermContainer
-  , tmNotebookTabs, createFontDescFromConfig
+  , tmNotebookTabs
   )
 import Termonad.XML (interfaceText, menuText)
-import Termonad.Window (doFind, findAbove, findBelow, showAboutDialog, updateFLTabPos, notebookPageReorderedCallback, modifyFontSizeForAllTerms)
+import Termonad.Window (doFind, findAbove, findBelow, showAboutDialog, notebookPageReorderedCallback, modifyFontSizeForAllTerms)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
