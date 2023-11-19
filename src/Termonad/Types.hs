@@ -26,7 +26,7 @@ import GI.Gtk
   , notebookGetNthPage
   , notebookGetNPages
   )
-import GI.Pango (FontDescription, fontDescriptionGetSize, fontDescriptionGetSizeIsAbsolute, pattern SCALE, fontDescriptionGetFamily)
+import GI.Pango (FontDescription, fontDescriptionGetSize, fontDescriptionGetSizeIsAbsolute, pattern SCALE, fontDescriptionGetFamily, fontDescriptionNew, fontDescriptionSetFamily, fontDescriptionSetSize, fontDescriptionSetAbsoluteSize)
 import GI.Vte (Terminal, CursorBlinkMode(..))
 import Termonad.Gtk (widgetEq)
 import Termonad.IdMap (IdMap, IdMapKey, singletonIdMap, lookupIdMap)
@@ -342,6 +342,31 @@ fontSizeFromFontDescription fontDesc = do
     else
       let fontRatio :: Double = fromIntegral currSize / fromIntegral SCALE
       in FontSizePoints $ round fontRatio
+
+-- | Create a 'FontDescription' from a 'FontSize' and font family.
+createFontDesc
+  :: FontSize
+  -> Text
+  -- ^ font family
+  -> IO FontDescription
+createFontDesc fontSz fontFam = do
+  fontDesc <- fontDescriptionNew
+  fontDescriptionSetFamily fontDesc fontFam
+  setFontDescSize fontDesc fontSz
+  pure fontDesc
+
+-- | Set the size of a 'FontDescription' from a 'FontSize'.
+setFontDescSize :: FontDescription -> FontSize -> IO ()
+setFontDescSize fontDesc (FontSizePoints points) =
+  fontDescriptionSetSize fontDesc $ fromIntegral (points * fromIntegral SCALE)
+setFontDescSize fontDesc (FontSizeUnits units) =
+  fontDescriptionSetAbsoluteSize fontDesc $ units * fromIntegral SCALE
+
+-- | Create a 'FontDescription' from the 'fontSize' and 'fontFamily' inside a 'TMConfig'.
+createFontDescFromConfig :: TMConfig -> IO FontDescription
+createFontDescFromConfig tmConfig = do
+  let fontConf = fontConfig (options tmConfig)
+  createFontDesc (fontSize fontConf) (fontFamily fontConf)
 
 -- | Settings for the font to be used in Termonad.
 data FontConfig = FontConfig

@@ -74,6 +74,7 @@ library
                      , Termonad.Startup
                      , Termonad.Term
                      , Termonad.Types
+                     , Termonad.Window
                      , Termonad.XML
   other-modules:       Paths_termonad
   build-depends:       base >= 4.13 && < 5
