@@ -4,43 +4,26 @@ module Termonad.Window where
 import Termonad.Prelude
 
 import Control.Lens ((^.), (^..), set, view, ix)
-import Data.FileEmbed (embedFile)
 import Data.FocusList (focusList, moveFromToFL, updateFocusFL)
 import Data.Sequence (findIndexR)
 import qualified Data.Text as Text
-import Data.Text.Encoding (encodeUtf8)
-import GI.Gdk (castTo, managedForeignPtr, screenGetDefault)
+import GI.Gdk (castTo, managedForeignPtr)
 import GI.Gio
-  ( ApplicationFlags(ApplicationFlagsFlagsNone)
-  , MenuModel(MenuModel)
-  , actionMapAddAction
-  , applicationQuit
-  , applicationRun
-  , onApplicationActivate
-  , onApplicationStartup
+  ( actionMapAddAction
   , onSimpleActionActivate
   , simpleActionNew
   )
 import GI.Gtk
   ( Application
-  , ApplicationWindow(ApplicationWindow)
-  , Box(Box)
+  , ApplicationWindow
+  , Notebook
   , PositionType(PositionTypeRight)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
   , ScrolledWindow(ScrolledWindow)
-  , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
+  , Widget
   , aboutDialogNew
-  , applicationAddWindow
-  , applicationGetActiveWindow
   , applicationSetAccelsForAction
-  , applicationSetMenubar
-  , applicationWindowSetShowMenubar
-  , boxPackStart
-  , builderNewFromString
-  , builderSetApplication
   , containerAdd
-  , cssProviderLoadFromData
-  , cssProviderNew
   , dialogAddButton
   , dialogGetContentArea
   , dialogNew
@@ -51,35 +34,16 @@ import GI.Gtk
   , gridAttachNextTo
   , gridNew
   , labelNew
-  , notebookGetNPages
-  , notebookNew
-  , notebookSetShowBorder
   , onEntryActivate
-  , onNotebookPageRemoved
   , onNotebookPageReordered
   , onNotebookSwitchPage
-  , onWidgetDeleteEvent
   , setWidgetMargin
-  , styleContextAddProviderForScreen
   , widgetDestroy
   , widgetGrabFocus
-  , widgetSetCanFocus
   , widgetShow
-  , widgetShowAll
-  , windowPresent
-  , windowSetDefaultIcon
-  , windowSetTitle
-  , windowSetTransientFor, Widget
+  , windowSetTransientFor
   )
-import qualified GI.Gtk as Gtk
-import GI.Pango
-  ( FontDescription
-  , pattern SCALE
-  , fontDescriptionNew
-  , fontDescriptionSetFamily
-  , fontDescriptionSetSize
-  , fontDescriptionSetAbsoluteSize
-  )
+import GI.Pango (FontDescription)
 import GI.Vte
   ( catchRegexError
   , regexNewForSearch
@@ -91,49 +55,37 @@ import GI.Vte
   , terminalSearchSetWrapAround
   , terminalSetFont
   )
-import Termonad.Gtk (appNew, imgToPixbuf, objFromBuildUnsafe)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Lenses
-  ( lensConfirmExit
-  , lensFontConfig
-  , lensOptions
-  , lensShowMenu
-  , lensTMNotebookTabs
+  ( lensTMNotebookTabs
   , lensTMNotebookTabTerm
-  , lensTMStateApp
-  , lensTMStateConfig
   , lensTMStateFontDesc
   , lensTerm
-  , lensTMStateWindows, lensTMWindowNotebook
+  , lensTMStateWindows
+  , lensTMWindowNotebook
   )
-import Termonad.Preferences (showPreferencesDialog)
 import Termonad.Term
   ( createTerm
   , relabelTabs
   , termNextPage
   , termPrevPage
   , termExitFocused
-  , setShowTabs
   )
 import Termonad.Types
-  ( FontConfig(..)
-  , FontSize(FontSizePoints, FontSizeUnits)
-  , TMConfig
+  ( FontSize
   , TMNotebookTab
   , TMState
-  , TMState'
   , TMWindowId
   , fontSizeFromFontDescription
   , getFocusedTermFromState
   , getTMNotebookFromTMState
   , getTMNotebookFromTMState'
-  , modFontSize
-  , newEmptyTMState
+  , getTMWindowFromTMState
+  , setFontDescSize
   , tmNotebookTabTermContainer
   , tmNotebookTabs
-  , tmStateApp, getTMWindowFromTMState, tmWindowAppWin, setFontDescSize
+  , tmWindowAppWin
   )
-import Termonad.XML (interfaceText, menuText)
 
 modifyFontSizeForAllTerms :: (FontSize -> FontSize) -> TMState -> TMWindowId -> IO ()
 modifyFontSizeForAllTerms modFontSizeFunc mvarTMState tmWinId = do
@@ -358,3 +310,77 @@ findBelow mvarTMState tmWinId = do
       _matchFound <- terminalSearchFindNext terminal
       -- putStrLn $ "was match found: " <> tshow matchFound
       pure ()
+
+setupWindowCallbacks :: TMState -> Application -> ApplicationWindow -> Notebook -> TMWindowId -> IO ()
+setupWindowCallbacks mvarTMState app win note tmWinId = do
+
+  void $ onNotebookSwitchPage note $ \_ pageNum -> do
+    modifyMVar_ mvarTMState $ \tmState -> do
+      tmNote <- getTMNotebookFromTMState' tmState tmWinId
+      let tabs = tmNotebookTabs tmNote
+          maybeNewTabs = updateFocusFL (fromIntegral pageNum) tabs
+      case maybeNewTabs of
+        Nothing -> pure tmState
+        Just (tab, newTabs) -> do
+          widgetGrabFocus $ tab ^. lensTMNotebookTabTerm . lensTerm
+          pure $
+            set
+              (lensTMStateWindows . ix tmWinId . lensTMWindowNotebook . lensTMNotebookTabs)
+              newTabs
+              tmState
+
+  void $ onNotebookPageReordered note $ \childWidg pageNum ->
+    notebookPageReorderedCallback mvarTMState tmWinId childWidg pageNum
+
+  newTabAction <- simpleActionNew "newtab" Nothing
+  void $ onSimpleActionActivate newTabAction $ \_ ->
+    void $ createTerm handleKeyPress mvarTMState tmWinId
+  actionMapAddAction win newTabAction
+  applicationSetAccelsForAction app "win.newtab" ["<Shift><Ctrl>T"]
+
+  nextPageAction <- simpleActionNew "nextpage" Nothing
+  void $ onSimpleActionActivate nextPageAction $ \_ ->
+    termNextPage mvarTMState tmWinId
+  actionMapAddAction win nextPageAction
+  applicationSetAccelsForAction app "win.nextpage" ["<Ctrl>Page_Down"]
+
+  prevPageAction <- simpleActionNew "prevpage" Nothing
+  void $ onSimpleActionActivate prevPageAction $ \_ ->
+    termPrevPage mvarTMState tmWinId
+  actionMapAddAction win prevPageAction
+  applicationSetAccelsForAction app "win.prevpage" ["<Ctrl>Page_Up"]
+
+  closeTabAction <- simpleActionNew "closetab" Nothing
+  void $ onSimpleActionActivate closeTabAction $ \_ ->
+    termExitFocused mvarTMState tmWinId
+  actionMapAddAction win closeTabAction
+  applicationSetAccelsForAction app "win.closetab" ["<Shift><Ctrl>W"]
+
+  copyAction <- simpleActionNew "copy" Nothing
+  void $ onSimpleActionActivate copyAction $ \_ -> do
+    maybeTerm <- getFocusedTermFromState mvarTMState tmWinId
+    maybe (pure ()) terminalCopyClipboard maybeTerm
+  actionMapAddAction win copyAction
+  applicationSetAccelsForAction app "win.copy" ["<Shift><Ctrl>C"]
+
+  pasteAction <- simpleActionNew "paste" Nothing
+  void $ onSimpleActionActivate pasteAction $ \_ -> do
+    maybeTerm <- getFocusedTermFromState mvarTMState tmWinId
+    maybe (pure ()) terminalPasteClipboard maybeTerm
+  actionMapAddAction win pasteAction
+  applicationSetAccelsForAction app "win.paste" ["<Shift><Ctrl>V"]
+
+  findAction <- simpleActionNew "find" Nothing
+  void $ onSimpleActionActivate findAction $ \_ -> doFind mvarTMState tmWinId
+  actionMapAddAction win findAction
+  applicationSetAccelsForAction app "win.find" ["<Shift><Ctrl>F"]
+
+  findAboveAction <- simpleActionNew "findabove" Nothing
+  void $ onSimpleActionActivate findAboveAction $ \_ -> findAbove mvarTMState tmWinId
+  actionMapAddAction win findAboveAction
+  applicationSetAccelsForAction app "win.findabove" ["<Shift><Ctrl>P"]
+
+  findBelowAction <- simpleActionNew "findbelow" Nothing
+  void $ onSimpleActionActivate findBelowAction $ \_ -> findBelow mvarTMState tmWinId
+  actionMapAddAction win findBelowAction
+  applicationSetAccelsForAction app "win.findbelow" ["<Shift><Ctrl>I"]

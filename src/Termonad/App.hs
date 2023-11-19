@@ -4,9 +4,8 @@ module Termonad.App where
 
 import Termonad.Prelude
 
-import Control.Lens ((^.), set, ix)
+import Control.Lens ((^.))
 import Data.FileEmbed (embedFile)
-import Data.FocusList (updateFocusFL)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
 import GI.Gdk (screenGetDefault)
@@ -25,6 +24,7 @@ import GI.Gtk
   ( Application
   , ApplicationWindow(ApplicationWindow)
   , Box(Box)
+  , Notebook
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
   , applicationAddWindow
@@ -47,8 +47,6 @@ import GI.Gtk
   , notebookNew
   , notebookSetShowBorder
   , onNotebookPageRemoved
-  , onNotebookPageReordered
-  , onNotebookSwitchPage
   , onWidgetDeleteEvent
   , setWidgetMargin
   , styleContextAddProviderForScreen
@@ -63,44 +61,29 @@ import GI.Gtk
   , windowSetTransientFor
   )
 import qualified GI.Gtk as Gtk
-import GI.Vte
-  ( terminalCopyClipboard
-  , terminalPasteClipboard
-  )
 import Termonad.Gtk (appNew, imgToPixbuf, objFromBuildUnsafe)
 import Termonad.Keys (handleKeyPress)
 import Termonad.Lenses
   ( lensConfirmExit
   , lensOptions
   , lensShowMenu
-  , lensTMNotebookTabs
-  , lensTMNotebookTabTerm
   , lensTMStateApp
   , lensTMStateConfig
   , lensTerm
-  , lensTMStateWindows, lensTMWindowNotebook
   )
 import Termonad.Preferences (showPreferencesDialog)
-import Termonad.Term
-  ( createTerm
-  , termNextPage
-  , termPrevPage
-  , termExitFocused
-  , setShowTabs
-  )
+import Termonad.Term (createTerm, setShowTabs)
 import Termonad.Types
   ( TMConfig
   , TMState
   , TMState'
+  , TMWindowId
   , createFontDescFromConfig
-  , getFocusedTermFromState
-  , getTMNotebookFromTMState'
   , modFontSize
   , newEmptyTMState
-  , tmNotebookTabs
   )
 import Termonad.XML (interfaceText, menuText)
-import Termonad.Window (doFind, findAbove, findBelow, showAboutDialog, notebookPageReorderedCallback, modifyFontSizeForAllTerms)
+import Termonad.Window (showAboutDialog, modifyFontSizeForAllTerms, setupWindowCallbacks)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
@@ -207,45 +190,8 @@ forceQuit mvarTMState = do
   let app = tmState ^. lensTMStateApp
   applicationQuit app
 
-setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
-setupTermonad tmConfig app win builder = do
-  setupScreenStyle
-  box <- objFromBuildUnsafe builder "content_box" Box
-  fontDesc <- createFontDescFromConfig tmConfig
-  note <- notebookNew
-  widgetSetCanFocus note False
-  -- If this is not set to False, then there will be a one pixel white border
-  -- shown around the notebook.
-  notebookSetShowBorder note False
-  boxPackStart box note True True 0
-
-  (mvarTMState, tmWinId) <- newEmptyTMState tmConfig app win note fontDesc
-  terminal <- createTerm handleKeyPress mvarTMState tmWinId
-
-  void $ onNotebookPageRemoved note $ \_ _ -> do
-    pages <- notebookGetNPages note
-    if pages == 0
-      then forceQuit mvarTMState
-      else setShowTabs tmConfig note
-
-  void $ onNotebookSwitchPage note $ \_ pageNum -> do
-    modifyMVar_ mvarTMState $ \tmState -> do
-      tmNote <- getTMNotebookFromTMState' tmState tmWinId
-      let tabs = tmNotebookTabs tmNote
-          maybeNewTabs = updateFocusFL (fromIntegral pageNum) tabs
-      case maybeNewTabs of
-        Nothing -> pure tmState
-        Just (tab, newTabs) -> do
-          widgetGrabFocus $ tab ^. lensTMNotebookTabTerm . lensTerm
-          pure $
-            set
-              (lensTMStateWindows . ix tmWinId . lensTMWindowNotebook . lensTMNotebookTabs)
-              newTabs
-              tmState
-
-  void $ onNotebookPageReordered note $ \childWidg pageNum ->
-    notebookPageReorderedCallback mvarTMState tmWinId childWidg pageNum
-
+setupAppCallbacks :: TMState -> TMConfig -> Application -> ApplicationWindow -> Notebook -> TMWindowId -> IO ()
+setupAppCallbacks mvarTMState tmConfig app win note tmWinId = do
   newWindowAction <- simpleActionNew "newwin" Nothing
   void $ onSimpleActionActivate newWindowAction $ \_ ->
     pure ()
@@ -253,29 +199,11 @@ setupTermonad tmConfig app win builder = do
   actionMapAddAction app newWindowAction
   applicationSetAccelsForAction app "app.newwin" ["<Shift><Ctrl>N"]
 
-  newTabAction <- simpleActionNew "newtab" Nothing
-  void $ onSimpleActionActivate newTabAction $ \_ ->
-    void $ createTerm handleKeyPress mvarTMState tmWinId
-  actionMapAddAction win newTabAction
-  applicationSetAccelsForAction app "win.newtab" ["<Shift><Ctrl>T"]
-
-  nextPageAction <- simpleActionNew "nextpage" Nothing
-  void $ onSimpleActionActivate nextPageAction $ \_ ->
-    termNextPage mvarTMState tmWinId
-  actionMapAddAction win nextPageAction
-  applicationSetAccelsForAction app "win.nextpage" ["<Ctrl>Page_Down"]
-
-  prevPageAction <- simpleActionNew "prevpage" Nothing
-  void $ onSimpleActionActivate prevPageAction $ \_ ->
-    termPrevPage mvarTMState tmWinId
-  actionMapAddAction win prevPageAction
-  applicationSetAccelsForAction app "win.prevpage" ["<Ctrl>Page_Up"]
-
-  closeTabAction <- simpleActionNew "closetab" Nothing
-  void $ onSimpleActionActivate closeTabAction $ \_ ->
-    termExitFocused mvarTMState tmWinId
-  actionMapAddAction win closeTabAction
-  applicationSetAccelsForAction app "win.closetab" ["<Shift><Ctrl>W"]
+  void $ onNotebookPageRemoved note $ \_ _ -> do
+    pages <- notebookGetNPages note
+    if pages == 0
+      then forceQuit mvarTMState
+      else setShowTabs tmConfig note
 
   quitAction <- simpleActionNew "quit" Nothing
   void $ onSimpleActionActivate quitAction $ \_ -> do
@@ -283,20 +211,6 @@ setupTermonad tmConfig app win builder = do
     when (shouldExit == ResponseTypeYes) $ forceQuit mvarTMState
   actionMapAddAction app quitAction
   applicationSetAccelsForAction app "app.quit" ["<Shift><Ctrl>Q"]
-
-  copyAction <- simpleActionNew "copy" Nothing
-  void $ onSimpleActionActivate copyAction $ \_ -> do
-    maybeTerm <- getFocusedTermFromState mvarTMState tmWinId
-    maybe (pure ()) terminalCopyClipboard maybeTerm
-  actionMapAddAction win copyAction
-  applicationSetAccelsForAction app "win.copy" ["<Shift><Ctrl>C"]
-
-  pasteAction <- simpleActionNew "paste" Nothing
-  void $ onSimpleActionActivate pasteAction $ \_ -> do
-    maybeTerm <- getFocusedTermFromState mvarTMState tmWinId
-    maybe (pure ()) terminalPasteClipboard maybeTerm
-  actionMapAddAction win pasteAction
-  applicationSetAccelsForAction app "win.paste" ["<Shift><Ctrl>V"]
 
   preferencesAction <- simpleActionNew "preferences" Nothing
   void $ onSimpleActionActivate preferencesAction (const $ showPreferencesDialog mvarTMState)
@@ -314,32 +228,9 @@ setupTermonad tmConfig app win builder = do
   actionMapAddAction app reduceFontAction
   applicationSetAccelsForAction app "app.reducefont" ["<Ctrl>minus"]
 
-  findAction <- simpleActionNew "find" Nothing
-  void $ onSimpleActionActivate findAction $ \_ -> doFind mvarTMState tmWinId
-  actionMapAddAction win findAction
-  applicationSetAccelsForAction app "win.find" ["<Shift><Ctrl>F"]
-
-  findAboveAction <- simpleActionNew "findabove" Nothing
-  void $ onSimpleActionActivate findAboveAction $ \_ -> findAbove mvarTMState tmWinId
-  actionMapAddAction win findAboveAction
-  applicationSetAccelsForAction app "win.findabove" ["<Shift><Ctrl>P"]
-
-  findBelowAction <- simpleActionNew "findbelow" Nothing
-  void $ onSimpleActionActivate findBelowAction $ \_ -> findBelow mvarTMState tmWinId
-  actionMapAddAction win findBelowAction
-  applicationSetAccelsForAction app "win.findbelow" ["<Shift><Ctrl>I"]
-
   aboutAction <- simpleActionNew "about" Nothing
   void $ onSimpleActionActivate aboutAction $ \_ -> showAboutDialog win
   actionMapAddAction app aboutAction
-
-  menuBuilder <- builderNewFromString menuText $ fromIntegral (Text.length menuText)
-  menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
-  applicationSetMenubar app (Just menuModel)
-  let showMenu = tmConfig ^. lensOptions . lensShowMenu
-  applicationWindowSetShowMenubar win showMenu
-
-  windowSetTitle win "Termonad"
 
   -- This event will happen if the user requests that the top-level Termonad
   -- window be closed through their window manager. It will also happen
@@ -355,6 +246,32 @@ setupTermonad tmConfig app win builder = do
       case shouldExit of
         ResponseTypeYes -> False
         _ -> True
+
+setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
+setupTermonad tmConfig app win builder = do
+  setupScreenStyle
+  box <- objFromBuildUnsafe builder "content_box" Box
+  fontDesc <- createFontDescFromConfig tmConfig
+  note <- notebookNew
+  widgetSetCanFocus note False
+  -- If this is not set to False, then there will be a one pixel white border
+  -- shown around the notebook.
+  notebookSetShowBorder note False
+  boxPackStart box note True True 0
+
+  (mvarTMState, tmWinId) <- newEmptyTMState tmConfig app win note fontDesc
+  terminal <- createTerm handleKeyPress mvarTMState tmWinId
+
+  setupAppCallbacks mvarTMState tmConfig app win note tmWinId
+  setupWindowCallbacks mvarTMState app win note tmWinId
+
+  menuBuilder <- builderNewFromString menuText $ fromIntegral (Text.length menuText)
+  menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
+  applicationSetMenubar app (Just menuModel)
+  let showMenu = tmConfig ^. lensOptions . lensShowMenu
+  applicationWindowSetShowMenubar win showMenu
+
+  windowSetTitle win "Termonad"
 
   widgetShowAll win
   widgetGrabFocus $ terminal ^. lensTerm
