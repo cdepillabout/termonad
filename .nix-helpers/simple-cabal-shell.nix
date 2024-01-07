@@ -102,8 +102,8 @@ pkgs.mkShell {
     ghc-real
     cabal-install-real
 
-    # pkgconfig for linking pkgconfig deps
-    pkgs.pkgconfig
+    # pkg-config for linking pkg-config deps
+    pkgs.pkg-config
 
     # Required system libraries
     pkgs.gobject-introspection

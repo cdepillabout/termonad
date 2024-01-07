@@ -37,7 +37,7 @@
     jq
     ltrace
     nix-bash-completions
-    pkgconfig
+    pkg-config
     psmisc
     screen
     strace
