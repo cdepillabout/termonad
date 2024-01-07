@@ -78,7 +78,7 @@ let
     #
     # Either this, or termonadKnownWorkingHaskellPkgSet can be changed in an overlay
     # if you want to use a different GHC to build Termonad.
-    termonadCompilerVersion = "ghc92";
+    termonadCompilerVersion = "ghc94";
 
     # A Haskell package set where we know the GHC version works to compile
     # Termonad.  This is basically just a shortcut so that other Nix files
