@@ -23,19 +23,12 @@ import GI.Gio
 import GI.GLib (setApplicationName, setPrgname)
 import GI.Gtk
   ( Application
-  , ApplicationWindow(ApplicationWindow)
-  , Box(Box)
-  , Notebook
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
   , pattern STYLE_PROVIDER_PRIORITY_APPLICATION
-  , applicationAddWindow
   , applicationGetActiveWindow
   , applicationSetAccelsForAction
   , applicationSetMenubar
-  , applicationWindowSetShowMenubar
-  , boxPackStart
   , builderNewFromString
-  , builderSetApplication
   , containerAdd
   , cssProviderLoadFromData
   , cssProviderNew
@@ -44,47 +37,31 @@ import GI.Gtk
   , dialogNew
   , dialogRun
   , labelNew
-  , notebookGetNPages
-  , notebookNew
-  , notebookSetShowBorder
-  , onNotebookPageRemoved
-  , onWidgetDeleteEvent
   , setWidgetMargin
   , styleContextAddProviderForScreen
   , widgetDestroy
-  , widgetGrabFocus
-  , widgetSetCanFocus
   , widgetShow
-  , widgetShowAll
-  , windowPresent
   , windowSetDefaultIcon
-  , windowSetTitle
   , windowSetTransientFor
   )
-import qualified GI.Gtk as Gtk
 import Termonad.Gtk (appNew, imgToPixbuf, objFromBuildUnsafe)
-import Termonad.Keys (handleKeyPress)
 import Termonad.Lenses
   ( lensConfirmExit
   , lensOptions
-  , lensShowMenu
   , lensTMStateApp
   , lensTMStateConfig
-  , lensTerm
   )
 import Termonad.Preferences (showPreferencesDialog)
-import Termonad.Term (createTerm, setShowTabs)
 import Termonad.Types
   ( TMConfig
   , TMState
   , TMState'
-  , TMWindowId
   , createFontDescFromConfig
   , modFontSize
   , newEmptyTMState
   )
-import Termonad.XML (interfaceText, menuText)
-import Termonad.Window (showAboutDialog, modifyFontSizeForAllTerms, setupWindowCallbacks)
+import Termonad.XML (menuText)
+import Termonad.Window (showAboutDialog, modifyFontSizeForAllTerms, newWindow)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
@@ -191,22 +168,14 @@ forceQuit mvarTMState = do
   let app = tmState ^. lensTMStateApp
   applicationQuit app
 
-setupAppCallbacks :: TMState -> TMConfig -> Application -> ApplicationWindow -> Notebook -> TMWindowId -> IO ()
-setupAppCallbacks mvarTMState tmConfig app win note tmWinId = do
+-- | Set up the application-scoped GActions (those under the @app.@ prefix).
+setupAppCallbacks :: TMState -> Application -> IO ()
+setupAppCallbacks mvarTMState app = do
   newWindowAction <- simpleActionNew "newwin" Nothing
   void $ onSimpleActionActivate newWindowAction $ \_ ->
-    pure ()
-    -- void $ createTerm handleKeyPress mvarTMState tmWinId
+    void $ newWindow mvarTMState
   actionMapAddAction app newWindowAction
-  -- TODO: Uncomment this when adding the actual functionality
-  -- for creating new windows.
-  -- applicationSetAccelsForAction app "app.newwin" ["<Shift><Ctrl>N"]
-
-  void $ onNotebookPageRemoved note $ \_ _ -> do
-    pages <- notebookGetNPages note
-    if pages == 0
-      then forceQuit mvarTMState
-      else setShowTabs tmConfig note
+  applicationSetAccelsForAction app "app.newwin" ["<Shift><Ctrl>N"]
 
   quitAction <- simpleActionNew "quit" Nothing
   void $ onSimpleActionActivate quitAction $ \_ -> do
@@ -221,76 +190,37 @@ setupAppCallbacks mvarTMState tmConfig app win note tmWinId = do
 
   enlargeFontAction <- simpleActionNew "enlargefont" Nothing
   void $ onSimpleActionActivate enlargeFontAction $ \_ ->
-    modifyFontSizeForAllTerms (modFontSize 1) mvarTMState tmWinId
+    modifyFontSizeForAllTerms (modFontSize 1) mvarTMState
   actionMapAddAction app enlargeFontAction
   applicationSetAccelsForAction app "app.enlargefont" ["<Ctrl>plus"]
 
   reduceFontAction <- simpleActionNew "reducefont" Nothing
   void $ onSimpleActionActivate reduceFontAction $ \_ ->
-    modifyFontSizeForAllTerms (modFontSize (-1)) mvarTMState tmWinId
+    modifyFontSizeForAllTerms (modFontSize (-1)) mvarTMState
   actionMapAddAction app reduceFontAction
   applicationSetAccelsForAction app "app.reducefont" ["<Ctrl>minus"]
 
   aboutAction <- simpleActionNew "about" Nothing
-  void $ onSimpleActionActivate aboutAction $ \_ -> showAboutDialog win
+  void $ onSimpleActionActivate aboutAction $ \_ -> showAboutDialog app
   actionMapAddAction app aboutAction
-
-  -- This event will happen if the user requests that the top-level Termonad
-  -- window be closed through their window manager. It will also happen
-  -- normally when the user tries to close Termonad through normal methods,
-  -- like clicking "Quit" or closing the last open terminal.
-  --
-  -- If you return 'True' from this callback, then Termonad will not exit.
-  -- If you return 'False' from this callback, then Termonad will continue to
-  -- exit.
-  void $ onWidgetDeleteEvent win $ \_ -> do
-    shouldExit <- askShouldExit mvarTMState
-    pure $
-      case shouldExit of
-        ResponseTypeYes -> False
-        _ -> True
-
-setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
-setupTermonad tmConfig app win builder = do
-  setupScreenStyle
-  box <- objFromBuildUnsafe builder "content_box" Box
-  fontDesc <- createFontDescFromConfig tmConfig
-  note <- notebookNew
-  widgetSetCanFocus note False
-  -- If this is not set to False, then there will be a one pixel white border
-  -- shown around the notebook.
-  notebookSetShowBorder note False
-  boxPackStart box note True True 0
-
-  (mvarTMState, tmWinId) <- newEmptyTMState tmConfig app win note fontDesc
-  terminal <- createTerm handleKeyPress mvarTMState tmWinId
-
-  setupAppCallbacks mvarTMState tmConfig app win note tmWinId
-  setupWindowCallbacks mvarTMState app win note tmWinId
-
-  menuBuilder <- builderNewFromString menuText $ fromIntegral (Text.length menuText)
-  menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
-  applicationSetMenubar app (Just menuModel)
-  let showMenu = tmConfig ^. lensOptions . lensShowMenu
-  applicationWindowSetShowMenubar win showMenu
-
-  windowSetTitle win "Termonad"
-
-  widgetShowAll win
-  widgetGrabFocus $ terminal ^. lensTerm
 
 appActivate :: TMConfig -> Application -> IO ()
 appActivate tmConfig app = do
   let img = $(embedFile "img/termonad-lambda.png")
   iconPixbuf <- imgToPixbuf img
   windowSetDefaultIcon iconPixbuf
-  uiBuilder <-
-    builderNewFromString interfaceText $ fromIntegral (Text.length interfaceText)
-  builderSetApplication uiBuilder app
-  appWin <- objFromBuildUnsafe uiBuilder "appWin" ApplicationWindow
-  applicationAddWindow app appWin
-  setupTermonad tmConfig app appWin uiBuilder
-  windowPresent appWin
+  setupScreenStyle
+  fontDesc <- createFontDescFromConfig tmConfig
+  mvarTMState <- newEmptyTMState tmConfig app fontDesc
+
+  -- Set up the application-wide menu bar model once.
+  menuBuilder <- builderNewFromString menuText $ fromIntegral (Text.length menuText)
+  menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
+  applicationSetMenubar app (Just menuModel)
+
+  setupAppCallbacks mvarTMState app
+
+  void $ newWindow mvarTMState
 
 appStartup :: Application -> IO ()
 appStartup _app = pure ()

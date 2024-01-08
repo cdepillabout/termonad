@@ -142,6 +142,7 @@ import Termonad.Lenses
   , lensTMStateWindows
   , lensTMWindowNotebook
   )
+import Termonad.IdMap (lookupIdMap)
 import Termonad.Pcre (pcre2Multiline)
 import Termonad.Types
   ( ConfigHooks(createTermHook)
@@ -160,7 +161,6 @@ import Termonad.Types
   , getNotebookFromTMState
   , getTMNotebookFromTMState
   , getTMNotebookFromTMState'
-  , getTMWindowFromTMState
   , getTMWindowFromWins
   , newTMTerm
   , pid
@@ -254,8 +254,13 @@ termExit tab mvarTMState tmWinId = do
               tmState
       pure (newTMState, detachTabAction)
   detachTabAction
-  tmWin <- getTMWindowFromTMState mvarTMState tmWinId
-  relabelTabs (tmWindowNotebook tmWin)
+  -- Detaching the last tab fires the notebook's page-removed callback, which
+  -- may have just closed this window and dropped it from the state.  Look the
+  -- window up leniently and skip relabeling if it is already gone.
+  tmState <- readMVar mvarTMState
+  case lookupIdMap tmWinId (tmStateWindows tmState) of
+    Nothing -> pure ()
+    Just tmWin -> relabelTabs (tmWindowNotebook tmWin)
 
 relabelTabs :: TMNotebook -> IO ()
 relabelTabs tmNote = do
@@ -646,8 +651,8 @@ handleMousePress win vteTerm eventButton = do
         menuAppend menuModel (Just "Open URL in browser") (Just "win.openurl")
 
 
-    menuAppend menuModel (Just "Copy") (Just "app.copy")
-    menuAppend menuModel (Just "Paste") (Just "app.paste")
+    menuAppend menuModel (Just "Copy") (Just "win.copy")
+    menuAppend menuModel (Just "Paste") (Just "win.paste")
     menuAppend menuModel (Just "Preferences") (Just "app.preferences")
     menu <- menuNewFromModel menuModel
     menuAttachToWidget menu vteTerm Nothing
