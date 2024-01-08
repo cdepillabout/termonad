@@ -29,7 +29,7 @@ import GI.Gtk
 import GI.Pango (FontDescription, fontDescriptionGetSize, fontDescriptionGetSizeIsAbsolute, pattern SCALE, fontDescriptionGetFamily, fontDescriptionNew, fontDescriptionSetFamily, fontDescriptionSetSize, fontDescriptionSetAbsoluteSize)
 import GI.Vte (Terminal, CursorBlinkMode(..))
 import Termonad.Gtk (widgetEq)
-import Termonad.IdMap (IdMap, IdMapKey, singletonIdMap, lookupIdMap)
+import Termonad.IdMap (IdMap, IdMapKey, singletonIdMap, lookupIdMap, emptyIdMap)
 import Text.Pretty.Simple (pPrint)
 
 -- | A wrapper around a VTE 'Terminal'.  This also stores the process ID of the
@@ -258,20 +258,30 @@ createTMWindow appwin notebook =
     , tmWindowNotebook = notebook
     }
 
-newEmptyTMState :: TMConfig -> Application -> ApplicationWindow -> Notebook -> FontDescription -> IO (TMState, TMWindowId)
-newEmptyTMState tmConfig app appWin note fontDesc = do
-  let tmnote = createEmptyTMNotebook note
-      tmwin = createTMWindow appWin tmnote
-      (tmwinId, tmwins) = singletonIdMap tmwin
-  tmState <-
-    newMVar $
-      TMState
-        { tmStateApp = app
-        , tmStateConfig = tmConfig
-        , tmStateFontDesc = fontDesc
-        , tmStateWindows = tmwins
-        }
-  pure (tmState, tmwinId)
+-- newEmptyTMState :: TMConfig -> Application -> ApplicationWindow -> Notebook -> FontDescription -> IO (TMState, TMWindowId)
+-- newEmptyTMState tmConfig app appWin note fontDesc = do
+--   let tmnote = createEmptyTMNotebook note
+--       tmwin = createTMWindow appWin tmnote
+--       (tmwinId, tmwins) = singletonIdMap tmwin
+--   tmState <-
+--     newMVar $
+--       TMState
+--         { tmStateApp = app
+--         , tmStateConfig = tmConfig
+--         , tmStateFontDesc = fontDesc
+--         , tmStateWindows = tmwins
+--         }
+--   pure (tmState, tmwinId)
+
+newEmptyTMState :: TMConfig -> Application -> FontDescription -> IO TMState
+newEmptyTMState tmConfig app fontDesc = do
+  newMVar $
+    TMState
+      { tmStateApp = app
+      , tmStateConfig = tmConfig
+      , tmStateFontDesc = fontDesc
+      , tmStateWindows = emptyIdMap
+      }
 
 ------------
 -- Config --

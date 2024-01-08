@@ -58,7 +58,7 @@ import GI.Gtk
   , windowPresent
   , windowSetDefaultIcon
   , windowSetTitle
-  , windowSetTransientFor
+  , windowSetTransientFor, Builder
   )
 import qualified GI.Gtk as Gtk
 import Termonad.Gtk (appNew, imgToPixbuf, objFromBuildUnsafe)
@@ -195,7 +195,6 @@ setupAppCallbacks mvarTMState tmConfig app win note tmWinId = do
   newWindowAction <- simpleActionNew "newwin" Nothing
   void $ onSimpleActionActivate newWindowAction $ \_ ->
     pure ()
-    -- void $ createTerm handleKeyPress mvarTMState tmWinId
   actionMapAddAction app newWindowAction
   applicationSetAccelsForAction app "app.newwin" ["<Shift><Ctrl>N"]
 
@@ -247,10 +246,9 @@ setupAppCallbacks mvarTMState tmConfig app win note tmWinId = do
         ResponseTypeYes -> False
         _ -> True
 
-setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Gtk.Builder -> IO ()
-setupTermonad tmConfig app win builder = do
-  setupScreenStyle
-  box <- objFromBuildUnsafe builder "content_box" Box
+setupTermonad :: TMConfig -> Application -> ApplicationWindow -> Builder -> IO ()
+setupTermonad tmConfig app win uiBuilder = do
+  box <- objFromBuildUnsafe uiBuilder "content_box" Box
   fontDesc <- createFontDescFromConfig tmConfig
   note <- notebookNew
   widgetSetCanFocus note False
@@ -281,13 +279,9 @@ appActivate tmConfig app = do
   let img = $(embedFile "img/termonad-lambda.png")
   iconPixbuf <- imgToPixbuf img
   windowSetDefaultIcon iconPixbuf
-  uiBuilder <-
-    builderNewFromString interfaceText $ fromIntegral (Text.length interfaceText)
-  builderSetApplication uiBuilder app
-  appWin <- objFromBuildUnsafe uiBuilder "appWin" ApplicationWindow
-  applicationAddWindow app appWin
-  setupTermonad tmConfig app appWin uiBuilder
-  windowPresent appWin
+  setupScreenStyle
+  fontDesc <- createFontDescFromConfig tmConfig
+  newEmptyTMState tmConfig app fontDesc
 
 appStartup :: Application -> IO ()
 appStartup _app = pure ()

@@ -15,7 +15,7 @@ import GI.Gio
   )
 import GI.Gtk
   ( Application
-  , ApplicationWindow
+  , ApplicationWindow(ApplicationWindow)
   , Notebook
   , PositionType(PositionTypeRight)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
@@ -41,7 +41,7 @@ import GI.Gtk
   , widgetDestroy
   , widgetGrabFocus
   , widgetShow
-  , windowSetTransientFor
+  , windowSetTransientFor, builderNewFromString, builderSetApplication, applicationAddWindow, windowPresent, Box (Box), notebookNew, widgetSetCanFocus, notebookSetShowBorder, boxPackStart
   )
 import GI.Pango (FontDescription)
 import GI.Vte
@@ -84,8 +84,10 @@ import Termonad.Types
   , setFontDescSize
   , tmNotebookTabTermContainer
   , tmNotebookTabs
-  , tmWindowAppWin
+  , tmWindowAppWin, TMState' (TMState, tmStateApp), tmStateConfig, assertInvariantTMState, createEmptyTMNotebook, createTMWindow, tmStateWindows
   )
+import Termonad.XML (interfaceText)
+import Termonad.Gtk (objFromBuildUnsafe)
 
 modifyFontSizeForAllTerms :: (FontSize -> FontSize) -> TMState -> TMWindowId -> IO ()
 modifyFontSizeForAllTerms modFontSizeFunc mvarTMState tmWinId = do
@@ -384,3 +386,50 @@ setupWindowCallbacks mvarTMState app win note tmWinId = do
   void $ onSimpleActionActivate findBelowAction $ \_ -> findBelow mvarTMState tmWinId
   actionMapAddAction win findBelowAction
   applicationSetAccelsForAction app "win.findbelow" ["<Shift><Ctrl>I"]
+
+newWindow :: TMState -> IO ()
+newWindow mvarTMState = do
+  assertInvariantTMState mvarTMState
+
+  TMState{tmStateConfig, tmStateApp, tmStateWindows} <- readMVar mvarTMState
+
+  uiBuilder <-
+    builderNewFromString interfaceText $ fromIntegral (Text.length interfaceText)
+
+  builderSetApplication uiBuilder tmStateApp
+
+  appWin <- objFromBuildUnsafe uiBuilder "appWin" ApplicationWindow
+  applicationAddWindow tmStateApp appWin
+
+  box <- objFromBuildUnsafe uiBuilder "content_box" Box
+
+  note <- notebookNew
+  widgetSetCanFocus note False
+  -- If this is not set to False, then there will be a one pixel white border
+  -- shown around the notebook.
+  notebookSetShowBorder note False
+  boxPackStart box note True True 0
+
+  let tmnote = createEmptyTMNotebook note
+      tmwin = createTMWindow appWin tmnote
+
+  -- (mvarTMState, tmWinId) <- newEmptyTMState tmConfig app win note fontDesc
+  -- terminal <- createTerm handleKeyPress mvarTMState tmWinId
+
+  -- setupAppCallbacks mvarTMState tmConfig app win note tmWinId
+  -- setupWindowCallbacks mvarTMState app win note tmWinId
+
+  -- menuBuilder <- builderNewFromString menuText $ fromIntegral (Text.length menuText)
+  -- menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
+  -- applicationSetMenubar app (Just menuModel)
+  -- let showMenu = tmConfig ^. lensOptions . lensShowMenu
+  -- applicationWindowSetShowMenubar win showMenu
+
+  -- windowSetTitle win "Termonad"
+
+  -- widgetShowAll win
+  -- widgetGrabFocus $ terminal ^. lensTerm
+
+  windowPresent appWin
+
+  assertInvariantTMState mvarTMState
