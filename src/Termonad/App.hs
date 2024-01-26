@@ -197,7 +197,9 @@ setupAppCallbacks mvarTMState tmConfig app win note tmWinId = do
     pure ()
     -- void $ createTerm handleKeyPress mvarTMState tmWinId
   actionMapAddAction app newWindowAction
-  applicationSetAccelsForAction app "app.newwin" ["<Shift><Ctrl>N"]
+  -- TODO: Uncomment this when adding the actual functionality
+  -- for creating new windows.
+  -- applicationSetAccelsForAction app "app.newwin" ["<Shift><Ctrl>N"]
 
   void $ onNotebookPageRemoved note $ \_ _ -> do
     pages <- notebookGetNPages note
