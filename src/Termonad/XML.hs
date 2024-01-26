@@ -56,10 +56,15 @@ menuDoc =
         <submenu>
           <attribute name="label" translatable="yes">File</attribute>
           <section>
+            <!-- TODO: Uncomment this when adding functionality for creating new
+                 windows
+            -->
+            <!--
             <item>
               <attribute name="label" translatable="yes">_New Window</attribute>
               <attribute name="action">app.newwin</attribute>
             </item>
+            -->
             <item>
               <attribute name="label" translatable="yes">New _Tab</attribute>
               <attribute name="action">win.newtab</attribute>
