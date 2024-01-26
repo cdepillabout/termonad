@@ -1,14 +1,17 @@
-## (next)
+## 4.6.0.0
 
-*   Embed the Termonad icon into the Termonad library (instead of having it set
-    as a `data-file` in `termonad.cabal`).
+*   The thing that may affect end users the most in this release is that the
+    **`defaultMain` function moved from `Termonad.App` to `Termonad.Startup`**.
+    (_However, it is also exported from the top-level `Termonad` module, so most
+    users will likely want to get it from the top-level `Termonad` module_.)
+    [#239](https://github.com/cdepillabout/termonad/pull/239)
 
-    This fixes a problem some users were seeing when garbaging-collecting their
-    Nix store and losing the required `termonad-lambda.png` file that their
-    Termonad binary was referencing:
-    [#165](https://github.com/cdepillabout/termonad/issues/165)
-
-    Thanks [@refaelsh](https://github.com/refaelsh)! [#236](https://github.com/cdepillabout/termonad/pull/236)
+*   There has been a big refactoring of the guts of Termonad.  As an end user,
+    if you reach into any modules like `Termonad.App`, `Termonad.Term`, or
+    `Termonad.Types`, you may notice some functions have moved around or gained
+    new arguments.  Some data types have changed as well.  Most end users don't
+    use these modules, so I don't expect that this refactoring will affect most
+    users.
 
 *   Add support for setting Termonad options with CLI arguments.  Add a whole
     CLI argument parser based on optparse-applicative.
@@ -23,6 +26,16 @@
     funtionality, you should be able to use the `Termonad.start` function (in
     place of `Termonad.defaultMain`).
 
+*   Embed the Termonad icon into the Termonad library (instead of having it set
+    as a `data-file` in `termonad.cabal`).
+
+    This fixes a problem some users were seeing when garbaging-collecting their
+    Nix store and losing the required `termonad-lambda.png` file that their
+    Termonad binary was referencing:
+    [#165](https://github.com/cdepillabout/termonad/issues/165)
+
+    Thanks [@refaelsh](https://github.com/refaelsh)! [#236](https://github.com/cdepillabout/termonad/pull/236)
+
 *   Rename the `Termonad.PreferencesFile` module to `Termonad.Preferences.File`.
 
     Also, add a `Termonad.Preferences` module that re-exports everything helpful
@@ -30,12 +43,6 @@
     preferences-related functionality from `Termonad.App` has been moved into
     `Termonad.Preferences`.
     [#238](https://github.com/cdepillabout/termonad/pull/238)
-
-*   Move the `defaultMain` function from `Termonad.App` to `Termonad.Startup`.
-    (It is also exported from the top-level `Termonad` module, so most users
-    will likely want to get it from there.)
-    [#239](https://github.com/cdepillabout/termonad/pull/239)
-
 
 ## 4.5.0.0
 
