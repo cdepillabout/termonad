@@ -4,6 +4,12 @@
 -- License     : BSD3
 -- Stability   : experimental
 -- Portability : POSIX
+--
+-- An 'IdMap' is a combination between an 'IntMap' and a 'Set'.
+--
+-- An 'IdMap' allows adding an arbitrary number of things to be tracked.  It
+-- returns an 'IdMapKey' whenever a new item is added to the set.  This
+-- 'IdMapKey' can then be used to lookup items already in the set.
 
 module Termonad.IdMap
   ( IdMapKey
@@ -13,6 +19,7 @@ module Termonad.IdMap
   , insertIdMap
   , lookupIdMap
   , keysIdMap
+  , deleteIdMap
   ) where
 
 import Termonad.IdMap.Internal
