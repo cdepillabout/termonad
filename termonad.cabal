@@ -151,7 +151,10 @@ executable termonad
   build-depends:       base
                      , termonad
   default-language:    Haskell2010
-  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  if arch(loongarch64)
+	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts
+  else 
+  	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
 
 test-suite doctests
   type:                exitcode-stdio-1.0
@@ -172,8 +175,11 @@ test-suite termonad-test
   build-depends:       base
                      , termonad
                      , tasty
-  default-language:    Haskell2010
-  ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
+  default-language:    haskell2010
+  if arch(loongarch64)
+	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts
+  else 
+  	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
   default-extensions:  DataKinds
                      , GADTs
                      , GeneralizedNewtypeDeriving
@@ -203,7 +209,10 @@ executable termonad-readme
                      , colour
   ghc-options:         -pgmL markdown-unlit
   default-language:    Haskell2010
-  ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
+  if arch(loongarch64)
+	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts
+  else 
+  	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
 
   if flag(buildexamples)
     buildable:         True
@@ -216,7 +225,10 @@ executable termonad-example-colour-extension
                      , termonad
                      , colour
   default-language:    Haskell2010
-  ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
+  if arch(loongarch64)
+	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts
+  else 
+  	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
 
   if flag(buildexamples)
     buildable:         True
@@ -229,7 +241,10 @@ executable termonad-example-colour-extension-dracula
                      , termonad
                      , colour
   default-language:    Haskell2010
-  ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
+  if arch(loongarch64)
+	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts
+  else 
+  	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
 
   if flag(buildexamples)
     buildable:         True
@@ -242,7 +257,10 @@ executable termonad-example-colour-extension-gruvbox
                      , termonad
                      , colour
   default-language:    Haskell2010
-  ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
+  if arch(loongarch64)
+	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts
+  else 
+  	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
 
   if flag(buildexamples)
     buildable:         True
@@ -255,7 +273,10 @@ executable termonad-example-colour-extension-oneDarkPro
                      , termonad
                      , colour
   default-language:    Haskell2010
-  ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
+  if arch(loongarch64)
+	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts
+  else 
+  	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
 
   if flag(buildexamples)
     buildable:         True
@@ -268,7 +289,10 @@ executable termonad-example-colour-extension-papercolour
                      , termonad
                      , colour
   default-language:    Haskell2010
-  ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
+  if arch(loongarch64)
+	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts
+  else 
+  	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
 
   if flag(buildexamples)
     buildable:         True
@@ -281,7 +305,10 @@ executable termonad-example-colour-extension-solarized
                      , termonad
                      , colour
   default-language:    Haskell2010
-  ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
+  if arch(loongarch64)
+	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts
+  else 
+  	ghc-options:         -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates -threaded -rtsopts -with-rtsopts=-N
 
   if flag(buildexamples)
     buildable:         True
