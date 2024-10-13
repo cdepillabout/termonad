@@ -159,14 +159,6 @@ import Termonad.Types
   , tmWindowNotebook
   )
 
-focusTerm :: Int -> TMState -> TMWindowId -> IO ()
-focusTerm i mvarTMState tmWinId = do
-  note <- getNotebookFromTMState mvarTMState tmWinId
-  notebookSetCurrentPage note (fromIntegral i)
-
-altNumSwitchTerm :: Int -> TMState -> TMWindowId -> IO ()
-altNumSwitchTerm = focusTerm
-
 -- | Change focus to the next tab.
 termNextPage :: TMState -> TMWindowId -> IO ()
 termNextPage mvarTMState tmWinId = do

@@ -36,9 +36,10 @@ import System.Directory
 import System.FilePath ((</>))
 import Termonad.Types
   ( ConfigOptions
-  , TMConfig(TMConfig, hooks, options)
+  , TMConfig(TMConfig, hooks, options, keys)
   , defaultConfigHooks
   , defaultConfigOptions
+  , keyMap
   )
 
 -- $setup
@@ -74,7 +75,7 @@ tmConfigFromPreferencesFile = do
         hPutStrLn stderr $ "Error parsing file " <> pack confFile <> ": " <> err
         pure defaultConfigOptions
       Right options -> pure options
-  pure TMConfig { options = options, hooks = defaultConfigHooks }
+  pure TMConfig { options = options, hooks = defaultConfigHooks, keys = keyMap }
 
 -- | Read the 'ConfigOptions' out of a configuration file.
 --
