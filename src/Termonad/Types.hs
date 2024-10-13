@@ -626,7 +626,7 @@ defaultTMConfig =
   TMConfig
     { options = defaultConfigOptions
     , hooks = defaultConfigHooks
-    , keys = defaultConfigKeyMap
+    , keys = defaultConfigKeys
     }
 
 data Key = Key
@@ -637,8 +637,8 @@ data Key = Key
 toKey :: Word32 -> Set ModifierType -> Key
 toKey = Key
 
-defaultConfigKeyMap :: Map Key (TMState -> TMWindowId -> IO Bool)
-defaultConfigKeyMap =
+defaultConfigKeys :: Map Key (TMState -> TMWindowId -> IO Bool)
+defaultConfigKeys =
   let numKeys :: [Word32]
       numKeys =
         [ KEY_1

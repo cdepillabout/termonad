@@ -39,7 +39,7 @@ import Termonad.Types
   , TMConfig(TMConfig, hooks, options, keys)
   , defaultConfigHooks
   , defaultConfigOptions
-  , defaultConfigKeyMap
+  , defaultConfigKeys
   )
 
 -- $setup
@@ -77,7 +77,7 @@ tmConfigFromPreferencesFile = do
       Right options -> pure options
   pure TMConfig { options = options
                 , hooks = defaultConfigHooks
-                , keys = defaultConfigKeyMap 
+                , keys = defaultConfigKeys
                 }
 
 -- | Read the 'ConfigOptions' out of a configuration file.
