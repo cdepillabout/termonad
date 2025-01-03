@@ -22,7 +22,6 @@ jobs:
           # - macOS-latest
         cabal: ["latest"]
         ghc:
-          - "9.2.8"
           - "9.4.8"
           - "9.6.6"
           - "9.8.4"

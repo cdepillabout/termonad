@@ -111,6 +111,7 @@ pkgs.mkShell {
     pkgs.libepoxy
     pkgs.libselinux
     pkgs.libsepol
+    pkgs.libsysprof-capture
     pkgs.libthai
     pkgs.libxkbcommon
     pkgs.pcre
