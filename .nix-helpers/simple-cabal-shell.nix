@@ -107,6 +107,7 @@ pkgs.mkShell {
 
     # Required system libraries
     pkgs.gobject-introspection
+    pkgs.lerc
     pkgs.libdatrie
     pkgs.libepoxy
     pkgs.libselinux
