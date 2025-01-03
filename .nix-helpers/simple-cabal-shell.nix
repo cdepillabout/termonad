@@ -113,6 +113,7 @@ pkgs.mkShell {
     pkgs.libsepol
     pkgs.libsysprof-capture
     pkgs.libthai
+    pkgs.libtiff
     pkgs.libxkbcommon
     pkgs.pcre
     pkgs.pcre2
