@@ -78,7 +78,7 @@ let
     #
     # Either this, or termonadKnownWorkingHaskellPkgSet can be changed in an overlay
     # if you want to use a different GHC to build Termonad.
-    termonadCompilerVersion = "ghc94";
+    termonadCompilerVersion = "ghc96";
 
     # A Haskell package set where we know the GHC version works to compile
     # Termonad.  This is basically just a shortcut so that other Nix files
@@ -158,7 +158,7 @@ let
         name = "termonad-${self.termonadKnownWorkingHaskellPkgSet.termonad.version}-ghc-${env.version}";
         buildInputs = [
           self.gdk-pixbuf
-          self.gnome.adwaita-icon-theme
+          self.adwaita-icon-theme
           self.hicolor-icon-theme
         ];
         nativeBuildInputs = [ self.wrapGAppsHook ];
