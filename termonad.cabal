@@ -88,11 +88,11 @@ library
                      , file-embed
                      , filepath
                      , focuslist
-                     , gi-gdk
+                     , gi-gdk < 4
                      , gi-gdkpixbuf
                      , gi-gio
                      , gi-glib
-                     , gi-gtk >= 3.0.24
+                     , gi-gtk >= 3.0.24 && < 4
                      , gi-pango
                      , gi-vte >= 2.91.19
                      , haskell-gi-base >= 0.21.2
