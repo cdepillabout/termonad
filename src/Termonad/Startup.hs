@@ -15,9 +15,11 @@ import Config.Dyre (wrapMain, newParams)
 import Control.Lens (over)
 import System.IO.Error (doesNotExistErrorType, ioeGetErrorType, ioeGetFileName, tryIOError)
 import Termonad.App (start)
-import Termonad.Cli (parseCliArgs, applyCliArgs)
+import Termonad.Cli (parseCliArgs, applyCliArgs, cliConfigOptions, cliConfDirectory)
 import Termonad.Lenses (lensOptions)
-import Termonad.Types (TMConfig)
+import Termonad.Types (TMConfig, Option (Set, Unset))
+import System.Directory (setCurrentDirectory)
+import Data.Text (unpack)
 
 
 -- | Run Termonad with the given 'TMConfig'.
@@ -29,6 +31,9 @@ import Termonad.Types (TMConfig)
 startWithCliArgs :: TMConfig -> IO ()
 startWithCliArgs tmConfig = do
   cliArgs <- parseCliArgs
+  case cliConfDirectory (cliConfigOptions cliArgs) of
+    Set directory -> setCurrentDirectory (unpack directory)
+    Unset         -> mempty
   start (over lensOptions (applyCliArgs cliArgs) tmConfig)
 
 -- | Run Termonad with the given 'TMConfig'.

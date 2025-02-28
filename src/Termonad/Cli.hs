@@ -63,6 +63,7 @@ data CliConfigOptions = CliConfigOptions
   , cliConfBoldIsBright :: !(Option Bool)
   , cliConfEnableSixel :: !(Option Bool)
   , cliConfAllowBold :: !(Option Bool)
+  , cliConfDirectory :: !(Option Text)
   } deriving (Eq, Show)
 
 -- | The default 'CliConfigOptions'.  All 'Option's are 'Unset', which means
@@ -102,6 +103,7 @@ defaultCliConfigOptions =
     , cliConfBoldIsBright = Unset
     , cliConfEnableSixel = Unset
     , cliConfAllowBold = Unset
+    , cliConfDirectory = Unset
     }
 
 -- | Extra CLI arguments for values that don't make sense in 'ConfigOptions'.
@@ -180,6 +182,7 @@ cliConfigOptionsParser =
     <*> boldIsBrightParser
     <*> enableSixelParser
     <*> allowBoldParser
+    <*> directoryParser
 
 fontFamilyParser :: Parser (Option Text)
 fontFamilyParser =
@@ -360,6 +363,19 @@ allowBoldParser =
     "Allow Termonad to show bold text.  Defaults to enabled."
     "Disable Termonad from showing text as bold.  Defaults to \
     \allow showing text as bold."
+
+directoryParser :: Parser (Option Text)
+directoryParser =
+  option'
+    (maybeTextReader (\case
+                         x -> Just x
+                         _ -> Nothing))
+    ( short 'c' <>
+      long "directory" <>
+      metavar "DIRECTORY" <>
+      help
+        "Start the terminal in this directory."
+    )
 
 extraCliArgsParser :: Parser ExtraCliArgs
 extraCliArgsParser = pure ExtraCliArgs
