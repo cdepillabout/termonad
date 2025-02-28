@@ -89,6 +89,7 @@ import GI.Gtk
   , widgetSetHexpand
   , widgetShow
   , windowSetFocus
+  , windowSetTitle
   , windowSetTransientFor
   )
 import GI.Pango (EllipsizeMode(EllipsizeModeMiddle), FontDescription)
@@ -510,6 +511,9 @@ createTerm handleKeyPress mvarTMState tmWinId = do
   void $ onButtonClicked tabCloseButton $ termClose notebookTab mvarTMState tmWinId
   void $ onTerminalWindowTitleChanged vteTerm $ do
     relabelTab (tmNotebook currNote) tabLabel scrolledWin vteTerm
+    maybeTitle <- terminalGetWindowTitle vteTerm
+    let title = fromMaybe "shell" maybeTitle
+    windowSetTitle appWin title
   void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState tmWinId
   void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState tmWinId
   void $ onWidgetButtonPressEvent vteTerm $ handleMousePress appWin vteTerm

@@ -74,7 +74,8 @@ import Termonad.Lenses
 import Termonad.Preferences (showPreferencesDialog)
 import Termonad.Term (createTerm, setShowTabs)
 import Termonad.Types
-  ( TMConfig
+  ( Option (Set, Unset)
+  , TMConfig
   , TMState
   , TMState'
   , TMWindowId
@@ -84,6 +85,8 @@ import Termonad.Types
   )
 import Termonad.XML (interfaceText, menuText)
 import Termonad.Window (showAboutDialog, modifyFontSizeForAllTerms, setupWindowCallbacks)
+import Termonad.Cli (parseCliArgs, cliConfigOptions, cliConfDirectory)
+import System.Directory (setCurrentDirectory)
 
 setupScreenStyle :: IO ()
 setupScreenStyle = do
@@ -302,6 +305,10 @@ appStartup _app = pure ()
 -- This function __does not__ parse command line arguments.
 start :: TMConfig -> IO ()
 start tmConfig = do
+  cliArgs <- parseCliArgs
+  case cliConfDirectory (cliConfigOptions cliArgs) of
+    Set directory -> setCurrentDirectory (Text.unpack directory)
+    Unset         -> mempty
   -- app <- appNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
   -- Make sure the application is not unique, so we can open multiple copies of it.
   app <- appNew Nothing [ApplicationFlagsFlagsNone]
