@@ -20,6 +20,8 @@
       #
       # Termonad is likely to also work aarch64-linux, but you'll have to edit
       # this line to enable it.
+      #
+      # TODO TODO: I think this problem has been resolved in recent versions of Nix.
       supportedSystems = [ "x86_64-linux" ];
 
       # Helper function to generate an attrset '{ x86_64-linux = f "x86_64-linux"; ... }'.
