@@ -26,8 +26,7 @@ jobs:
           - "9.8.4"
 
     steps:
-      - uses: actions/checkout@v3
-        #if: github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.ref == 'refs/heads/master'
+      - uses: actions/checkout@v4
 
       - uses: haskell-actions/setup@v2
         id: setup-haskell-cabal
@@ -36,7 +35,7 @@ jobs:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: ${{ matrix.cabal }}
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         name: Cache cabal-store
         with:
           path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
@@ -74,8 +73,7 @@ jobs:
           # - macOS-latest
 
     steps:
-      - uses: actions/checkout@v3
-        #if: github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.ref == 'refs/heads/master'
+      - uses: actions/checkout@v4
 
       - uses: haskell-actions/setup@v2
         name: Setup Haskell Stack
@@ -83,7 +81,7 @@ jobs:
           stack-version: ${{ matrix.stack }}
           enable-stack: true
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         name: Cache ~/.stack
         with:
           path: ~/.stack
@@ -107,13 +105,13 @@ jobs:
     name: nix / ubuntu-latest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: cachix/install-nix-action@v22
+      - uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
-      - uses: DeterminateSystems/magic-nix-cache-action@v2
+      - uses: DeterminateSystems/magic-nix-cache-action@v11
 
       - run: nix-build
 
@@ -123,13 +121,13 @@ jobs:
     name: nix flakes / ubuntu-latest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: cachix/install-nix-action@v22
+      - uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
-      - uses: DeterminateSystems/magic-nix-cache-action@v2
+      - uses: DeterminateSystems/magic-nix-cache-action@v11
 
       - run: nix build
 
@@ -139,13 +137,13 @@ jobs:
     name: nix simple cabal shell.nix / ubuntu-latest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: cachix/install-nix-action@v22
+      - uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
-      - uses: DeterminateSystems/magic-nix-cache-action@v2
+      - uses: DeterminateSystems/magic-nix-cache-action@v11
 
       # TODO: These caches actually needs to be keyed on the hash of the
       # ./nix-helpers/simple-cabal-shell.nix derivation.  If that derivation
@@ -159,7 +157,7 @@ jobs:
       # $ nix eval --impure --raw --expr 'with (import <nixpkgs> {}).lib; let simpleCabalShell = import ./.nix-helpers/simple-cabal-shell.nix {}; in builtins.elemAt (splitString "-" (removePrefix (builtins.storeDir + "/") simpleCabalShell)) 0'
       #
       # Just need to load this into a variable, and throw it in the following key name
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         name: Cache cabal store
         with:
           path: |
