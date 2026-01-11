@@ -52,10 +52,6 @@ let
                   };
             in
             termonadDrv;
-            #termonadDrv.overrideScope (htermfinal: htermprev: {
-            #  gi-gdk = htermfinal.gi-gdk3;
-            #  gi-gtk = htermfinal.gi-gtk3;
-            #});
         };
     };
 
