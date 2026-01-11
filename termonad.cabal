@@ -1,5 +1,5 @@
 name:                termonad
-version:             4.6.0.0
+version:             4.6.0.1
 synopsis:            Terminal emulator configurable in Haskell
 description:
   Termonad is a terminal emulator configurable in Haskell.  It is extremely
@@ -88,11 +88,11 @@ library
                      , file-embed
                      , filepath
                      , focuslist
-                     , gi-gdk < 4
+                     , gi-gdk3
                      , gi-gdkpixbuf
                      , gi-gio
                      , gi-glib
-                     , gi-gtk >= 3.0.24 && < 4
+                     , gi-gtk3
                      , gi-pango
                      , gi-vte >= 2.91.19
                      , haskell-gi-base >= 0.21.2

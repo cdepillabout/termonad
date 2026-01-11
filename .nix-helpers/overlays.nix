@@ -52,6 +52,10 @@ let
                   };
             in
             termonadDrv;
+            #termonadDrv.overrideScope (htermfinal: htermprev: {
+            #  gi-gdk = htermfinal.gi-gdk3;
+            #  gi-gtk = htermfinal.gi-gtk3;
+            #});
         };
     };
 
@@ -78,7 +82,7 @@ let
     #
     # Either this, or termonadKnownWorkingHaskellPkgSet can be changed in an overlay
     # if you want to use a different GHC to build Termonad.
-    termonadCompilerVersion = "ghc98";
+    termonadCompilerVersion = "ghc910";
 
     # A Haskell package set where we know the GHC version works to compile
     # Termonad.  This is basically just a shortcut so that other Nix files
@@ -161,7 +165,7 @@ let
           self.adwaita-icon-theme
           self.hicolor-icon-theme
         ];
-        nativeBuildInputs = [ self.wrapGAppsHook ];
+        nativeBuildInputs = [ self.wrapGAppsHook3 ];
         dontBuild = true;
         unpackPhase = ":";
         # Using installPhase instead of buildCommand was recommended here:
