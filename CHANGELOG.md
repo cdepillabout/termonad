@@ -1,3 +1,10 @@
+
+## (next)
+
+*   Move from depending on `gi-gtk` and `gi-gdk` Haskell packages to `gi-gtk3` and `gi-gdk3`.
+    This shouldn't affect most users.
+    [#259](https://github.com/cdepillabout/termonad/pull/259)
+
 ## 4.6.0.0
 
 *   The thing that may affect end users the most in this release is that the

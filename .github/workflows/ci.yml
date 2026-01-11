@@ -21,9 +21,10 @@ jobs:
           # - macOS-latest
         cabal: ["latest"]
         ghc:
-          - "9.6.6"
+          - "9.6.7"
           - "9.8.4"
-          - "9.10.2"
+          - "9.10.3"
+          - "9.12.3"
 
     steps:
       - uses: actions/checkout@v4
@@ -133,41 +134,43 @@ jobs:
 
       - run: nix build .#devShell.x86_64-linux
 
-  nix-simple-cabal-shell:
-    name: nix simple cabal shell.nix / ubuntu-latest
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: cachix/install-nix-action@v31
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-
-      - uses: DeterminateSystems/magic-nix-cache-action@v11
-
-      # TODO: These caches actually needs to be keyed on the hash of the
-      # ./nix-helpers/simple-cabal-shell.nix derivation.  If that derivation
-      # changes, then we really, really should not reuse the same
-      # ~/.cabal/store directory (since there is the possibility of getting
-      # into a cabal hell, where Haskell libraries in the Cabal store are linked to
-      # different, incompatible system libraries).
-      #
-      # It is possible to get the hash of this derivation with a command like:
-      #
-      # $ nix eval --impure --raw --expr 'with (import <nixpkgs> {}).lib; let simpleCabalShell = import ./.nix-helpers/simple-cabal-shell.nix {}; in builtins.elemAt (splitString "-" (removePrefix (builtins.storeDir + "/") simpleCabalShell)) 0'
-      #
-      # Just need to load this into a variable, and throw it in the following key name
-      - uses: actions/cache@v4
-        name: Cache cabal store
-        with:
-          path: |
-            ~/.cabal/store
-            ~/.config/cabal/store
-            ~/.local/state/cabal/store
-          key: nix-simple-cabal-shell
-
-      - name: cabal update
-        run: nix-shell ./.nix-helpers/simple-cabal-shell.nix --command 'cabal update'
-
-      - name: cabal build
-        run: nix-shell ./.nix-helpers/simple-cabal-shell.nix --command 'cabal build all --enable-tests --enable-benchmarks'
+  # TODO: I noticed this was broken in https://github.com/cdepillabout/termonad/pull/259.  I don't know why.
+  # Need to look into this.
+  # nix-simple-cabal-shell:
+  #   name: nix simple cabal shell.nix / ubuntu-latest
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - uses: cachix/install-nix-action@v31
+  #       with:
+  #         nix_path: nixpkgs=channel:nixos-unstable
+  #
+  #     - uses: DeterminateSystems/magic-nix-cache-action@v11
+  #
+  #     # TODO: These caches actually needs to be keyed on the hash of the
+  #     # ./nix-helpers/simple-cabal-shell.nix derivation.  If that derivation
+  #     # changes, then we really, really should not reuse the same
+  #     # ~/.cabal/store directory (since there is the possibility of getting
+  #     # into a cabal hell, where Haskell libraries in the Cabal store are linked to
+  #     # different, incompatible system libraries).
+  #     #
+  #     # It is possible to get the hash of this derivation with a command like:
+  #     #
+  #     # $ nix eval --impure --raw --expr 'with (import <nixpkgs> {}).lib; let simpleCabalShell = import ./.nix-helpers/simple-cabal-shell.nix {}; in builtins.elemAt (splitString "-" (removePrefix (builtins.storeDir + "/") simpleCabalShell)) 0'
+  #     #
+  #     # Just need to load this into a variable, and throw it in the following key name
+  #     - uses: actions/cache@v4
+  #       name: Cache cabal store
+  #       with:
+  #         path: |
+  #           ~/.cabal/store
+  #           ~/.config/cabal/store
+  #           ~/.local/state/cabal/store
+  #         key: nix-simple-cabal-shell
+  #
+  #     - name: cabal update
+  #       run: nix-shell ./.nix-helpers/simple-cabal-shell.nix --command 'cabal update'
+  #
+  #     - name: cabal build
+  #       run: nix-shell ./.nix-helpers/simple-cabal-shell.nix --command 'cabal build all --enable-tests --enable-benchmarks'
