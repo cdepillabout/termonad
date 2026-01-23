@@ -4,15 +4,31 @@ module Termonad.Types where
 
 import Termonad.Prelude
 
-import Control.Lens (ifoldMap)
+import Control.Lens (ifoldMap, imap)
 import Data.FocusList (FocusList, emptyFL, getFocusItemFL, lengthFL)
 import Data.Foldable (toList)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Set (Set)
 import Data.Unique (Unique, hashUnique, newUnique)
 import Data.Yaml
   ( FromJSON(parseJSON)
   , ToJSON(toJSON)
   , Value(String)
   , withText
+  )
+import GI.Gdk
+  ( pattern KEY_0
+  , pattern KEY_1
+  , pattern KEY_2
+  , pattern KEY_3
+  , pattern KEY_4
+  , pattern KEY_5
+  , pattern KEY_6
+  , pattern KEY_7
+  , pattern KEY_8
+  , pattern KEY_9
+  , ModifierType(..)
   )
 import GI.Gtk
   ( Application
@@ -25,6 +41,7 @@ import GI.Gtk
   , notebookGetCurrentPage
   , notebookGetNthPage
   , notebookGetNPages
+  , notebookSetCurrentPage
   )
 import GI.Pango (FontDescription, fontDescriptionGetSize, fontDescriptionGetSizeIsAbsolute, pattern SCALE, fontDescriptionGetFamily, fontDescriptionNew, fontDescriptionSetFamily, fontDescriptionSetSize, fontDescriptionSetAbsoluteSize)
 import GI.Vte (Terminal, CursorBlinkMode(..))
@@ -595,7 +612,11 @@ defaultConfigOptions =
 data TMConfig = TMConfig
   { options :: !ConfigOptions
   , hooks :: !ConfigHooks
-  } deriving Show
+  , keys :: !(Map Key (TMState -> TMWindowId -> IO Bool))
+  }
+
+instance Show TMConfig where
+  show cfg = (show . options) cfg <> (show . hooks) cfg
 
 -- | The default 'TMConfig'.
 --
@@ -605,7 +626,52 @@ defaultTMConfig =
   TMConfig
     { options = defaultConfigOptions
     , hooks = defaultConfigHooks
+    , keys = defaultConfigKeys
     }
+
+data Key = Key
+  { keyVal :: !Word32
+  , keyMods :: !(Set ModifierType)
+  } deriving (Eq, Ord, Show)
+
+toKey :: Word32 -> Set ModifierType -> Key
+toKey = Key
+
+defaultConfigKeys :: Map Key (TMState -> TMWindowId -> IO Bool)
+defaultConfigKeys =
+  let numKeys :: [Word32]
+      numKeys =
+        [ KEY_1
+        , KEY_2
+        , KEY_3
+        , KEY_4
+        , KEY_5
+        , KEY_6
+        , KEY_7
+        , KEY_8
+        , KEY_9
+        , KEY_0
+        ]
+      altNumKeys :: [(Key, TMState -> TMWindowId -> IO Bool)]
+      altNumKeys =
+        imap
+          (\i k ->
+             (toKey k [ModifierTypeMod1Mask], stopProp (altNumSwitchTerm i))
+          )
+          numKeys
+  in
+  Map.fromList altNumKeys
+
+stopProp :: (TMState -> TMWindowId -> IO a) -> TMState -> TMWindowId -> IO Bool
+stopProp callback terState tmWinId = callback terState tmWinId $> True
+
+focusTerm :: Int -> TMState -> TMWindowId -> IO ()
+focusTerm i mvarTMState tmWinId = do
+  note <- getNotebookFromTMState mvarTMState tmWinId
+  notebookSetCurrentPage note (fromIntegral i)
+
+altNumSwitchTerm :: Int -> TMState -> TMWindowId -> IO ()
+altNumSwitchTerm = focusTerm
 
 ---------------------
 -- ConfigHooks --
