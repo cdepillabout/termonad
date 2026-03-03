@@ -28,7 +28,6 @@ import GI.Gtk
   , Entry(Entry)
   , FontButton(FontButton)
   , Label(Label)
-  , PolicyType(PolicyTypeAutomatic)
   , ResponseType(ResponseTypeAccept)
   , SpinButton(SpinButton)
   , adjustmentNew
@@ -44,7 +43,6 @@ import GI.Gtk
   , fontChooserSetFontDesc
   , fontChooserGetFontDesc
   , getEntryBuffer
-  , scrolledWindowSetPolicy
   , spinButtonGetValueAsInt
   , spinButtonSetAdjustment
   , spinButtonSetValue
@@ -78,7 +76,7 @@ import Termonad.Lenses
   , lensShowScrollbar
   , lensShowTabBar
   , lensScrollbackLen
-  , lensTMNotebookTabTermContainer
+  , lensTMNotebookTabScrollbar
   , lensTMNotebookTabTerm
   , lensTMStateApp
   , lensTMStateConfig
@@ -88,8 +86,8 @@ import Termonad.Lenses
   )
 import Termonad.Preferences.File (saveToPreferencesFile, tmConfigFromPreferencesFile)
 import Termonad.Term
-  ( setShowTabs
-  , showScrollbarToPolicy
+  ( applyShowScrollbar
+  , setShowTabs
   )
 import Termonad.Types
   ( ConfigOptions(..)
@@ -144,7 +142,7 @@ applyNewPreferencesToTab mvarTMState tab = do
   tmState <- readMVar mvarTMState
   let fontDesc = tmState ^. lensTMStateFontDesc
       term = tab ^. lensTMNotebookTabTerm . lensTerm
-      scrolledWin = tab ^. lensTMNotebookTabTermContainer
+      scrollbar = tab ^. lensTMNotebookTabScrollbar
       options = tmState ^. lensTMStateConfig . lensOptions
   terminalSetFont term (Just fontDesc)
   terminalSetCursorBlinkMode term (cursorBlinkMode options)
@@ -154,8 +152,7 @@ applyNewPreferencesToTab mvarTMState tab = do
   terminalSetEnableSixelIfExists term (enableSixel options)
   terminalSetAllowBold term (allowBold options)
 
-  let vScrollbarPolicy = showScrollbarToPolicy (options ^. lensShowScrollbar)
-  scrolledWindowSetPolicy scrolledWin PolicyTypeAutomatic vScrollbarPolicy
+  applyShowScrollbar (options ^. lensShowScrollbar) scrollbar
 
 applyNewPreferencesToWindow :: TMState -> TMWindowId -> IO ()
 applyNewPreferencesToWindow mvarTMState tmWinId = do
@@ -218,7 +215,6 @@ showPreferencesDialog mvarTMState = do
     showScrollbarComboBoxText
     [ (ShowScrollbarNever, "Never")
     , (ShowScrollbarAlways, "Always")
-    , (ShowScrollbarIfNeeded, "If needed")
     ]
   showTabBarComboBoxText <-
     objFromBuildUnsafe preferencesBuilder "showTabBar" ComboBoxText
