@@ -16,10 +16,10 @@ import GI.Gio
 import GI.Gtk
   ( Application
   , ApplicationWindow
+  , Box(Box)
   , Notebook
   , PositionType(PositionTypeRight)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
-  , ScrolledWindow(ScrolledWindow)
   , Widget
   , aboutDialogNew
   , applicationSetAccelsForAction
@@ -120,36 +120,36 @@ notebookPageReorderedCallback
   -- ^ The new index of the Notebook page.
   -> IO ()
 notebookPageReorderedCallback mvarTMState tmWinId childWidg pageNum = do
-  maybeScrollWin <- castTo ScrolledWindow childWidg
-  case maybeScrollWin of
+  maybeBox <- castTo Box childWidg
+  case maybeBox of
     Nothing ->
       fail $
         "In setupTermonad, in callback for onNotebookPageReordered, " <>
-        "child widget is not a ScrolledWindow.\n" <>
+        "child widget is not a Box.\n" <>
         "Don't know how to continue.\n"
-    Just scrollWin -> do
+    Just box -> do
       tmNote <- getTMNotebookFromTMState mvarTMState tmWinId
       let fl = view lensTMNotebookTabs tmNote
       let maybeOldPosition =
-            findIndexR (compareScrolledWinAndTab scrollWin) (focusList fl)
+            findIndexR (compareBoxAndTab box) (focusList fl)
       case maybeOldPosition of
         Nothing ->
           fail $
             "In setupTermonad, in callback for onNotebookPageReordered, " <>
-            "the ScrolledWindow is not already in the FocusList.\n" <>
+            "the Box is not already in the FocusList.\n" <>
             "Don't know how to continue.\n"
         Just oldPos -> do
           updateFLTabPos mvarTMState tmWinId oldPos (fromIntegral pageNum)
           tmNote' <- getTMNotebookFromTMState mvarTMState tmWinId
           relabelTabs tmNote'
   where
-    compareScrolledWinAndTab :: ScrolledWindow -> TMNotebookTab -> Bool
-    compareScrolledWinAndTab scrollWin flTab =
-      let ScrolledWindow managedPtrFLTab = tmNotebookTabTermContainer flTab
+    compareBoxAndTab :: Box -> TMNotebookTab -> Bool
+    compareBoxAndTab box flTab =
+      let Box managedPtrFLTab = tmNotebookTabTermContainer flTab
           foreignPtrFLTab = managedForeignPtr managedPtrFLTab
-          ScrolledWindow managedPtrScrollWin = scrollWin
-          foreignPtrScrollWin = managedForeignPtr managedPtrScrollWin
-      in foreignPtrFLTab == foreignPtrScrollWin
+          Box managedPtrBox = box
+          foreignPtrBox = managedForeignPtr managedPtrBox
+      in foreignPtrFLTab == foreignPtrBox
 
 -- | Move a 'TMNotebookTab' from one position to another.
 --

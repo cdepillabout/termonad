@@ -238,10 +238,9 @@ showScrollbarParser =
       metavar "SHOW_SCROLLBAR" <>
       help
         "Whether or not to show a scrollbar in the terminal. \
-        \Defaults to \"if-needed\".  Possible values = \"never\": \
+        \Defaults to \"always\".  Possible values = \"never\": \
         \never show the scrollbar, \"always\": always show the \
-        \scrollbar, \"if-needed\": only show the scrollbar if \
-        \enough text on the screen"
+        \scrollbar"
     )
 
 scrollbackLenParser :: Parser (Option Integer)

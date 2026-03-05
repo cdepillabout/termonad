@@ -36,19 +36,17 @@ import GI.GLib
   ( SpawnFlags(SpawnFlagsDefault)
   )
 import GI.Gtk
-  ( Adjustment
-  , Align(AlignFill)
+  ( Align(AlignFill)
   , ApplicationWindow
   , Box
   , Button
   , IconSize(IconSizeMenu)
   , Label
   , Notebook
-  , Orientation(OrientationHorizontal)
-  , PolicyType(PolicyTypeAlways, PolicyTypeAutomatic, PolicyTypeNever)
+  , Orientation(OrientationHorizontal, OrientationVertical)
   , ReliefStyle(ReliefStyleNone)
   , ResponseType(ResponseTypeNo, ResponseTypeYes)
-  , ScrolledWindow
+  , Scrollbar
   , Window
   , applicationGetActiveWindow
   , boxNew
@@ -78,8 +76,8 @@ import GI.Gtk
   , onButtonClicked
   , onWidgetButtonPressEvent
   , onWidgetKeyPressEvent
-  , scrolledWindowNew
-  , scrolledWindowSetPolicy
+  , scrollableGetVadjustment
+  , scrollbarNew
   , setWidgetMargin
   , showUriOnWindow
   , widgetDestroy
@@ -87,6 +85,7 @@ import GI.Gtk
   , widgetSetCanFocus
   , widgetSetHalign
   , widgetSetHexpand
+  , widgetSetVisible
   , widgetShow
   , windowSetFocus
   , windowSetTransientFor
@@ -126,7 +125,9 @@ import Termonad.Lenses
   , lensTMNotebookTabs
   , lensTMStateApp
   , lensTMStateConfig
-  , lensTerm, lensTMStateWindows, lensTMWindowNotebook
+  , lensTerm
+  , lensTMStateWindows
+  , lensTMWindowNotebook
   )
 import Termonad.Pcre (pcre2Multiline)
 import Termonad.Types
@@ -252,9 +253,9 @@ relabelTabs tmNote = do
     go :: Notebook -> TMNotebookTab -> IO ()
     go notebook tmNotebookTab = do
       let label = tmNotebookTab ^. lensTMNotebookTabLabel
-          scrolledWin = tmNotebookTab ^. lensTMNotebookTabTermContainer
+          termBox = tmNotebookTab ^. lensTMNotebookTabTermContainer
           term' = tmNotebookTab ^. lensTMNotebookTabTerm . lensTerm
-      relabelTab notebook label scrolledWin term'
+      relabelTab notebook label termBox term'
 
 -- | Compute the text for a 'Label' for a GTK Notebook tab.
 --
@@ -280,31 +281,38 @@ computeTabLabel pageNum maybeTitle =
 -- | Update the given 'Label' for a GTK Notebook tab.
 --
 -- The new text for the label is determined by the 'computeTabLabel' function.
-relabelTab :: Notebook -> Label -> ScrolledWindow -> Terminal -> IO ()
-relabelTab notebook label scrolledWin term' = do
-  tabNum <- notebookPageNum notebook scrolledWin
+relabelTab :: Notebook -> Label -> Box -> Terminal -> IO ()
+relabelTab notebook label termBox term' = do
+  tabNum <- notebookPageNum notebook termBox
   maybeTitle <- terminalGetWindowTitle term'
   let labelText = computeTabLabel (fromIntegral tabNum) maybeTitle
   labelSetLabel label labelText
 
-showScrollbarToPolicy :: ShowScrollbar -> PolicyType
-showScrollbarToPolicy ShowScrollbarNever = PolicyTypeNever
-showScrollbarToPolicy ShowScrollbarIfNeeded = PolicyTypeAutomatic
-showScrollbarToPolicy ShowScrollbarAlways = PolicyTypeAlways
+-- | Apply the 'ShowScrollbar' setting to a 'Scrollbar' widget by toggling
+-- its visibility.
+applyShowScrollbar :: ShowScrollbar -> Scrollbar -> IO ()
+applyShowScrollbar showScrollbarVal scrollbar =
+  case showScrollbarVal of
+    ShowScrollbarNever -> widgetSetVisible scrollbar False
+    ShowScrollbarAlways -> widgetSetVisible scrollbar True
 
-createScrolledWin :: TMState -> IO ScrolledWindow
-createScrolledWin mvarTMState = do
+-- | Create a horizontal 'Box' containing the VTE 'Terminal' and a vertical
+-- 'Scrollbar'.  The scrollbar is connected to the terminal's vertical
+-- adjustment.
+createTerminalBox :: TMState -> Terminal -> IO (Box, Scrollbar)
+createTerminalBox mvarTMState vteTerm = do
   tmState <- readMVar mvarTMState
   let showScrollbarVal =
         tmState ^. lensTMStateConfig . lensOptions . lensShowScrollbar
-      vScrollbarPolicy = showScrollbarToPolicy showScrollbarVal
-  scrolledWin <-
-    scrolledWindowNew
-      (Nothing :: Maybe Adjustment)
-      (Nothing :: Maybe Adjustment)
-  widgetShow scrolledWin
-  scrolledWindowSetPolicy scrolledWin PolicyTypeAutomatic vScrollbarPolicy
-  pure scrolledWin
+  termBox <- boxNew OrientationHorizontal 0
+  vadjustment <- scrollableGetVadjustment vteTerm
+  scrollbar <- scrollbarNew OrientationVertical (Just vadjustment)
+  containerAdd termBox vteTerm
+  widgetSetHexpand vteTerm True
+  containerAdd termBox scrollbar
+  applyShowScrollbar showScrollbarVal scrollbar
+  widgetShow termBox
+  pure (termBox, scrollbar)
 
 createNotebookTabLabel :: IO (Box, Label, Button)
 createNotebookTabLabel = do
@@ -444,9 +452,9 @@ addPage mvarTMState tmWinId notebookTab tabLabelBox = do
       notebook <- getTMNotebookFromTMState' tmState tmWinId
       let note = tmNotebook notebook
           tabs = tmNotebookTabs notebook
-          scrolledWin = tmNotebookTabTermContainer notebookTab
-      pageIndex <- notebookAppendPage note scrolledWin (Just tabLabelBox)
-      notebookSetTabReorderable note scrolledWin True
+          termBox = tmNotebookTabTermContainer notebookTab
+      pageIndex <- notebookAppendPage note termBox (Just tabLabelBox)
+      notebookSetTabReorderable note termBox True
       setShowTabs (tmState ^. lensTMStateConfig) note
       let newTabs = appendFL tabs notebookTab
           newTMState =
@@ -488,15 +496,14 @@ createTerm handleKeyPress mvarTMState tmWinId = do
   termShellPid <- launchShell vteTerm maybeCurrDir
   tmTerm <- newTMTerm vteTerm termShellPid
 
-  -- Create the container add the VTE term in it
-  scrolledWin <- createScrolledWin mvarTMState
-  containerAdd scrolledWin vteTerm
+  -- Create the container with the VTE term and scrollbar
+  (termBox, scrollbar) <- createTerminalBox mvarTMState vteTerm
 
   -- Create the GTK widget for the Notebook tab
   (tabLabelBox, tabLabel, tabCloseButton) <- createNotebookTabLabel
 
   -- Create notebook state
-  let notebookTab = createTMNotebookTab tabLabel scrolledWin tmTerm
+  let notebookTab = createTMNotebookTab tabLabel termBox scrollbar tmTerm
 
   -- Add the new notebooktab to the notebook.
   addPage mvarTMState tmWinId notebookTab tabLabelBox
@@ -504,14 +511,14 @@ createTerm handleKeyPress mvarTMState tmWinId = do
   -- Setup the initial label for the notebook tab.  This needs to happen
   -- after we add the new page to the notebook, so that the page can get labelled
   -- appropriately.
-  relabelTab (tmNotebook currNote) tabLabel scrolledWin vteTerm
+  relabelTab (tmNotebook currNote) tabLabel termBox vteTerm
 
   -- Connect callbacks
   void $ onButtonClicked tabCloseButton $ termClose notebookTab mvarTMState tmWinId
   void $ onTerminalWindowTitleChanged vteTerm $ do
-    relabelTab (tmNotebook currNote) tabLabel scrolledWin vteTerm
+    relabelTab (tmNotebook currNote) tabLabel termBox vteTerm
   void $ onWidgetKeyPressEvent vteTerm $ handleKeyPress mvarTMState tmWinId
-  void $ onWidgetKeyPressEvent scrolledWin $ handleKeyPress mvarTMState tmWinId
+  void $ onWidgetKeyPressEvent termBox $ handleKeyPress mvarTMState tmWinId
   void $ onWidgetButtonPressEvent vteTerm $ handleMousePress appWin vteTerm
   void $ onTerminalChildExited vteTerm $ \_ -> termExit notebookTab mvarTMState tmWinId
 

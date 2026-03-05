@@ -17,10 +17,11 @@ import Data.Yaml
 import GI.Gtk
   ( Application
   , ApplicationWindow
+  , Box
   , IsWidget
   , Label
   , Notebook
-  , ScrolledWindow
+  , Scrollbar
   , Widget
   , notebookGetCurrentPage
   , notebookGetNthPage
@@ -60,13 +61,15 @@ instance Show TMTerm where
       showString "}"
 
 -- | A container that holds everything in a given terminal window.  The 'term'
--- in the 'TMTerm' is inside the 'tmNotebookTabTermContainer' 'ScrolledWindow'.
+-- in the 'TMTerm' is inside the 'tmNotebookTabTermContainer' 'Box'.
 -- The notebook tab 'Label' is also available.
 data TMNotebookTab = TMNotebookTab
-  { tmNotebookTabTermContainer :: !ScrolledWindow
-    -- ^ The 'ScrolledWindow' holding the VTE 'Terminal'.
+  { tmNotebookTabTermContainer :: !Box
+    -- ^ The 'Box' holding the VTE 'Terminal' and 'Scrollbar'.
+  , tmNotebookTabScrollbar :: !Scrollbar
+    -- ^ The 'Scrollbar' for the VTE 'Terminal'.
   , tmNotebookTabTerm :: !TMTerm
-    -- ^ The 'Terminal' insidie the 'ScrolledWindow'.
+    -- ^ The 'Terminal' inside the 'Box'.
   , tmNotebookTabLabel :: !Label
     -- ^ The 'Label' holding the title of the 'Terminal' in the 'Notebook' tab.
   }
@@ -77,7 +80,10 @@ instance Show TMNotebookTab where
     showParen (d > 10) $
       showString "TMNotebookTab {" .
       showString "tmNotebookTabTermContainer = " .
-      showString "(GI.GTK.ScrolledWindow)" .
+      showString "(GI.GTK.Box)" .
+      showString ", " .
+      showString "tmNotebookTabScrollbar = " .
+      showString "(GI.GTK.Scrollbar)" .
       showString ", " .
       showString "tmNotebookTabTerm = " .
       showsPrec (d + 1) tmNotebookTabTerm .
@@ -223,10 +229,11 @@ getFocusedTermFromState mvarTMState tmWinId =
       let maybeNotebookTab = getFocusItemFL $ tmNotebookTabs tmNote
       pure $ fmap (term . tmNotebookTabTerm) maybeNotebookTab
 
-createTMNotebookTab :: Label -> ScrolledWindow -> TMTerm -> TMNotebookTab
-createTMNotebookTab tabLabel scrollWin trm =
+createTMNotebookTab :: Label -> Box -> Scrollbar -> TMTerm -> TMNotebookTab
+createTMNotebookTab tabLabel termBox scrollbar trm =
   TMNotebookTab
-    { tmNotebookTabTermContainer = scrollWin
+    { tmNotebookTabTermContainer = termBox
+    , tmNotebookTabScrollbar = scrollbar
     , tmNotebookTabTerm = trm
     , tmNotebookTabLabel = tabLabel
     }
@@ -426,21 +433,28 @@ data ShowScrollbar
                        -- should still be able to scroll with the mouse wheel.
   | ShowScrollbarAlways -- ^ Always show the scrollbar, even if it is not
                         -- needed.
-  | ShowScrollbarIfNeeded -- ^ Only show the scrollbar if there are too many
-                          -- lines on the terminal to show all at once.
-  deriving (Enum, Eq, Generic, FromJSON, Show, ToJSON)
+  deriving (Enum, Eq, Generic, Show, ToJSON)
+
+-- | Custom 'FromJSON' instance that accepts the removed
+-- @\"ShowScrollbarIfNeeded\"@ value for backward compatibility with existing
+-- config files, treating it as 'ShowScrollbarAlways'.
+instance FromJSON ShowScrollbar where
+  parseJSON = withText "ShowScrollbar" $ \case
+    "ShowScrollbarNever" -> pure ShowScrollbarNever
+    "ShowScrollbarAlways" -> pure ShowScrollbarAlways
+    "ShowScrollbarIfNeeded" -> pure ShowScrollbarAlways
+    other -> fail $ "Unknown ShowScrollbar value: " <> show other
 
 showScrollbarToString :: ShowScrollbar -> Text
 showScrollbarToString = \case
   ShowScrollbarNever -> "never"
   ShowScrollbarAlways -> "always"
-  ShowScrollbarIfNeeded -> "if-needed"
 
 showScrollbarFromString :: Text -> Maybe ShowScrollbar
 showScrollbarFromString = \case
   "never" -> Just ShowScrollbarNever
   "always" -> Just ShowScrollbarAlways
-  "if-needed" -> Just ShowScrollbarIfNeeded
+  "if-needed" -> Just ShowScrollbarAlways
   _ -> Nothing
 
 -- | Whether or not to show the tab bar for switching tabs.
@@ -561,7 +575,7 @@ instance ToJSON CursorBlinkMode where
 --   let defConfOpt =
 --         ConfigOptions
 --           { fontConfig = defaultFontConfig
---           , showScrollbar = ShowScrollbarIfNeeded
+--           , showScrollbar = ShowScrollbarAlways
 --           , scrollbackLen = 10000
 --           , confirmExit = True
 --           , wordCharExceptions = "-#%&+,./=?@\\_~\183:"
@@ -579,7 +593,7 @@ defaultConfigOptions :: ConfigOptions
 defaultConfigOptions =
   ConfigOptions
     { fontConfig = defaultFontConfig
-    , showScrollbar = ShowScrollbarIfNeeded
+    , showScrollbar = ShowScrollbarAlways
     , scrollbackLen = 10000
     , confirmExit = True
     , wordCharExceptions = "-#%&+,./=?@\\_~\183:"

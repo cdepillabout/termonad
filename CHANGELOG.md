@@ -1,5 +1,15 @@
 
-## (next)
+## (next -- major version bump)
+
+*   Don't put the VTE Terminal in a `ScrolledWindow`. Instead, use a `Box`
+    with a `Scrollbar`. This fixes problems with the scrollbar not working
+    correctly.
+    [#260](https://github.com/cdepillabout/termonad/pull/260)
+
+    The `ShowScrollbarIfNeeded` option has been removed since it no longer has a
+    meaningful implementation without `ScrolledWindow`. The default is now
+    `ShowScrollbarAlways`. Existing config files with `ShowScrollbarIfNeeded` MUST
+    update to using `ShowScrollbarAlways` or `ShowScrollbarNever`.
 
 *   Move from depending on `gi-gtk` and `gi-gdk` Haskell packages to `gi-gtk3` and `gi-gdk3`.
     This shouldn't affect most users.
