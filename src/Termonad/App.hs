@@ -20,6 +20,7 @@ import GI.Gio
   , onSimpleActionActivate
   , simpleActionNew
   )
+import GI.GLib (setApplicationName, setPrgname)
 import GI.Gtk
   ( Application
   , ApplicationWindow(ApplicationWindow)
@@ -302,6 +303,12 @@ appStartup _app = pure ()
 -- This function __does not__ parse command line arguments.
 start :: TMConfig -> IO ()
 start tmConfig = do
+  -- Set explicit GLib program and application names.  On macOS (where Termonad
+  -- runs as a native Quartz app) this makes the menu bar show "Termonad" rather
+  -- than the underlying (possibly dyre-recompiled) executable name.  The Dock
+  -- name and icon instead come from the generated Termonad.app bundle.
+  setPrgname "termonad"
+  setApplicationName "Termonad"
   -- app <- appNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
   -- Make sure the application is not unique, so we can open multiple copies of it.
   app <- appNew Nothing [ApplicationFlagsFlagsNone]

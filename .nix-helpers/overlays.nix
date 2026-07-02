@@ -44,11 +44,10 @@ let
                   src
                   extraCabal2nixOptions
                   {
-                    # There are Haskell packages called gtk3 and pcre2, which
+                    # There are Haskell packages called gtk3, pcre2, and vte, which
                     # makes these system dependencies not able to be resolved
                     # correctly.
-                    inherit (self) gtk3 pcre2;
-                    vte_291 = self.vte;
+                    inherit (self) gtk3 pcre2 vte;
                   };
             in
             termonadDrv;
@@ -153,6 +152,22 @@ let
         env =
           self.termonadKnownWorkingHaskellPkgSet.ghcWithPackages
             (hpkgs: [ hpkgs.termonad ] ++ self.termonadExtraHaskellPackages hpkgs);
+
+        # A freedesktop.org desktop entry for Termonad.  On Linux this is just a
+        # normal .desktop file.  On Darwin, desktopToDarwinBundle (see
+        # nativeBuildInputs below) turns this entry plus the installed icon into a
+        # proper `Termonad.app` bundle.  That bundle is what gives Termonad a nice
+        # name ("Termonad") and icon in the Dock; without it macOS falls back to
+        # the raw executable name and a generic icon.
+        desktopItem = self.makeDesktopItem {
+          name = "termonad";
+          desktopName = "Termonad";
+          genericName = "Terminal emulator";
+          comment = "Terminal emulator configurable in Haskell";
+          exec = "termonad";
+          icon = "termonad";
+          categories = [ "System" "TerminalEmulator" ];
+        };
       in
       self.stdenv.mkDerivation {
         name = "termonad-${self.termonadKnownWorkingHaskellPkgSet.termonad.version}-ghc-${env.version}";
@@ -161,7 +176,11 @@ let
           self.adwaita-icon-theme
           self.hicolor-icon-theme
         ];
-        nativeBuildInputs = [ self.wrapGAppsHook3 ];
+        nativeBuildInputs = [
+          self.wrapGAppsHook3
+          self.copyDesktopItems
+        ] ++ self.lib.optional self.stdenv.hostPlatform.isDarwin self.desktopToDarwinBundle;
+        desktopItems = [ desktopItem ];
         dontBuild = true;
         unpackPhase = ":";
         # Using installPhase instead of buildCommand was recommended here:
@@ -170,6 +189,12 @@ let
           runHook preInstall
           mkdir -p $out/bin
           ln -sf ${env}/bin/termonad $out/bin/termonad
+          # Install the application icon.  copyDesktopItems (Linux) and
+          # desktopToDarwinBundle (macOS) both look for it here, by the name
+          # referenced in the desktop entry's Icon field.
+          install -Dm644 \
+            ${../img/termonad-lambda.png} \
+            $out/share/icons/hicolor/256x256/apps/termonad.png
           gappsWrapperArgs+=(
             --set NIX_GHC "${env}/bin/ghc"
           )
