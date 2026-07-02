@@ -1,4 +1,6 @@
 
+{-# LANGUAGE CPP #-}
+
 module Termonad.Keys where
 
 import Termonad.Prelude
@@ -79,11 +81,22 @@ keyMap =
         , KEY_9
         , KEY_0
         ]
+      -- The modifier used with a number key to switch tabs.  On most platforms
+      -- this is Alt (Mod1).  On macOS, GTK's Quartz backend treats Option as a
+      -- compose key (Option+1 arrives as "¡", not the digit), whereas Command
+      -- arrives as Mod2+Meta with the digit keyval intact -- so there we bind
+      -- Command+<number>, matching macOS's built-in Terminal.app.
+      tabSwitchMods :: Set ModifierType
+#ifdef darwin_HOST_OS
+      tabSwitchMods = [ModifierTypeMod2Mask, ModifierTypeMetaMask]
+#else
+      tabSwitchMods = [ModifierTypeMod1Mask]
+#endif
       altNumKeys :: [(Key, TMState -> TMWindowId -> IO Bool)]
       altNumKeys =
         imap
           (\i k ->
-             (toKey k [ModifierTypeMod1Mask], stopProp (altNumSwitchTerm i))
+             (toKey k tabSwitchMods, stopProp (altNumSwitchTerm i))
           )
           numKeys
   in
