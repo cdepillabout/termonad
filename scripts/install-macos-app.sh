@@ -20,10 +20,18 @@
 #
 #   * the installed bundle's Info.plist and icon (so the name and Dock icon
 #     match), and
-#   * a small launcher script that just re-execs the real binary at
+#   * an executable that is just a symlink to the real binary at
 #     ~/.nix-profile/bin/termonad.
 #
-# Because the launcher points at the stable ~/.nix-profile path (rather than a
+# Only the .app DIRECTORY itself must be real for Spotlight to index it; a
+# symlinked executable inside it is fine (verified empirically).  A symlink is
+# also preferred over a wrapper script that exec's the real binary: launching
+# through LaunchServices with that extra sh->exec hop breaks NSStatusItem
+# (menu-bar item) visibility on current macOS.  Termonad is a regular windowed
+# app so it never hit that, but break-time did — the symlink form avoids the
+# whole class of problem and is simpler anyway.
+#
+# Because the symlink points at the stable ~/.nix-profile path (rather than a
 # specific /nix/store/... path), this only has to be run ONCE: the trampoline
 # keeps working across `nix profile upgrade`.  Re-run it only if you delete
 # ~/Applications/Termonad.app or install Termonad into a different Nix profile.
@@ -72,13 +80,9 @@ cp "$profile_app/Contents/Info.plist" "$dest/Contents/Info.plist"
 cp "$profile_app/Contents/Resources/termonad.icns" "$dest/Contents/Resources/termonad.icns"
 chmod u+w "$dest/Contents/Info.plist" "$dest/Contents/Resources/termonad.icns"
 
-# A real launcher script (not a symlink, so Spotlight indexes it) that execs the
-# stable profile binary.  The path is baked in when this script runs.
-cat > "$dest/Contents/MacOS/Termonad" <<EOF
-#!/bin/sh
-exec "$profile_bin"
-EOF
-chmod +x "$dest/Contents/MacOS/Termonad"
+# The executable is a symlink to the stable profile binary — NOT a wrapper
+# script; see the header comment for why.
+ln -s "$profile_bin" "$dest/Contents/MacOS/Termonad"
 
 # Register with LaunchServices right away so it shows up in Spotlight without
 # having to wait for the next indexing pass.

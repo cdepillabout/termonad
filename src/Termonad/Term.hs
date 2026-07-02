@@ -1,4 +1,6 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Termonad.Term where
 
@@ -110,9 +112,18 @@ import GI.Vte
   , terminalSpawnSync
   , terminalSetAllowBold
   )
-import System.Directory (getSymbolicLinkTarget)
 import System.Environment (lookupEnv)
+#if !defined(mingw32_HOST_OS) && !defined(darwin_HOST_OS)
+import System.Directory (getSymbolicLinkTarget)
 import System.FilePath ((</>))
+#endif
+#ifdef darwin_HOST_OS
+import Foreign.C.String (peekCString)
+import Foreign.C.Types (CInt)
+import Foreign.Marshal.Alloc (free)
+import Foreign.Ptr (nullPtr)
+import qualified Language.C.Inline as C
+#endif
 import Termonad.Gtk (terminalSetEnableSixelIfExists)
 import Termonad.Lenses
   ( lensConfirmExit
@@ -356,17 +367,42 @@ toRGBA colour = do
   setRGBABlue rgba blue
   pure rgba
 
+#ifdef darwin_HOST_OS
+C.include "<libproc.h>"
+C.include "<sys/proc_info.h>"
+C.include "<string.h>"
+#endif
+
 -- | TODO: This should probably be implemented in an external package,
 -- since it is a generally useful utility.
 --
--- It should also be implemented for windows and osx.
+-- It should also be implemented for windows.
 cwdOfPid :: Int -> IO (Maybe Text)
 cwdOfPid pd = do
 #ifdef mingw32_HOST_OS
   pure Nothing
 #else
 #ifdef darwin_HOST_OS
-  pure Nothing
+  -- macOS has no @/proc@, so ask the kernel for the process's vnode path info
+  -- via libproc; @pvi_cdir.vip_path@ is the process's current working
+  -- directory.  This works without special privileges for processes owned by
+  -- the same user (which the tab's shell always is).
+  let pidC = fromIntegral pd :: CInt
+  cwdCStr <-
+    [C.block| char* {
+        struct proc_vnodepathinfo vpi;
+        int r = proc_pidinfo($(int pidC), PROC_PIDVNODEPATHINFO, 0, &vpi, sizeof(vpi));
+        // proc_pidinfo returns the number of bytes written; a short read means
+        // the call failed (the process is gone, or we're not permitted).
+        if (r < (int)sizeof(vpi)) { return NULL; }
+        return strdup(vpi.pvi_cdir.vip_path);
+    } |]
+  if cwdCStr == nullPtr
+    then pure Nothing
+    else do
+      cwdStr <- peekCString cwdCStr
+      free cwdCStr
+      pure $ if null cwdStr then Nothing else Just (pack cwdStr)
 #else
   let pidPath = "/proc" </> show pd </> "cwd"
   eitherLinkTarget <- try $ getSymbolicLinkTarget pidPath
