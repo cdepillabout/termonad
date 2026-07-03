@@ -6,6 +6,7 @@ module Termonad.Term where
 
 import Termonad.Prelude
 
+import Control.Exception (SomeException)
 import Control.Lens ((^.), ix, set)
 import Data.Coerce (coerce)
 import Data.Colour.SRGB (Colour, RGB(RGB), toSRGB)
@@ -96,6 +97,7 @@ import GI.Pango (EllipsizeMode(EllipsizeModeMiddle), FontDescription)
 import GI.Vte
   ( PtyFlags(PtyFlagsDefault)
   , Terminal
+  , getUserShell
   , onTerminalChildExited
   , onTerminalWindowTitleChanged
   , regexNewForMatch
@@ -143,7 +145,7 @@ import Termonad.Lenses
 import Termonad.Pcre (pcre2Multiline)
 import Termonad.Types
   ( ConfigHooks(createTermHook)
-  , ConfigOptions(scrollbackLen, wordCharExceptions, cursorBlinkMode, boldIsBright, enableSixel, allowBold)
+  , ConfigOptions(scrollbackLen, wordCharExceptions, cursorBlinkMode, boldIsBright, enableSixel, allowBold, shell)
   , ShowScrollbar(..)
   , ShowTabBar(..)
   , TMConfig(hooks, options)
@@ -441,19 +443,22 @@ createAndInitVteTerm tmStateFontDesc curOpts = do
   pure vteTerm
 
 -- | Starts a shell in a terminal and return a new TMTerm
+--
+-- The shell to launch is chosen by 'shellArgv'.
 launchShell
   :: Terminal
   -- ^ GTK 'Terminal' to spawn the shell in.
+  -> Maybe [Text]
+  -- ^ The shell configured in the Termonad config (the 'shell' field of
+  -- 'ConfigOptions'), if any.  When 'Just', it takes precedence over the
+  -- automatic shell detection.
   -> Maybe Text
   -- ^ An optional path to the current working directory to start the
   -- shell in.  If 'Nothing', use the current working directory of the
   -- termonad process.
   -> IO Int
-launchShell vteTerm maybeCurrDir = do
-  -- Should probably use GI.Vte.Functions.getUserShell, but contrary to its
-  -- documentation it raises an exception rather wrap in Maybe.
-  mShell <- lookupEnv "SHELL"
-  let argv = maybe ["/usr/bin/env", "bash"] pure mShell
+launchShell vteTerm mConfiguredShell maybeCurrDir = do
+  argv <- shellArgv mConfiguredShell
   -- Launch the shell
   shellPid <-
     terminalSpawnSync
@@ -466,6 +471,36 @@ launchShell vteTerm maybeCurrDir = do
       Nothing
       (Nothing :: Maybe Cancellable)
   pure (fromIntegral shellPid)
+
+-- | Determine the argv used to launch a terminal's shell, in order of
+-- preference (highest first):
+--
+--   1. The shell set in the Termonad config (the 'shell' field of
+--      'ConfigOptions'), if any.
+--   2. The @$SHELL@ environment variable, if set.
+--   3. The user's login shell from the password database.
+--   4. @bash@ found on @$PATH@, as a last resort.
+shellArgv :: Maybe [Text] -> IO [String]
+shellArgv mConfiguredShell = do
+  mEnvShell <- lookupEnv "SHELL"
+  mLoginShell <- getLoginShell
+  pure $
+    case (fmap Text.unpack <$> mConfiguredShell, mEnvShell, mLoginShell) of
+      (Just configuredShell, _, _) -> configuredShell
+      (_, Just envShell, _) -> [envShell]
+      (_, _, Just loginShell) -> [loginShell]
+      _ -> ["/usr/bin/env", "bash"]
+
+-- | The user's login shell from the password database, or 'Nothing' if it
+-- cannot be determined.  'getUserShell' raises an exception (contrary to its
+-- documentation) rather than returning 'Nothing' when no shell can be found, so
+-- guard it with 'try'.
+getLoginShell :: IO (Maybe String)
+getLoginShell = do
+  eShell <- try getUserShell :: IO (Either SomeException String)
+  pure $ case eShell of
+    Right loginShell | not (null loginShell) -> Just loginShell
+    _ -> Nothing
 
 -- | Add a page to the notebook and switch to it.
 addPage
@@ -529,7 +564,7 @@ createTerm handleKeyPress mvarTMState tmWinId = do
   -- Create a new terminal and launch a shell in it
   vteTerm <- createAndInitVteTerm tmStateFontDesc (options tmStateConfig)
   maybeCurrDir <- getCWDFromFocusedTab currNote
-  termShellPid <- launchShell vteTerm maybeCurrDir
+  termShellPid <- launchShell vteTerm (shell (options tmStateConfig)) maybeCurrDir
   tmTerm <- newTMTerm vteTerm termShellPid
 
   -- Create the container with the VTE term and scrollbar

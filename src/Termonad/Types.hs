@@ -538,6 +538,15 @@ data ConfigOptions = ConfigOptions
     --
     -- You may want to disable this, for instance, if you use a font that
     -- doesn't look good when bold.
+  , shell :: !(Maybe [Text])
+    -- ^ The argv for the shell to launch in each terminal.
+    --
+    -- When 'Nothing' (the default), Termonad chooses the shell automatically,
+    -- in this order: the @SHELL@ environment variable if set, otherwise the
+    -- user's login shell from the password database, otherwise @bash@.
+    --
+    -- Set this to a 'Just' value to force a specific shell, for example
+    -- @Just ["\/opt\/homebrew\/bin\/bash"]@ or @Just ["\/usr\/bin\/env", "bash"]@
   } deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
 cursorBlinkModeToString :: CursorBlinkMode -> Text
@@ -585,6 +594,7 @@ instance ToJSON CursorBlinkMode where
 --           , boldIsBright = False
 --           , enableSixel = False
 --           , allowBold = True
+--           , shell = Nothing
 --           }
 --   in defaultConfigOptions == defConfOpt
 -- :}
@@ -603,6 +613,7 @@ defaultConfigOptions =
     , boldIsBright = False
     , enableSixel = False
     , allowBold = True
+    , shell = Nothing
     }
 
 -- | The Termonad 'ConfigOptions' along with the 'ConfigHooks'.

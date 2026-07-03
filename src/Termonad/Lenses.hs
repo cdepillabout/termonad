@@ -67,6 +67,7 @@ $(makeLensesFor
     , ("boldIsBright", "lensBoldIsBright")
     , ("allowBold", "lensAllowBold")
     , ("enableSixel", "lensEnableSixel")
+    , ("shell", "lensShell")
     ]
     ''ConfigOptions
  )
