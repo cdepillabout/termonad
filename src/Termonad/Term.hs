@@ -126,7 +126,7 @@ import Foreign.Marshal.Alloc (free)
 import Foreign.Ptr (nullPtr)
 import qualified Language.C.Inline as C
 #endif
-import Termonad.Gtk (terminalSetEnableSixelIfExists)
+import Termonad.Gtk (terminalNormalizeSmoothScrollDeltas, terminalSetEnableSixelIfExists)
 import Termonad.Lenses
   ( lensConfirmExit
   , lensOptions
@@ -444,6 +444,7 @@ createAndInitVteTerm tmStateFontDesc curOpts = do
   terminalSetBoldIsBright vteTerm (boldIsBright curOpts)
   terminalSetEnableSixelIfExists vteTerm (enableSixel curOpts)
   terminalSetAllowBold vteTerm (allowBold curOpts)
+  terminalNormalizeSmoothScrollDeltas vteTerm
   widgetShow vteTerm
   pure vteTerm
 
