@@ -9,14 +9,15 @@ import Data.FileEmbed (embedFile)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
 import GI.Gdk (screenGetDefault)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import GI.Gio
-  ( ApplicationFlags(ApplicationFlagsFlagsNone)
+  ( ApplicationFlags(ApplicationFlagsFlagsNone, ApplicationFlagsNonUnique)
   , MenuModel(MenuModel)
   , actionMapAddAction
+  , afterApplicationStartup
   , applicationQuit
   , applicationRun
   , onApplicationActivate
-  , onApplicationStartup
   , onSimpleActionActivate
   , simpleActionNew
   )
@@ -53,7 +54,8 @@ import Termonad.Lenses
   )
 import Termonad.Preferences (showPreferencesDialog)
 import Termonad.Types
-  ( TMConfig
+  ( InstanceMode(SeparateInstance, SingleInstance)
+  , TMConfig
   , TMState
   , TMState'
   , createFontDescFromConfig
@@ -204,44 +206,89 @@ setupAppCallbacks mvarTMState app = do
   void $ onSimpleActionActivate aboutAction $ \_ -> showAboutDialog app
   actionMapAddAction app aboutAction
 
-appActivate :: TMConfig -> Application -> IO ()
-appActivate tmConfig app = do
+-- | One-time, per-primary-instance setup.
+--
+-- GApplication emits @startup@ exactly once for the primary instance, before
+-- the first @activate@ (and before any second invocation can activate us), so
+-- this is where all the process-global state lives: the window icon, the
+-- screen CSS, the shared 'TMState', the app-wide menu bar, and the @app.@
+-- GActions.  The resulting 'TMState' is stashed in the 'IORef' so that every
+-- 'appActivate' -- the first one and each subsequent one -- can open a window
+-- against it.
+--
+-- This is connected with 'afterApplicationStartup' rather than
+-- 'onApplicationStartup': GtkApplication only runs @gtk_init@ in the default
+-- @startup@ handler, which (being a @RUN_LAST@ signal) fires after ordinary
+-- @connect@ handlers.  Anything display-dependent (the icon, 'setupScreenStyle')
+-- must therefore run in an @after@ handler.
+appStartup :: TMConfig -> Application -> IORef (Maybe TMState) -> IO ()
+appStartup tmConfig app tmStateRef = do
   let img = $(embedFile "img/termonad-lambda.png")
   iconPixbuf <- imgToPixbuf img
   windowSetDefaultIcon iconPixbuf
   setupScreenStyle
   fontDesc <- createFontDescFromConfig tmConfig
   mvarTMState <- newEmptyTMState tmConfig app fontDesc
+  -- TODO: This IORef is really ugly.  I'd like to rearchitect this so we don't need it...
+  writeIORef tmStateRef (Just mvarTMState)
 
-  -- Set up the application-wide menu bar model once.
+  -- Set up the application-wide menu bar model.
   menuBuilder <- builderNewFromString menuText $ fromIntegral (Text.length menuText)
   menuModel <- objFromBuildUnsafe menuBuilder "menubar" MenuModel
   applicationSetMenubar app (Just menuModel)
 
   setupAppCallbacks mvarTMState app
 
-  void $ newWindow mvarTMState
-
-appStartup :: Application -> IO ()
-appStartup _app = pure ()
+-- | Open a new window.  This runs on every activation: the initial launch and,
+-- when Termonad is a single instance, each later @termonad@ invocation that
+-- activates the already-running primary instead of starting a new process.
+appActivate :: IORef (Maybe TMState) -> IO ()
+appActivate tmStateRef = do
+  maybeTMState <- readIORef tmStateRef
+  case maybeTMState of
+    -- 'appStartup' always runs before the first 'appActivate', so by the time
+    -- we get here the IORef has been populated.
+    Nothing -> fail "appActivate: TMState was not initialized in appStartup"
+    Just mvarTMState -> void $ newWindow mvarTMState
 
 -- | Run Termonad with the given 'TMConfig'.
+--
+-- Termonad registers as a single-instance GApplication, so launching @termonad@
+-- while one is already running opens a new window in the existing process
+-- rather than starting a second one.  Use 'startWith' with 'SeparateInstance'
+-- (the @--no-remote@ CLI flag) to force a fully separate process.
 --
 -- Do not perform any of the recompilation operations that the 'Termonad.Startup.defaultMain'
 -- function does.
 --
 -- This function __does not__ parse command line arguments.
 start :: TMConfig -> IO ()
-start tmConfig = do
+start = startWith SingleInstance
+
+-- | Like 'start', but the 'InstanceMode' selects GApplication uniqueness.
+--
+-- With 'SingleInstance' (what 'start' uses) a second @termonad@ invocation
+-- activates the running primary, which opens a new window.  With
+-- 'SeparateInstance' (the @--no-remote@ flag) this process registers as
+-- non-unique, so it gets its own state and windows and neither contacts nor
+-- becomes the primary instance.
+startWith :: InstanceMode -> TMConfig -> IO ()
+startWith instanceMode tmConfig = do
   -- Set explicit GLib program and application names.  On macOS (where Termonad
   -- runs as a native Quartz app) this makes the menu bar show "Termonad" rather
   -- than the underlying (possibly dyre-recompiled) executable name.  The Dock
   -- name and icon instead come from the generated Termonad.app bundle.
   setPrgname "termonad"
   setApplicationName "Termonad"
-  -- app <- appNew (Just "haskell.termonad") [ApplicationFlagsFlagsNone]
-  -- Make sure the application is not unique, so we can open multiple copies of it.
-  app <- appNew Nothing [ApplicationFlagsFlagsNone]
-  void $ onApplicationStartup app (appStartup app)
-  void $ onApplicationActivate app (appActivate tmConfig app)
+  -- Register a stable application id so GApplication can enforce single-instance
+  -- behavior.  --no-remote adds the NonUnique flag, which tells GApplication to
+  -- skip the single-instance negotiation entirely (own primary, own state).
+  let appFlags =
+        case instanceMode of
+          SingleInstance -> [ApplicationFlagsFlagsNone]
+          SeparateInstance -> [ApplicationFlagsNonUnique]
+  app <- appNew (Just "com.github.cdepillabout.termonad") appFlags
+  tmStateRef <- newIORef Nothing
+  void $ afterApplicationStartup app (appStartup tmConfig app tmStateRef)
+  void $ onApplicationActivate app (appActivate tmStateRef)
   void $ applicationRun app Nothing

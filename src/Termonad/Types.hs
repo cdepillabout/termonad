@@ -475,6 +475,21 @@ showTabBarFromString = \case
   "if-needed" -> Just ShowTabBarIfNeeded
   _ -> Nothing
 
+-- | Whether a Termonad invocation should hand off to an already-running
+-- Termonad, or run completely on its own.
+--
+-- This is what the @--remote@ and @--no-remote@ CLI flags select.
+data InstanceMode
+  = SingleInstance
+    -- ^ Take part in single-instance behavior.  The first Termonad becomes the
+    -- primary instance; each later invocation asks that primary to open a new
+    -- window, and then exits.
+  | SeparateInstance
+    -- ^ Run as a completely separate process, with its own state and windows.
+    -- This invocation neither contacts the running primary instance nor
+    -- becomes one.
+  deriving (Eq, Show)
+
 -- | Configuration options for Termonad.
 --
 -- See 'defaultConfigOptions' for the default values.

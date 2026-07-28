@@ -19,7 +19,7 @@ import Control.Applicative ((<|>), (<**>))
 import Data.Text (pack)
 import GI.Vte (CursorBlinkMode)
 import Options.Applicative (fullDesc, info, helper, progDesc, ParserInfo, execParser, Parser, Mod, OptionFields, option, str, value, short, long, metavar, help, ReadM, maybeReader, auto, flag')
-import Termonad.Types (ConfigOptions (..), Option (Set, Unset), ShowScrollbar, FontSize (..), ShowTabBar, showScrollbarFromString, showTabBarFromString, cursorBlinkModeFromString, FontConfig (..))
+import Termonad.Types (ConfigOptions (..), InstanceMode (SeparateInstance, SingleInstance), Option (Set, Unset), ShowScrollbar, FontSize (..), ShowTabBar, showScrollbarFromString, showTabBarFromString, cursorBlinkModeFromString, FontConfig (..))
 
 
 -- | A data type that contains arguments from the command line.
@@ -106,18 +106,25 @@ defaultCliConfigOptions =
 
 -- | Extra CLI arguments for values that don't make sense in 'ConfigOptions'.
 data ExtraCliArgs = ExtraCliArgs
-  deriving (Eq, Show)
+  { cliInstanceMode :: !InstanceMode
+    -- ^ 'SeparateInstance' when @--no-remote@ was passed, meaning this Termonad
+    -- runs as a completely separate process instead of opening a new window in
+    -- an already-running instance (see 'Termonad.App.startWith').  @--remote@
+    -- asks for the default, 'SingleInstance'.
+  } deriving (Eq, Show)
 
 -- | The default 'ExtraCliArgs'.
 --
 -- >>> :{
 --   let defExtraCliArgs =
 --         ExtraCliArgs
+--           { cliInstanceMode = SingleInstance
+--           }
 --   in defaultExtraCliArgs == defExtraCliArgs
 -- :}
 -- True
 defaultExtraCliArgs :: ExtraCliArgs
-defaultExtraCliArgs = ExtraCliArgs
+defaultExtraCliArgs = ExtraCliArgs { cliInstanceMode = SingleInstance }
 
 -- | Similar to 'Options.Applicative.strOption', but specifically work on a
 -- value that is an 'Option'.
@@ -361,7 +368,34 @@ allowBoldParser =
     \allow showing text as bold."
 
 extraCliArgsParser :: Parser ExtraCliArgs
-extraCliArgsParser = pure ExtraCliArgs
+extraCliArgsParser = ExtraCliArgs <$> instanceModeParser
+
+-- | Parse @--remote@ / @--no-remote@ into an 'InstanceMode', defaulting to
+-- 'SingleInstance' when neither is given.
+--
+-- This has the same caveat as 'optionFlag': passing both flags is an error
+-- rather than taking the last one passed.
+instanceModeParser :: Parser InstanceMode
+instanceModeParser = flagRemote <|> flagNoRemote <|> pure SingleInstance
+  where
+    flagRemote =
+      flag'
+        SingleInstance
+        ( long "remote" <>
+          help
+            "Open a new window in an already-running Termonad rather than \
+            \starting a separate process.  This is the default."
+        )
+    flagNoRemote =
+      flag'
+        SeparateInstance
+        ( long "no-remote" <>
+          help
+            "Run as a completely separate process instead of opening a new \
+            \window in an already-running Termonad.  This instance gets its \
+            \own state and windows; it neither contacts the running instance \
+            \nor becomes the primary one."
+        )
 
 cliArgsParser :: Parser CliArgs
 cliArgsParser =
