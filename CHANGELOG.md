@@ -1,6 +1,35 @@
 
 ## (next -- major version bump)
 
+*   Termonad can now manage multiple windows within a single process.  Open
+    another window with <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>n</kbd>, or
+    `New Window` in the `File` menu.  Closing a window's last tab closes that
+    window, and closing the last window quits Termonad.
+    [#6](https://github.com/cdepillabout/termonad/issues/6)
+
+    Note that font size changes (<kbd>Ctrl</kbd> <kbd>+</kbd> /
+    <kbd>Ctrl</kbd> <kbd>-</kbd>) currently apply to every window at once.
+
+*   Termonad now runs as a single instance.  Launching `termonad` while one is
+    already running opens a new window in the existing process instead of
+    starting a second one.  Pass `--no-remote` to get a completely separate
+    process, with its own state and windows.  `--remote` spells out the default.
+
+    This relies on a D-Bus session bus, which is normally available on Linux but
+    not on Mac OS X.  Without one, every invocation ends up being its own
+    instance, so neither flag has any effect there.
+
+    Two consequences worth knowing about:
+
+    - Other CLI options are ignored when an invocation is handed off to an
+      already-running Termonad, since the new window uses the running process's
+      settings.  Use `--no-remote` if you want a window with different options.
+
+    - `Termonad.startWith` is a new entry point taking an `InstanceMode`
+      (`SingleInstance` or `SeparateInstance`), for `termonad.hs` files that want
+      to choose this themselves.  `Termonad.start` is now
+      `startWith SingleInstance`.
+
 *   Don't put the VTE Terminal in a `ScrolledWindow`. Instead, use a `Box`
     with a `Scrollbar`. This fixes problems with the scrollbar not working
     correctly.

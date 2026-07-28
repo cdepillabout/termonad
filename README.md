@@ -327,6 +327,7 @@ Termonad provides the following default key bindings.
 
 | Key binding | Action |
 |------------|--------|
+| <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>n</kbd> | Open new window. |
 | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>t</kbd> | Open new tab. |
 | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>w</kbd> | Close tab. |
 | <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>f</kbd> | Open Find dialog for searching for a regex. |
@@ -337,6 +338,34 @@ Termonad provides the following default key bindings.
 | <kbd>Ctrl</kbd> <kbd>PgUp</kbd> | Switch to previous tab. |
 | <kbd>Ctrl</kbd> <kbd>PgDown</kbd> | Switch to next tab. |
 | <kbd>Alt</kbd> <kbd>(number key)</kbd> | Switch to tab `number`.  For example, <kbd>Alt</kbd> <kbd>2</kbd> switches to tab 2. |
+
+### Multiple Windows
+
+Termonad manages multiple windows within a single process.  Open another window
+with <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>n</kbd>, or `New Window` in the `File`
+menu.  Closing a window's last tab closes that window, and closing the last
+window quits Termonad.
+
+Termonad also runs as a single instance: launching `termonad` when one is already
+running opens a new window in the existing process rather than starting a second
+one.  If you would rather have a completely separate process, with its own state
+and windows, pass `--no-remote`:
+
+```console
+$ termonad --no-remote
+```
+
+`--remote` spells out the default, in case you want to be explicit.
+
+Two things to be aware of:
+
+*   This relies on a D-Bus session bus, which is normally available on Linux but
+    not on Mac OS X.  Without one, every invocation ends up being its own
+    instance, so neither flag has any effect there.
+
+*   Other CLI options are ignored when an invocation is handed off to an
+    already-running Termonad, since the new window uses the running process's
+    settings.  Use `--no-remote` if you want a window with different options.
 
 ### Configuring Termonad
 
